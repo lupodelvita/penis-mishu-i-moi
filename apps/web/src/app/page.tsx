@@ -74,6 +74,7 @@ export default function Home() {
          events.forEach(([evt]) => win.electron.removeMenuListener(evt));
       };
     }
+    return undefined;
   }, [addEntity, selectEntity]);
 
   // Auto-connect to collaboration on mount
