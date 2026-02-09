@@ -334,7 +334,7 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
     try {
         console.log(`Running legacy transform ${transformId} on ${sourceEntity.value}`);
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:4000/api/transforms/execute', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/transforms/execute`, {
             method: 'POST',
             headers: { 
               'Content-Type': 'application/json',
@@ -395,7 +395,8 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
             alert(`Ошибка выполнения: ${json.error || 'Неизвестная ошибка'}`);
         }
 
-        }
+
+
     } catch (err) {
        console.error('Failed to execute transform:', err);
     }

@@ -72,7 +72,7 @@ export default function NmapScanModal({
     setResults(null);
 
     try {
-      const response = await fetch('http://localhost:4000/api/osint/nmap/scan', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/osint/nmap/scan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
