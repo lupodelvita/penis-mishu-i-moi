@@ -8,13 +8,13 @@ interface TransformPanelProps {
   onOpenTerminal?: (command: string) => void;
 }
 const SAMPLE_TRANSFORMS = [
-  { id: 'dns.domain_to_ip', name: 'Domain to IP', category: 'DNS', icon: '🌐', inputTypes: ['domain'] },
-  { id: 'whois.domain', name: 'WHOIS Lookup', category: 'WHOIS', icon: '🔍', inputTypes: ['domain'] },
-  { id: 'dns.mx_records', name: 'MX Records', category: 'DNS', icon: '📧', inputTypes: ['domain'] },
-  { id: 'email.breach_check', name: 'Breach Check', category: 'Email', icon: '🔒', inputTypes: ['email_address'] },
-  { id: 'social.username_search', name: 'Username Search', category: 'Social', icon: '👤', inputTypes: ['username', 'person'] },
-  { id: 'geo.ip_to_location', name: 'IP to Location', category: 'Geo', icon: '📍', inputTypes: ['ip_address'] },
-  { id: 'nmap.port_scan', name: 'Port Scan (Active)', category: 'Security', icon: '🛡️', inputTypes: ['domain', 'ip_address'] },
+  { id: 'dns_resolve', name: 'Domain to IP', category: 'DNS', icon: '🌐', inputTypes: ['domain'] },
+  { id: 'whois_lookup', name: 'WHOIS Lookup', category: 'WHOIS', icon: '🔍', inputTypes: ['domain'] },
+  { id: 'dns_mx_records', name: 'MX Records', category: 'DNS', icon: '📧', inputTypes: ['domain'] },
+  { id: 'oathnet_breach_check', name: 'Breach Check', category: 'Email', icon: '🔒', inputTypes: ['email_address'] },
+  { id: 'username_search', name: 'Username Search', category: 'Social', icon: '👤', inputTypes: ['username', 'person'] },
+  { id: 'geo_ip_location', name: 'IP to Location', category: 'Geo', icon: '📍', inputTypes: ['ip_address'] },
+  { id: 'nmap_quick_scan', name: 'Port Scan (Active)', category: 'Security', icon: '🛡️', inputTypes: ['domain', 'ip_address'] },
   { id: 'security.xss_scan', name: 'XSS Fuzzer (Active)', category: 'Security', icon: '☣️', inputTypes: ['url', 'domain'] },
   { id: 'security.sqli_scan', name: 'SQLi Fuzzer (Active)', category: 'Security', icon: '💉', inputTypes: ['url', 'domain'] },
 ];
@@ -54,7 +54,7 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
     // If the transform has a CLI equivalent, run it in terminal instead of API
     let cliCommand = '';
     // Generate terminal command for Nmap scans
-    if (transformId === 'network.port_scan' || transformId === 'nmap.port_scan') {
+    if (transformId === 'nmap_quick_scan') {
         const target = sourceEntity.value.replace(/^https?:\/\//, '').split('/')[0];
         cliCommand = `nmap -F -sV -T4 --script-args http.useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" "${target}"`;
     }
@@ -67,7 +67,7 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
     // ======================================
     // SECURITY SCANS (Port, XSS, SQLi) - ALL VIA TERMINAL
     // ======================================
-    const isSecurityScan = transformId.startsWith('security.') || transformId.includes('port_scan');
+    const isSecurityScan = transformId.startsWith('security.') || transformId.includes('nmap_quick_scan');
     if (isSecurityScan) {
       // Open terminal with preview command
       if (onOpenTerminal) {
@@ -91,7 +91,7 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
       // Background API call for data collection
       let endpoint = '';
       let body: any = {};
-      if (transformId.includes('port_scan')) {
+      if (transformId === 'nmap_quick_scan') {
         // FIXED: Use the new OSINT endpoint that returns correct graph topology
         endpoint = '/api/osint/nmap/scan';
         const target = sourceEntity.value.replace(/^https?:\/\//, '').split('/')[0];
@@ -129,7 +129,6 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
             if (typeof window !== 'undefined' && (window as any).electron?.terminal?.write) {
               const termWrite = (window as any).electron.terminal.write;
               console.log('[TransformPanel] Terminal write available, results:', data.data?.results?.length);
-
               
               if (data.success && data.data.results) {
                 const results = data.data.results;
@@ -170,7 +169,7 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
                   termWrite(`\r\nNodeWeaver> `);
                 }
               } else {
-                termWrite(`\r\n\x1b[31mScan failed: ${data.error?.message || 'Unknown error'}\x1b[0m\r\n`);
+                termWrite(`\r\n\x1b[31mScan failed: ${data.error?.message || typeof data.error === 'string' ? data.error : 'Unknown error'}\x1b[0m\r\n`);
                 termWrite(`NodeWeaver> `);
               }
             }
@@ -323,7 +322,7 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
                }
             } else {
                 console.error('Scan failed:', data.error);
-                alert(`Ошибка сканирования: ${data.error?.message || 'Unknown error'}`);
+                alert(`Ошибка сканирования: ${data.error?.message || (typeof data.error === 'string' ? data.error : 'Unknown error')}`);
             }
           } catch (err) {
               console.error('API Call failed:', err);
@@ -391,8 +390,12 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
                       label: result.link?.label || 'related'
                   });
              });
+           }
+        } else {
+            alert(`Ошибка выполнения: ${json.error || 'Неизвестная ошибка'}`);
         }
-      }
+
+        }
     } catch (err) {
        console.error('Failed to execute transform:', err);
     }

@@ -138,7 +138,7 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
           const allFields: Array<{label: string; value: string}> = [];
           const idShort = data.id ? data.id.substring(data.id.lastIndexOf('-') + 1, data.id.lastIndexOf('-') + 9) : '';
           if (idShort) allFields.push({ label: 'ID', value: idShort });
-          if (data.properties) {
+          if (data && data.properties) {
             if (data.properties.port) allFields.push({ label: 'PORT', value: String(data.properties.port) });
             if (data.properties.service) allFields.push({ label: 'SERVICE', value: data.properties.service });
             if (data.properties.version) allFields.push({ label: 'VERSION', value: data.properties.version });
@@ -257,26 +257,21 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
     cy.batch(() => {
         (currentGraph.entities as any[]).forEach(entity => {
             if (cy.$id(entity.id).length === 0) {
-                const position = entity.position || {  
-                    x: Math.random() * 800 + 100, 
-                    y: Math.random() * 600 + 100 
-                  };
-                console.log('[GraphCanvas] Adding node to Cytoscape:', {
-                  id: entity.id,
-                  label: entity.data?.label || entity.value,
-                  position,
-                  hasPosition: !!entity.position,
-                });
-                cy.add({
-                    data: {
-                        id: entity.id,
-                        label: entity.data?.label || entity.value,
-                        color: entity.data?.color || '#64748b',
-                        type: entity.type,
-                    },
-                    position: position,
-                });
-                console.log('[GraphCanvas] Node added successfully, total nodes:', cy.nodes().length);
+        const position = entity.position || {
+            x: Math.random() * 800 + 100,
+            y: Math.random() * 600 + 100
+        };
+        cy.add({
+            data: {
+                id: entity.id,
+                label: entity.data?.label || entity.value,
+                color: entity.data?.color || '#64748b',
+                type: entity.type,
+                properties: entity.properties || {}, // Pass properties
+                data: entity.data || {} // Pass data object
+            },
+            position: position,
+        });
             } else {
                 const node = cy.$id(entity.id);
                 const newLabel = entity.data?.label || entity.value;

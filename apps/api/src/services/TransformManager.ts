@@ -5,6 +5,7 @@ import { dnsReconService } from './osint/DNSReconService';
 import { shodanService } from './osint/ShodanService';
 import { oathNetService } from './osint/OathNetService';
 import { geoLocationService } from './osint/GeoLocationService';
+import * as dns from 'dns/promises';
 
 export interface Transform {
   id: string;
@@ -130,6 +131,98 @@ export class TransformManager {
               vulnsCount: hostInfo.vulns?.length || 0
             }
           };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'dns_resolve',
+      name: 'Domain to IP',
+      description: 'Resolve domain to IP address',
+      category: 'DNS',
+      inputTypes: ['domain'],
+      outputTypes: ['ip_address'],
+      icon: '🌐',
+      execute: async (input) => {
+        try {
+          const domain = input.value;
+          const addresses = await dns.resolve4(domain);
+          
+          if (!addresses || addresses.length === 0) {
+            return { success: false, error: 'No IP addresses found' };
+          }
+
+          const entities = addresses.map(ip => ({
+            id: `ip-${ip}-${Date.now()}`,
+            type: 'ip_address',
+            value: ip,
+            data: { label: ip, type: 'ip_address', color: '#f59e0b' },
+            properties: { source: 'DNS' }
+          }));
+
+          const links = entities.map(entity => ({
+            id: `link-${input.id}-${entity.id}`,
+            source: input.id,
+            target: entity.id,
+            label: 'resolves to'
+          }));
+
+          return { success: true, entities, links, metadata: { count: addresses.length } };
+        } catch (error: any) {
+             return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'username_search',
+      name: 'Username Search',
+      description: 'Search for username across social platforms',
+      category: 'Social',
+      inputTypes: ['username', 'person'],
+      outputTypes: ['social_profile'],
+      icon: '👤',
+      execute: async (input) => {
+        try {
+          const username = input.value;
+          const socialPlatforms = [
+            { name: 'Twitter/X', url: 'https://twitter.com/', icon: '𝕏' },
+            { name: 'GitHub', url: 'https://github.com/', icon: '💻' },
+            { name: 'Instagram', url: 'https://instagram.com/', icon: '📷' },
+            { name: 'LinkedIn', url: 'https://linkedin.com/in/', icon: '💼' },
+            { name: 'Reddit', url: 'https://reddit.com/user/', icon: '🤖' },
+            { name: 'YouTube', url: 'https://youtube.com/@', icon: '📺' },
+            { name: 'Facebook', url: 'https://facebook.com/', icon: '👥' },
+            { name: 'Telegram', url: 'https://t.me/', icon: '✈️' }
+          ];
+          
+          // Note: Real username search requires checking HTTP status codes which might be blocked by CORS/Rate limits if done from server without proxies.
+          // This implementation assumes validity or should ideally use specific APIs.
+          // For now, we return "Potential" profiles based on structure.
+          
+          const entities = socialPlatforms.map((platform, index) => ({
+             id: `social-${username}-${index}-${Date.now()}`,
+             type: 'social_profile',
+             value: `${platform.icon} ${platform.name}: ${username}`,
+             data: { 
+                 label: `${platform.name}: ${username}`, 
+                 type: 'social_profile', 
+                 color: '#06b6d4',
+                 url: platform.url + username
+             },
+             properties: { platform: platform.name, username, url: platform.url + username, status: 'potential' }
+          }));
+
+          const links = entities.map(entity => ({
+             id: `link-${input.id}-${entity.id}`,
+             source: input.id,
+             target: entity.id,
+             label: 'possible profile'
+          }));
+
+          return { success: true, entities, links, metadata: { count: entities.length } };
         } catch (error: any) {
           return { success: false, error: error.message };
         }
