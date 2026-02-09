@@ -22,6 +22,8 @@ import teamsRoutes from './routes/teams';
 import { botManager } from './services/BotManager';
 import { collaborationService } from './services/CollaborationService';
 import { errorHandler } from './middleware/error';
+import { PrismaClient, LicenseTier } from '@prisma/client';
+
 
 dotenv.config();
 
@@ -63,12 +65,11 @@ app.use('/api/bots', botRoutes);
 app.use('/api/admin', adminRoutes);
 
 // TEMPORARY: Route to generate master keys (for initial setup on Render)
-import { PrismaClient, LicenseTier } from '@prisma/client';
 const prisma_temp = new PrismaClient();
 app.get('/api/admin/generate-master-key', async (req, res) => {
   try {
     const count = parseInt(req.query.count as string) || 1;
-    const keys = [];
+    const keys: string[] = [];
     
     for (let i = 0; i < count; i++) {
         const tier = LicenseTier.CEO;
