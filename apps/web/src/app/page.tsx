@@ -89,6 +89,7 @@ export default function Home() {
         // disconnect(); // Don't disconnect on every re-render, only on unmount
       };
     }
+    return undefined;
   }, [user]); // Removed 'connect' from deps to prevent reconnection loops
 
   if (loading || !user) {
