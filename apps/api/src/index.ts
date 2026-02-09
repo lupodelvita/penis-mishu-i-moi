@@ -61,6 +61,35 @@ app.use('/api/security', securityRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/bots', botRoutes);
 app.use('/api/admin', adminRoutes);
+
+// TEMPORARY: Route to generate master keys (for initial setup on Render)
+import { PrismaClient, LicenseTier } from '@prisma/client';
+const prisma_temp = new PrismaClient();
+app.get('/api/admin/generate-master-key', async (req, res) => {
+  try {
+    const count = parseInt(req.query.count as string) || 1;
+    const keys = [];
+    
+    for (let i = 0; i < count; i++) {
+        const tier = LicenseTier.CEO;
+        const key = `NW-${tier}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(7).toUpperCase()}-MASTER`;
+        
+        await prisma_temp.license.create({
+        data: {
+            key,
+            tier,
+            isActive: true
+        }
+        });
+        keys.push(key);
+    }
+    
+    res.json({ success: true, keys, message: 'These keys are valid ONE-TIME use for registration.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to generate key', details: error });
+  }
+});
 app.use('/api/reports', reportRoutes);
 app.use('/api/teams', teamsRoutes);
 app.use('/api', uploadRoutes);
