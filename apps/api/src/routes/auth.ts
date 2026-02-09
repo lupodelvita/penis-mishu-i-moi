@@ -8,7 +8,8 @@ const router = Router();
 // Register
 router.post('/register', async (req, res, next) => {
   try {
-    const { username, password, licenseKey } = req.body;
+    const { username, password } = req.body;
+    const licenseKey = req.body.licenseKey?.trim();
     
     if (!username || !password) {
       res.status(400).json({ success: false, error: 'Username and password required' });

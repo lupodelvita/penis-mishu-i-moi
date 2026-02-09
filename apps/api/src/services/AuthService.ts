@@ -28,20 +28,26 @@ export class AuthService {
         }
     });
 
-    // 4. Activate License if provided
-    if (licenseKey) {
-        await this.activateLicense(user.id, licenseKey);
-    } else {
-        // Create a default FREE license (Observer)
-        await this.createFreeLicense(user.id);
-    }
+    try {
+        // 4. Activate License if provided
+        if (licenseKey) {
+            await this.activateLicense(user.id, licenseKey);
+        } else {
+            // Create a default FREE license (Observer)
+            await this.createFreeLicense(user.id);
+        }
 
-    // 5. Generate Token (reload user to get license info)
-    const userWithLicense = await prisma.user.findUnique({
-        where: { id: user.id },
-        include: { license: true }
-    });
-    return this.generateToken(userWithLicense!);
+        // 5. Generate Token (reload user to get license info)
+        const userWithLicense = await prisma.user.findUnique({
+            where: { id: user.id },
+            include: { license: true }
+        });
+        return this.generateToken(userWithLicense!);
+    } catch (error) {
+        // Rollback: Delete user if license processing fails
+        await prisma.user.delete({ where: { id: user.id } });
+        throw error;
+    }
   }
 
   public async login(username: string, password: string) {
