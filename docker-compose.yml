@@ -1,0 +1,89 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: nodeweaver-postgres
+    environment:
+      POSTGRES_USER: nodeweaver
+      POSTGRES_PASSWORD: nodeweaver_dev_password
+      POSTGRES_DB: nodeweaver_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nodeweaver"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: nodeweaver-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Neo4j (Optional - for graph database)
+  # neo4j:
+  #   image: neo4j:5-community
+  #   container_name: nodeweaver-neo4j
+  #   environment:
+  #     NEO4J_AUTH: neo4j/nodeweaver_dev_password
+  #   ports:
+  #     - "7474:7474"
+  #     - "7687:7687"
+  #   volumes:
+  #     - neo4j_data:/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:7474 || exit 1"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  # Ollama (Local AI)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: nodeweaver-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    # Remove deploy section if not using NVIDIA GPU or docker-compose < 1.28
+
+  # Open WebUI (Dashboard & RAG)
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: nodeweaver-webui
+    ports:
+      - "8181:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://nodeweaver-ollama:11434
+    volumes:
+      - open_webui_data:/app/backend/data
+    restart: always
+    depends_on:
+      - ollama
+
+
+
+volumes:
+  postgres_data:
+  redis_data:
+  # neo4j_data:
+  ollama_data:
+  open_webui_data:

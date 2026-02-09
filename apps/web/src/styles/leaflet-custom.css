@@ -1,0 +1,6 @@
+/* Leaflet CSS - Fixed for Next.js/Turbopack compatibility */
+/* Importing from CDN to avoid IE filter parsing errors */
+
+@import url("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
+
+/* Override any problematic styles if needed */

@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum Role {
+  USER
+  ADMIN
+}
+
+enum LicenseTier {
+  OBSERVER   // Free
+  ANALYST    // Hobby/entry
+  OPERATIVE  // Advanced
+  DEVELOPER  // Tech
+  ENTERPRISE // White-label
+  CEO        // God mode
+}
+
+enum BotType {
+  DISCORD
+  TELEGRAM
+}
+
+// Models
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  created      DateTime @default(now())
+  
+  // Relations
+  license      License?
+  graphs       Graph[]
+  bots         BotConfig[]
+  memories     AIMemory[]
+  ownedTeams   Team[]       @relation("TeamOwner")
+  teamMembers  TeamMember[]
+}
+
+model License {
+  id         String      @id @default(uuid())
+  key        String      @unique
+  tier       LicenseTier
+  isActive   Boolean     @default(true)
+  expiresAt  DateTime?
+  created    DateTime    @default(now())
+  
+  // Relations
+  userId     String?     @unique
+  user       User?       @relation(fields: [userId], references: [id])
+}
+
+model BotConfig {
+  id         String   @id @default(uuid())
+  name       String
+  type       BotType
+  token      String // Encrypted in logic, stored as string here
+  isActive   Boolean  @default(true)
+  autoStart  Boolean  @default(false)
+  settings   Json?    @default("{}") // Channels, etc
+  created    DateTime @default(now())
+  
+  // Relations
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Graph {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  created     DateTime @default(now())
+  updated     DateTime @updatedAt
+  
+  // Relations
+  userId      String?  // Optional for now to support public/legacy, but ideally required
+  user        User?    @relation(fields: [userId], references: [id])
+  
+  entities    Entity[]
+  links       Link[]
+}
+
+model Entity {
+  id          String   @id @default(uuid())
+  graphId     String
+  type        String
+  value       String
+  properties  Json     @default("{}")
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Entity Notes/Comments
+  note        String?
+  noteColor   String?  @default("#FFEB3B")
+  noteAuthor  String?
+  noteDate    DateTime?
+  
+  graph       Graph    @relation(fields: [graphId], references: [id], onDelete: Cascade)
+  linksFrom   Link[]   @relation("SourceLink")
+  linksTo     Link[]   @relation("TargetLink")
+}
+
+model Link {
+  id        String   @id @default(uuid())
+  graphId   String
+  sourceId  String
+  targetId  String
+  label     String?
+  created   DateTime @default(now())
+  
+  graph     Graph    @relation(fields: [graphId], references: [id], onDelete: Cascade)
+  source    Entity   @relation("SourceLink", fields: [sourceId], references: [id], onDelete: Cascade)
+  target    Entity   @relation("TargetLink", fields: [targetId], references: [id], onDelete: Cascade)
+}
+
+model Team {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  avatar      String?
+  ownerId     String
+  owner       User         @relation("TeamOwner", fields: [ownerId], references: [id])
+  members     TeamMember[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  role      TeamRole @default(MEMBER)
+  joinedAt  DateTime @default(now())
+  
+  @@unique([teamId, userId])
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model AIMemory {
+  id        String   @id @default(uuid())
+  prompt    String
+  response  String
+  rating    String   @default("good")
+  timestamp DateTime @default(now())
+  
+  // Relations
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+}
