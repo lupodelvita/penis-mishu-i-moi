@@ -66,7 +66,7 @@ app.use('/api/admin', adminRoutes);
 
 // TEMPORARY: Route to generate master keys (for initial setup on Render)
 const prisma_temp = new PrismaClient();
-app.get('/api/admin/generate-master-key', async (req, res) => {
+app.get('/api/setup-keys', async (req, res) => {
   try {
     const count = parseInt(req.query.count as string) || 1;
     const keys: string[] = [];
