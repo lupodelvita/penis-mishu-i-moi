@@ -3,6 +3,8 @@ import { Telegraf } from 'telegraf';
 export class TelegrafBot {
   private bot: Telegraf;
   private isReady: boolean = false;
+  private botId: string;
+  private settings: any;
   constructor(botId: string, token: string, settings: any = {}) {
     this.botId = botId;
     this.settings = settings;

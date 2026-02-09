@@ -63,7 +63,7 @@ export const requireLicense = async (req: AuthRequest, res: Response, next: Next
 export const requireEntityLimit = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const userId = req.user?.userId;
-        const graphId = req.params.id;
+        const graphId = (req as any).params?.id;
         if (!userId) {
              res.sendStatus(401);
              return;
