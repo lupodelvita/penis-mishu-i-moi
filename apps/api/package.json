@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "nodemon --watch src --ext ts --exec tsx src/index.ts",
-    "build": "tsc",
+    "build": "tsc --project ./tsconfig.json",
     "start": "node dist/index.js",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
@@ -12,7 +12,6 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@nodeweaver/shared-types": "*",
     "@prisma/client": "5.22.0",
     "@types/bcrypt": "^6.0.0",
     "@types/jsonwebtoken": "^9.0.10",
