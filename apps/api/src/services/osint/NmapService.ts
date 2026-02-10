@@ -99,23 +99,24 @@ export class NmapService {
 
     switch (scanType) {
       case 'quick':
+        // -sT: TCP Connect Scan (unprivileged)
         // -F: Fast scan (top 100 ports)
         // -sV: Service version detection
         // -T4: Aggressive timing
-        // CUSTOM USER-AGENT to bypass basic WAF blocking
-        return `${baseCommand} -F -sV -T4 --script-args http.useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" ${xmlOutput} ${target}`;
+        return `${baseCommand} -sT -F -sV -T4 --script-args http.useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" ${xmlOutput} ${target}`;
       
       case 'full':
-        // -A: Enable OS detection, version detection, script scanning, and traceroute
-        // -sV: Service version detection (redundant with -A but explicit)
+        // -sT: TCP Connect Scan (unprivileged)
+        // -sV: Service version detection
+        // -sC: Default scripts
         // -T4: Aggressive timing
         // -p-: Scan all 65535 ports
-        return `${baseCommand} -A -sV -T4 -p- --script-args http.useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" ${xmlOutput} ${target}`;
+        // Removed -A because it includes -O (OS detection) which requires raw sockets
+        return `${baseCommand} -sT -sV -sC -T4 -p- --script-args http.useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" ${xmlOutput} ${target}`;
       
       case 'vuln':
-        // --script vuln: Run vulnerability scripts
-        // -sV: Version detection
-        return `${baseCommand} --script vuln -sV --script-args http.useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" ${xmlOutput} ${target}`;
+        // -sT: TCP Connect Scan (unprivileged)
+        return `${baseCommand} -sT --script vuln -sV --script-args http.useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" ${xmlOutput} ${target}`;
       
       case 'custom':
         if (!customArgs) {
