@@ -1,5 +1,4 @@
 import cytoscape from 'cytoscape';
-import fcose from 'cytoscape-fcose';
 import nodeHtmlLabel from 'cytoscape-node-html-label';
 
 let extensionsRegistered = false;
@@ -9,9 +8,11 @@ export const registerCytoscapeExtensions = () => {
 
   try {
     if (typeof cytoscape.use === 'function') {
-        cytoscape.use(fcose);
+        // fcose removed to prevent 'Super constructor null' crash
         cytoscape.use(nodeHtmlLabel);
     }
+    extensionsRegistered = true;
+    console.log('[CytoscapeHelper] Extensions registered successfully');
     extensionsRegistered = true;
     console.log('[CytoscapeHelper] Extensions registered successfully');
   } catch (error) {
