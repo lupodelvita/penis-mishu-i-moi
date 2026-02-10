@@ -137,15 +137,18 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
       // cy.fit(undefined, 50); // AUTO-ZOOM DISABLED
       console.log('[GraphCanvas] Cytoscape init complete. Auto-zoom should be OFF.');
     }, 100);
-    (cy as any).nodeHtmlLabel([
-      {
-        query: 'node',
-        halign: 'center',
-        valign: 'center',
-        halignBox: 'center',
-        valignBox: 'center',
-        cssClass: 'node-html-card',
-        tpl: function(data: any) {
+
+    // Safe extension initialization
+    try {
+        (cy as any).nodeHtmlLabel([
+          {
+            query: 'node',
+            halign: 'center',
+            valign: 'center',
+            halignBox: 'center',
+            valignBox: 'center',
+            cssClass: 'node-html-card',
+            tpl: function(data: any) {
           // Safety checks to prevent "Super constructor null" or other rendering crashes
           if (!data) return '';
           
@@ -208,6 +211,9 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
         }
       }
     ]);
+    } catch (e) {
+      console.warn('[GraphCanvas] nodeHtmlLabel initialization failed:', e);
+    }
 
     // Syntax fix verified - Block cleaned
     cy.on('tap', 'node', (evt: EventObject) => {
@@ -398,7 +404,14 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
       if (!pendingEntity) return;
       const defaultName = `Новый ${pendingEntity.type}`;
       const finalName = newEntityName.trim() || defaultName;
-      const newEntityId = `node-${Date.now()}`;
+      
+      // Deterministic ID generation to prevent duplicates with Backend Transforms
+      let prefix = 'node';
+      if (pendingEntity.type === 'domain') prefix = 'domain';
+      else if (pendingEntity.type === 'ip_address') prefix = 'ip';
+      else if (pendingEntity.type === 'email_address') prefix = 'email';
+      
+      const newEntityId = prefix === 'node' ? `node-${Date.now()}` : `${prefix}-${finalName}`;
       const colorMap: Record<string, string> = {
         [EntityType.Domain]: '#3b82f6',
         [EntityType.IPAddress]: '#10b981',
