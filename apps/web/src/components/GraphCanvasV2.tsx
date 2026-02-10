@@ -12,7 +12,9 @@ import dynamic from 'next/dynamic';
 // Dynamic imports to prevent SSR issues and build crashes
 const MapCanvas = dynamic(() => import('./MapCanvas'), { ssr: false });
 
-// No global registration for extensions to avoid "Super constructor null" error
+// Module-level flag to track extension registration (prevent double registration crash)
+let extensionsRegistered = false;
+
 interface GraphCanvasProps {
   onEntitySelect?: (entityId: string | null) => void;
   onOpenTerminal?: (command: string) => void;
@@ -38,16 +40,15 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
   useEffect(() => {
     if (currentView !== 'graph' || !containerRef.current || isInitializedRef.current) return;
     
-    // Register extensions safely
-    try {
-      if (!cytoscape.prototype.hasExtension('layout', 'fcose')) {
+    // Register extensions safely using flag
+    if (!extensionsRegistered) {
+      try {
         cytoscape.use(fcose);
-      }
-      if (!cytoscape.prototype.hasExtension('renderer', 'nodeHtmlLabel')) {
         cytoscape.use(nodeHtmlLabel);
+        extensionsRegistered = true;
+      } catch (e) {
+        console.warn('Cytoscape extension registration warning:', e);
       }
-    } catch (e) {
-      console.warn('Cytoscape extension registration warning:', e);
     }
 
     isInitializedRef.current = true;

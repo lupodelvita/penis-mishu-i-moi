@@ -178,48 +178,89 @@ export class TransformManager {
 
     this.registerTransform({
       id: 'username_search',
-      name: 'Username Search',
-      description: 'Search for username across social platforms',
+      name: 'Username Search (Maigret-lite)',
+      description: 'Check username availability across platforms (15+ sites)',
       category: 'Social',
       inputTypes: ['username', 'person'],
       outputTypes: ['social_profile'],
-      icon: '👤',
+      icon: '🕵️',
       execute: async (input) => {
         try {
           const username = input.value;
-          const socialPlatforms = [
-            { name: 'Twitter/X', url: 'https://twitter.com/', icon: '𝕏' },
-            { name: 'GitHub', url: 'https://github.com/', icon: '💻' },
-            { name: 'Instagram', url: 'https://instagram.com/', icon: '📷' },
-            { name: 'LinkedIn', url: 'https://linkedin.com/in/', icon: '💼' },
-            { name: 'Reddit', url: 'https://reddit.com/user/', icon: '🤖' },
-            { name: 'YouTube', url: 'https://youtube.com/@', icon: '📺' },
-            { name: 'Facebook', url: 'https://facebook.com/', icon: '👥' },
-            { name: 'Telegram', url: 'https://t.me/', icon: '✈️' }
+          const platforms = [
+            { name: 'Twitter/X', url: 'https://twitter.com/', checkUrl: 'https://nitter.net/', icon: '𝕏' },
+            { name: 'GitHub', url: 'https://github.com/', checkUrl: 'https://github.com/', icon: '💻' },
+            { name: 'Instagram', url: 'https://instagram.com/', checkUrl: 'https://www.instagram.com/', icon: '📷' },
+            { name: 'Facebook', url: 'https://facebook.com/', checkUrl: 'https://www.facebook.com/', icon: '👥' },
+            { name: 'Telegram', url: 'https://t.me/', checkUrl: 'https://t.me/', icon: '✈️' },
+            { name: 'Reddit', url: 'https://reddit.com/user/', checkUrl: 'https://www.reddit.com/user/', icon: '🤖' },
+            { name: 'YouTube', url: 'https://youtube.com/@', checkUrl: 'https://www.youtube.com/@', icon: '📺' },
+            { name: 'Twitch', url: 'https://twitch.tv/', checkUrl: 'https://m.twitch.tv/', icon: '🎮' },
+            { name: 'Pinterest', url: 'https://pinterest.com/', checkUrl: 'https://www.pinterest.com/', icon: '📌' },
+            { name: 'TikTok', url: 'https://tiktok.com/@', checkUrl: 'https://www.tiktok.com/@', icon: '🎵' },
+            { name: 'Vimeo', url: 'https://vimeo.com/', checkUrl: 'https://vimeo.com/', icon: '🎥' },
+            { name: 'SoundCloud', url: 'https://soundcloud.com/', checkUrl: 'https://soundcloud.com/', icon: '☁️' },
+            { name: 'DeviantArt', url: 'https://deviantart.com/', checkUrl: 'https://www.deviantart.com/', icon: '🎨' },
+            { name: 'About.me', url: 'https://about.me/', checkUrl: 'https://about.me/', icon: '👤' },
+            { name: 'Flickr', url: 'https://flickr.com/people/', checkUrl: 'https://www.flickr.com/people/', icon: '📷' }
           ];
+
+          const results: any[] = [];
           
-          // Note: Real username search requires checking HTTP status codes which might be blocked by CORS/Rate limits if done from server without proxies.
-          // This implementation assumes validity or should ideally use specific APIs.
-          // For now, we return "Potential" profiles based on structure.
-          
-          const entities = socialPlatforms.map((platform, index) => ({
-             id: `social-${username}-${index}-${Date.now()}`,
+          // Concurrent checks with batching
+          const batchSize = 5;
+          for (let i = 0; i < platforms.length; i += batchSize) {
+             const batch = platforms.slice(i, i + batchSize);
+             const promises = batch.map(async (p) => {
+                 try {
+                     const targetUrl = p.checkUrl + username;
+                     const response = await fetch(targetUrl, { 
+                         method: 'HEAD',
+                         redirect: 'follow', // Follow redirects for accurate status
+                         signal: AbortSignal.timeout(5000) // 5s timeout
+                     }).catch(() => null); // Catch network errors
+
+                     // Basic status check (200 OK usually means exists, 404 means free/banned)
+                     // Note: Many sites block HEAD or require headers, this is "best effort"
+                     if (response && response.status === 200) {
+                         return { ...p, found: true, actualUrl: p.url + username };
+                     }
+                 } catch (e) {
+                     // Ignore errors
+                 }
+                 return null;
+             });
+             
+             const batchResults = await Promise.all(promises);
+             results.push(...batchResults.filter(r => r !== null));
+             
+             // Tiny delay to avoid aggressive rate limiting
+             await new Promise(r => setTimeout(r, 500)); 
+          }
+
+          if (results.length === 0) {
+              return { success: true, entities: [], links: [], metadata: { message: 'No profiles found (or blocked)' } };
+          }
+
+          const entities = results.map(p => ({
+             id: `social-${username}-${p.name}-${Date.now()}`,
              type: 'social_profile',
-             value: `${platform.icon} ${platform.name}: ${username}`,
+             value: p.name,
              data: { 
-                 label: `${platform.name}: ${username}`, 
+                 label: `${p.name}: ${username}`, 
                  type: 'social_profile', 
                  color: '#06b6d4',
-                 url: platform.url + username
+                 url: p.actualUrl,
+                 platform: p.name
              },
-             properties: { platform: platform.name, username, url: platform.url + username, status: 'potential' }
+             properties: { platform: p.name, username, url: p.actualUrl, status: 'verified' }
           }));
 
           const links = entities.map(entity => ({
              id: `link-${input.id}-${entity.id}`,
              source: input.id,
              target: entity.id,
-             label: 'possible profile'
+             label: 'profile found'
           }));
 
           return { success: true, entities, links, metadata: { count: entities.length } };
@@ -443,14 +484,60 @@ export class TransformManager {
     // Security Transforms (placeholders from original file)
     this.registerTransform({
       id: 'security_headers_check',
-      name: 'Security Headers Check',
-      description: 'Analyze HTTP security headers',
+      name: 'Security Headers Analysis',
+      description: 'Check for critical security headers (HSTS, CSP, X-Frame, etc.)',
       category: 'Security',
       inputTypes: ['domain', 'url'],
       outputTypes: ['vulnerability'],
       icon: '🛡️',
       execute: async (input) => {
-        return { success: false, error: 'Not yet implemented - security scan coming soon' };
+        try {
+            const url = input.type === 'url' ? input.value : `https://${input.value}`;
+            const response = await fetch(url, { method: 'HEAD' });
+            const headers = response.headers;
+            
+            const vulnerabilities: any[] = [];
+            
+            const criticalHeaders = [
+                { name: 'Strict-Transport-Security', missingSeverity: 'Medium' },
+                { name: 'Content-Security-Policy', missingSeverity: 'High' },
+                { name: 'X-Frame-Options', missingSeverity: 'Medium' },
+                { name: 'X-Content-Type-Options', missingSeverity: 'Low' },
+                { name: 'Referrer-Policy', missingSeverity: 'Low' }
+            ];
+
+            criticalHeaders.forEach(check => {
+                if (!headers.has(check.name.toLowerCase())) {
+                    vulnerabilities.push({
+                        id: `vuln-${check.name}-${Date.now()}`,
+                        type: 'vulnerability',
+                        value: `Missing ${check.name}`,
+                        data: {
+                            label: `Missing ${check.name}`,
+                            severity: check.missingSeverity,
+                            description: `The ${check.name} header is missing, which could expose the site to attacks.`,
+                            color: check.missingSeverity === 'High' ? '#ef4444' : '#f59e0b'
+                        }
+                    });
+                }
+            });
+
+            const links = vulnerabilities.map(v => ({
+                id: `link-${input.id}-${v.id}`,
+                source: input.id,
+                target: v.id,
+                label: 'vulnerability'
+            }));
+
+            return { 
+                success: true, 
+                entities: vulnerabilities, 
+                links, 
+                metadata: { score: 100 - (vulnerabilities.length * 20) } 
+            };
+        } catch (e: any) {
+            return { success: false, error: 'Failed to access site headers: ' + e.message };
+        }
       }
     });
 
