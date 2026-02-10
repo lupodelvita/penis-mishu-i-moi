@@ -47,10 +47,19 @@ export class NmapService {
    */
   async isNmapInstalled(): Promise<boolean> {
     try {
+      // Try standard command first
       await execAsync('nmap --version');
       return true;
-    } catch {
-      return false;
+    } catch (e1) {
+        console.warn('[NmapService] "nmap" not found in PATH, trying /usr/bin/nmap', e1);
+        try {
+            // Try absolute path common in Debian/Ubuntu
+            await execAsync('/usr/bin/nmap --version');
+            return true;
+        } catch (e2) {
+             console.error('[NmapService] Nmap not found. PATH:', process.env.PATH, 'Error:', e2);
+             return false;
+        }
     }
   }
 

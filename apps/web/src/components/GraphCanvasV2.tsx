@@ -1,4 +1,3 @@
-'use client';
 import { useEffect, useRef, useState } from 'react';
 import cytoscape, { Core, EventObject, NodeSingular } from 'cytoscape';
 import fcose from 'cytoscape-fcose';
@@ -9,11 +8,11 @@ import { useGraphStore } from '@/store';
 import NmapScanModal from './NmapScanModal';
 import ViewToggle from './ViewToggle';
 import dynamic from 'next/dynamic';
+
+// Dynamic imports to prevent SSR issues and build crashes
 const MapCanvas = dynamic(() => import('./MapCanvas'), { ssr: false });
-if (typeof window !== 'undefined') {
-  cytoscape.use(fcose);
-  cytoscape.use(nodeHtmlLabel);
-}
+
+// No global registration for extensions to avoid "Super constructor null" error
 interface GraphCanvasProps {
   onEntitySelect?: (entityId: string | null) => void;
   onOpenTerminal?: (command: string) => void;
@@ -39,6 +38,18 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
   useEffect(() => {
     if (currentView !== 'graph' || !containerRef.current || isInitializedRef.current) return;
     
+    // Register extensions safely
+    try {
+      if (!cytoscape.prototype.hasExtension('layout', 'fcose')) {
+        cytoscape.use(fcose);
+      }
+      if (!cytoscape.prototype.hasExtension('renderer', 'nodeHtmlLabel')) {
+        cytoscape.use(nodeHtmlLabel);
+      }
+    } catch (e) {
+      console.warn('Cytoscape extension registration warning:', e);
+    }
+
     isInitializedRef.current = true;
     const cy = cytoscape({
       container: containerRef.current,
