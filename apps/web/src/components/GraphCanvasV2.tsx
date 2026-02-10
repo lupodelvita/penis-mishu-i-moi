@@ -129,7 +129,6 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
           },
         },
       ],
-      ],
       // User requested Tree layout (like Nmap topology)
       layout: { 
         name: 'breadthfirst', 
