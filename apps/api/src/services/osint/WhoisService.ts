@@ -39,40 +39,88 @@ export class WhoisService {
    * Perform WHOIS lookup using IP2WHOIS API
    */
   async whoisLookup(domain: string): Promise<WhoisResult | null> {
-    if (!this.ip2whoisApiKey) {
-      console.warn('[WhoisService] IP2WHOIS_API_KEY not configured');
-      return null;
+    // Try API first if key exists
+    if (this.ip2whoisApiKey) {
+      try {
+        const url = `${this.ip2whoisUrl}?key=${this.ip2whoisApiKey}&domain=${domain}`;
+        const response = await fetch(url);
+        
+        if (response.ok) {
+          const data: any = await response.json();
+          return {
+            domain: data.domain || domain,
+            registrar: data.registrar,
+            registrant: {
+              name: data.registrant?.name,
+              organization: data.registrant?.organization,
+              email: data.registrant?.email,
+            },
+            createdDate: data.create_date,
+            expiresDate: data.expire_date,
+            updatedDate: data.update_date,
+            nameServers: data.nameservers || [],
+            dnssec: data.dnssec === 'yes',
+            status: data.status || [],
+          };
+        }
+      } catch (error) {
+        console.warn('[WhoisService] IP2WHOIS API failed, falling back to system whois', error);
+      }
     }
 
+    // Fallback to system WHOIS
+    return this.systemWhoisLookup(domain);
+  }
+
+  /**
+   * Execute system whois command and parse output
+   */
+  private async systemWhoisLookup(domain: string): Promise<WhoisResult | null> {
     try {
-      const url = `${this.ip2whoisUrl}?key=${this.ip2whoisApiKey}&domain=${domain}`;
-      const response = await fetch(url);
+      const { exec } = require('child_process');
+      const { promisify } = require('util');
+      const execAsync = promisify(exec);
+
+      // Timeout 10s
+      const { stdout } = await execAsync(`whois ${domain}`, { timeout: 10000 });
       
-      if (!response.ok) {
-        console.error(`[WhoisService] IP2WHOIS API error: ${response.status}`);
-        return null;
+      const text = stdout as string;
+      
+      // Basic Regex Parsing for common fields
+      const registrar = text.match(/Registrar:\s*(.+)/i)?.[1]?.trim() || 
+                        text.match(/Registrar Name:\s*(.+)/i)?.[1]?.trim();
+                        
+      const createdDate = text.match(/Creation Date:\s*(.+)/i)?.[1]?.trim() || 
+                          text.match(/Registered on:\s*(.+)/i)?.[1]?.trim();
+                          
+      const expiresDate = text.match(/Registry Expiry Date:\s*(.+)/i)?.[1]?.trim() || 
+                          text.match(/Expires on:\s*(.+)/i)?.[1]?.trim();
+                          
+      const updatedDate = text.match(/Updated Date:\s*(.+)/i)?.[1]?.trim() || 
+                          text.match(/Last Updated on:\s*(.+)/i)?.[1]?.trim();
+
+      const nameServers: string[] = [];
+      const nsRegex = /Name Server:\s*(.+)/gi;
+      let match;
+      while ((match = nsRegex.exec(text)) !== null) {
+        nameServers.push(match[1].trim().toLowerCase());
       }
 
-      const data: any = await response.json();
-
-      // Transform IP2WHOIS response to our format
       return {
-        domain: data.domain || domain,
-        registrar: data.registrar,
+        domain,
+        registrar,
+        createdDate,
+        expiresDate,
+        updatedDate,
+        nameServers: [...new Set(nameServers)], // unique
+        status: ['Active'], // Assumption if whois succeeds
         registrant: {
-          name: data.registrant?.name,
-          organization: data.registrant?.organization,
-          email: data.registrant?.email,
-        },
-        createdDate: data.create_date,
-        expiresDate: data.expire_date,
-        updatedDate: data.update_date,
-        nameServers: data.nameservers || [],
-        dnssec: data.dnssec === 'yes',
-        status: data.status || [],
+           organization: text.match(/Registrant Organization:\s*(.+)/i)?.[1]?.trim()
+        }
       };
+
     } catch (error) {
-      console.error('[WhoisService] WHOIS lookup failed:', error);
+      console.error('[WhoisService] System WHOIS failed:', error);
       return null;
     }
   }
