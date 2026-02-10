@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import cytoscape, { Core, EventObject, NodeSingular } from 'cytoscape';
-import fcose from 'cytoscape-fcose';
-import nodeHtmlLabel from 'cytoscape-node-html-label';
+// Extensions managed by cytoscapeHelper
 import { EntityType } from '@nodeweaver/shared-types';
 import { Trash2, Link2, ZoomIn, ZoomOut, Maximize2, X, Wifi, Terminal } from 'lucide-react';
 import { useGraphStore } from '@/store';
@@ -12,8 +11,9 @@ import dynamic from 'next/dynamic';
 // Dynamic imports to prevent SSR issues and build crashes
 const MapCanvas = dynamic(() => import('./MapCanvas'), { ssr: false });
 
-// Module-level flag to track extension registration (prevent double registration crash)
-let extensionsRegistered = false;
+import { registerCytoscapeExtensions } from '@/utils/cytoscapeHelper';
+
+// Module-level flag removed (handled in helper)
 
 interface GraphCanvasProps {
   onEntitySelect?: (entityId: string | null) => void;
@@ -41,15 +41,8 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
     if (currentView !== 'graph' || !containerRef.current || isInitializedRef.current) return;
     
     // Register extensions safely using flag
-    if (!extensionsRegistered) {
-      try {
-        cytoscape.use(fcose);
-        cytoscape.use(nodeHtmlLabel);
-        extensionsRegistered = true;
-      } catch (e) {
-        console.warn('Cytoscape extension registration warning:', e);
-      }
-    }
+    // Register extensions safely
+    registerCytoscapeExtensions();
 
     isInitializedRef.current = true;
     const cy = cytoscape({

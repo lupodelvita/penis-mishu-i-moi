@@ -291,7 +291,7 @@ export class WhoisService {
     // Nameservers
     if (whois?.nameServers) {
       for (const ns of whois.nameServers.slice(0, 4)) {
-        const nsId = `ns-${ns.replace(/\./g, '-')}`;
+        const nsId = `ns-${ns}`;
         entities.push({
           id: nsId,
           type: 'domain',
@@ -315,7 +315,7 @@ export class WhoisService {
     // A records (IP addresses)
     if (dns?.a) {
       for (const ip of dns.a) {
-        const ipId = `ip-${ip.replace(/\./g, '-')}`;
+        const ipId = `ip-${ip}`;
         entities.push({
           id: ipId,
           type: 'ip_address',
@@ -339,7 +339,7 @@ export class WhoisService {
     // MX records (Mail servers)
     if (dns?.mx) {
       for (const mx of dns.mx.slice(0, 3)) {
-        const mxId = `mx-${mx.exchange.replace(/\./g, '-')}`;
+        const mxId = `mx-${mx.exchange}`;
         entities.push({
           id: mxId,
           type: 'domain',

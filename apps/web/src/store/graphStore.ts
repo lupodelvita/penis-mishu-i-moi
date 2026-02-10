@@ -61,12 +61,19 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
   
   setGraph: (graph) => set({ currentGraph: graph }),
   
-  addEntity: (entity) => set((state) => ({
-    currentGraph: state.currentGraph ? {
-      ...state.currentGraph,
-      entities: [...state.currentGraph.entities, entity],
-    } : null,
-  })),
+  addEntity: (entity) => set((state) => {
+    if (!state.currentGraph) return {};
+    // Deduplicate: Don't add if ID exists
+    if (state.currentGraph.entities.some(e => e.id === entity.id)) {
+        return {}; 
+    }
+    return {
+      currentGraph: {
+        ...state.currentGraph,
+        entities: [...state.currentGraph.entities, entity],
+      }
+    };
+  }),
   
   updateEntity: (id, updates) => set((state) => ({
     currentGraph: state.currentGraph ? {
@@ -86,12 +93,19 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
     selectedEntities: state.selectedEntities.filter(e => e.id !== id),
   })),
   
-  addLink: (link) => set((state) => ({
-    currentGraph: state.currentGraph ? {
-      ...state.currentGraph,
-      links: [...state.currentGraph.links, link],
-    } : null,
-  })),
+  addLink: (link) => set((state) => {
+    if (!state.currentGraph) return {};
+    // Deduplicate: Don't add if ID exists
+    if (state.currentGraph.links.some(l => l.id === link.id)) {
+        return {};
+    }
+    return {
+      currentGraph: {
+        ...state.currentGraph,
+        links: [...state.currentGraph.links, link],
+      }
+    };
+  }),
   
   deleteLink: (id) => set((state) => ({
     currentGraph: state.currentGraph ? {
