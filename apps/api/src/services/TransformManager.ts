@@ -155,7 +155,7 @@ export class TransformManager {
           }
 
           const entities = addresses.map(ip => ({
-            id: `ip-${ip}-${Date.now()}`,
+            id: `ip-${ip}`, // Deterministic ID to prevent duplicates
             type: 'ip_address',
             value: ip,
             data: { label: ip, type: 'ip_address', color: '#f59e0b' },
@@ -464,7 +464,33 @@ export class TransformManager {
       outputTypes: ['domain'],
       icon: '📧',
       execute: async (input) => {
-        return { success: false, error: 'Not yet implemented - coming soon' };
+        try {
+          const domain = input.value;
+          const records = await dns.resolveMx(domain);
+          
+          if (!records || records.length === 0) {
+            return { success: false, error: 'No MX records found' };
+          }
+
+          const entities = records.map(record => ({
+            id: `domain-${record.exchange}`, // Deterministic ID
+            type: 'domain',
+            value: record.exchange,
+            data: { label: record.exchange, type: 'domain', color: '#3b82f6' },
+            properties: { priority: record.priority, source: 'MX Record' }
+          }));
+
+          const links = entities.map(entity => ({
+            id: `link-${input.id}-${entity.id}`,
+            source: input.id,
+            target: entity.id,
+            label: `MX (prio ${entity.properties.priority})`
+          }));
+
+          return { success: true, entities, links, metadata: { count: records.length } };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
       }
     });
 

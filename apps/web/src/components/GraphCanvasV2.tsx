@@ -129,7 +129,15 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
           },
         },
       ],
-      layout: { name: 'fcose', randomize: false, animate: false } as any,
+      ],
+      // User requested Tree layout (like Nmap topology)
+      layout: { 
+        name: 'breadthfirst', 
+        directed: true, 
+        padding: 50, 
+        spacingFactor: 1.5,
+        animate: true 
+      } as any,
     });
     cyRef.current = cy;
     setTimeout(() => {
@@ -146,39 +154,59 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
         valignBox: 'center',
         cssClass: 'node-html-card',
         tpl: function(data: any) {
-          const typeLabel = data.type?.replace(/_/g, ' ').toUpperCase() || 'CUSTOM';
+          // Safety checks to prevent "Super constructor null" or other rendering crashes
+          if (!data) return '';
+          
+          const typeLabel = (data.type || 'CUSTOM').replace(/_/g, ' ').toUpperCase();
           const allFields: Array<{label: string; value: string}> = [];
-          const idShort = data.id ? data.id.substring(data.id.lastIndexOf('-') + 1, data.id.lastIndexOf('-') + 9) : '';
+          
+          // Safer ID extraction
+          const idShort = (data.id && typeof data.id === 'string') 
+            ? data.id.substring(data.id.lastIndexOf('-') + 1, data.id.lastIndexOf('-') + 9) 
+            : '';
+            
           if (idShort) allFields.push({ label: 'ID', value: idShort });
-          if (data && data.properties) {
-            if (data.properties.port) allFields.push({ label: 'PORT', value: String(data.properties.port) });
-            if (data.properties.service) allFields.push({ label: 'SERVICE', value: data.properties.service });
-            if (data.properties.version) allFields.push({ label: 'VERSION', value: data.properties.version });
-            if (data.properties.state) allFields.push({ label: 'STATE', value: data.properties.state });
-            if (data.properties.ip) allFields.push({ label: 'IP', value: data.properties.ip });
-            if (data.properties.country) allFields.push({ label: 'COUNTRY', value: data.properties.country });
-          }
-          if (data.data && typeof data.data === 'object') {
-            if (data.data.port) allFields.push({ label: 'PORT', value: String(data.data.port) });
-            if (data.data.service) allFields.push({ label: 'SERVICE', value: data.data.service });
-          }
+
+          // Safe property access
+          const props = data.properties || {};
+          if (props.port) allFields.push({ label: 'PORT', value: String(props.port) });
+          if (props.service) allFields.push({ label: 'SERVICE', value: String(props.service) });
+          if (props.version) allFields.push({ label: 'VERSION', value: String(props.version) });
+          if (props.state) allFields.push({ label: 'STATE', value: String(props.state) });
+          if (props.ip) allFields.push({ label: 'IP', value: String(props.ip) });
+          if (props.country) allFields.push({ label: 'COUNTRY', value: String(props.country) });
+
+          // Safe data object access
+          const d = data.data || {};
+          if (d.port) allFields.push({ label: 'PORT', value: String(d.port) });
+          if (d.service) allFields.push({ label: 'SERVICE', value: String(d.service) });
+          
+          // Platform/Username specific
+          if (props.platform) allFields.push({ label: 'PLATFORM', value: String(props.platform) });
+          if (props.status) allFields.push({ label: 'STATUS', value: String(props.status) });
+
           const displayFields = allFields.slice(0, Math.min(3, allFields.length));
           if (displayFields.length === 0) {
             displayFields.push({ label: 'TYPE', value: typeLabel });
           }
+          
           const fieldsHtml = displayFields.map(f => 
             `<div class="info-row">
               <span class="info-label">${f.label}</span>
               <span class="info-value">${f.value}</span>
             </div>`
           ).join('');
+          
+          const color = data.color || '#6b7280';
+          const label = data.label || data.value || 'Unknown';
+          
           return `
-            <div class="node-card" style="border-color: ${data.color || '#6b7280'}">
-              <div class="card-header" style="background: ${data.color || '#6b7280'}22">
-                <span style="color: ${data.color || '#9ca3af'}">${typeLabel}</span>
+            <div class="node-card" style="border-color: ${color}">
+              <div class="card-header" style="background: ${color}22">
+                <span style="color: ${color}">${typeLabel}</span>
               </div>
               <div class="card-body">
-                <div class="main-value">${data.label || data.value || 'Unknown'}</div>
+                <div class="main-value">${label}</div>
                 <div class="info-box">
                   ${fieldsHtml}
                 </div>
