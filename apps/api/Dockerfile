@@ -1,21 +1,22 @@
-FROM node:22-alpine
+FROM node:22-bullseye-slim
 
-# Install OSINT system dependencies
-RUN apk add --no-cache \
+# Install OSINT system dependencies and OpenSSL for Prisma
+RUN apt-get update && apt-get install -y \
     nmap \
-    nmap-scripts \
     whois \
-    bind-tools \
+    dnsutils \
     curl \
-    git
+    git \
+    openssl \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-
-# Copy all source files (.dockerignore will exclude unwanted files)
+# Copy all source files
 COPY . .
 
-# Install dependencies (including devDependencies for build)
+# Install dependencies
 RUN npm install
 
 # Build TypeScript
