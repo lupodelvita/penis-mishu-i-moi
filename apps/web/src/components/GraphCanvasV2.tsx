@@ -381,6 +381,49 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
     setNewEntityName(`Новый ${entityType}`);
     setShowNameDialog(true);
   };
+
+  // Link mode helpers
+  const startLinkMode = (node: NodeSingular) => {
+    if (!node || !cyRef.current) return;
+    linkModeRef.current = true;
+    linkSourceRef.current = node;
+    try { node.addClass('link-source'); } catch (e) { /* ignore */ }
+    setLinkMode(true);
+  };
+
+  const handleStartLink = () => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    // If already in link mode, cancel it
+    if (linkModeRef.current) {
+      handleCancelLink();
+      return;
+    }
+    const selected = cy.$('node:selected');
+    if (selected.length === 1) {
+      startLinkMode(selected[0]);
+    }
+  };
+
+  const handleCancelLink = () => {
+    if (linkSourceRef.current) {
+      try { linkSourceRef.current.removeClass('link-source'); } catch (e) { /* ignore */ }
+      linkSourceRef.current = null;
+    }
+    linkModeRef.current = false;
+    setLinkMode(false);
+  };
+
+  const handleDelete = () => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const selected = cy.$(':selected');
+    selected.forEach((ele: any) => {
+      if (ele.isNode && ele.isNode()) deleteEntity(ele.id());
+      if (ele.isEdge && ele.isEdge()) deleteLink(ele.id());
+    });
+    onEntitySelect?.(null);
+  };
   const confirmAddEntity = () => {
       if (!pendingEntity) return;
       const defaultName = `Новый ${pendingEntity.type}`;
