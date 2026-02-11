@@ -29,7 +29,8 @@
     "setup": "npm install && npm run docker:up && npm run db:migrate",
     "setup:desktop": "cd apps/desktop && npm install",
     "db:migrate": "cd apps/api && npm run db:migrate",
-    "db:seed": "cd apps/api && npm run db:seed"
+    "db:seed": "cd apps/api && npm run db:seed",
+    "validate:transform-ids": "node ./scripts/transform-id-check.js"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

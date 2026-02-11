@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import cytoscape, { Core, EventObject, NodeSingular } from 'cytoscape';
 // Extensions managed by cytoscapeHelper
+import { useEffect, useRef, useState } from 'react';
+import cytoscape, { Core, EventObject, NodeSingular } from 'cytoscape';
+// Extensions managed by cytoscapeHelper
 import { EntityType } from '@nodeweaver/shared-types';
 import { Trash2, Link2, ZoomIn, ZoomOut, Maximize2, X, Wifi, Terminal } from 'lucide-react';
 import { useGraphStore } from '@/store';
@@ -40,253 +43,258 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
   useEffect(() => {
     if (currentView !== 'graph' || !containerRef.current || isInitializedRef.current) return;
     
-    // Register extensions safely using flag
-    // Register extensions safely
-    registerCytoscapeExtensions();
+    // Register extensions safely (async, client only) and then initialize Cytoscape
+    (async () => {
+      try {
+        await registerCytoscapeExtensions();
+      } catch (e) {
+        console.warn('[GraphCanvas] registerCytoscapeExtensions failed:', e);
+      }
 
-    isInitializedRef.current = true;
-    const cy = cytoscape({
-      container: containerRef.current,
-      style: [
-        {
-          selector: 'node',
-          style: {
-            'shape': 'roundrectangle',
-            'width': 180,
-            'height': 100,
-            'background-color': '#1a1a24',
-            'border-width': 2,
-            'border-color': 'data(color)',
-            'border-style': 'solid',
-            'label': 'data(label)',
-            'text-valign': 'center',
-            'text-halign': 'center',
-            'color': '#e5e7eb',
-            'font-size': '13px',
-            'font-weight': 500,
-            'text-wrap': 'wrap',
-            'text-max-width': '160px',
-            'text-outline-color': '#0a0a0f',
-            'text-outline-width': 2,
-          },
-        },
-        {
-          selector: 'node:selected',
-          style: {
-            'border-width': 3,
-            'border-color': '#10b981',
-          },
-        },
-        {
-          selector: 'node.link-source',
-          style: {
-            'border-width': 4,
-            'border-color': '#22c55e', // green-500
-            'border-style': 'dashed',
-          },
-        },
-        {
-          selector: 'node.link-target-hover',
-          style: {
-            'border-width': 3,
-            'border-color': '#10b981',
-          },
-        },
-        {
-          selector: 'edge',
-          style: {
-            'width': 2,
-            'line-color': '#6366f1',
-            'line-opacity': 0.6,
-            'target-arrow-color': '#6366f1',
-            'target-arrow-shape': 'triangle',
-            'curve-style': 'bezier',
-            'label': 'data(label)',
-            'font-size': '10px',
-            'text-rotation': 'autorotate',
-            'text-margin-y': -10,
-            'color': '#9ca3af',
-            'text-background-color': '#0a0a0f',
-            'text-background-opacity': 0.8,
-            'text-background-padding': '4px',
-            'text-outline-color': '#000',
-            'text-outline-width': 0.5,
-          },
-        },
-        {
-          selector: 'edge:selected',
-          style: {
-            'line-color': '#667eea',
-            'target-arrow-color': '#667eea',
-            'width': 3,
-          },
-        },
-      ],
-      // User requested Tree layout (like Nmap topology)
-      layout: { 
-        name: 'breadthfirst', 
-        directed: true, 
-        padding: 50, 
-        spacingFactor: 1.5,
-        animate: true 
-      } as any,
-    });
-    cyRef.current = cy;
-    setTimeout(() => {
-      cy.resize();
-      // cy.fit(undefined, 50); // AUTO-ZOOM DISABLED
-      console.log('[GraphCanvas] Cytoscape init complete. Auto-zoom should be OFF.');
-    }, 100);
-
-    // Safe extension initialization
-    try {
-        (cy as any).nodeHtmlLabel([
+      isInitializedRef.current = true;
+      const cy = cytoscape({
+        container: containerRef.current,
+        style: [
           {
-            query: 'node',
-            halign: 'center',
-            valign: 'center',
-            halignBox: 'center',
-            valignBox: 'center',
-            cssClass: 'node-html-card',
-            tpl: function(data: any) {
-          // Safety checks to prevent "Super constructor null" or other rendering crashes
-          if (!data) return '';
-          
-          const typeLabel = (data.type || 'CUSTOM').replace(/_/g, ' ').toUpperCase();
-          const allFields: Array<{label: string; value: string}> = [];
-          
-          // Safer ID extraction
-          const idShort = (data.id && typeof data.id === 'string') 
-            ? data.id.substring(data.id.lastIndexOf('-') + 1, data.id.lastIndexOf('-') + 9) 
-            : '';
+            selector: 'node',
+            style: {
+              'shape': 'roundrectangle',
+              'width': 180,
+              'height': 100,
+              'background-color': '#1a1a24',
+              'border-width': 2,
+              'border-color': 'data(color)',
+              'border-style': 'solid',
+              'label': 'data(label)',
+              'text-valign': 'center',
+              'text-halign': 'center',
+              'color': '#e5e7eb',
+              'font-size': '13px',
+              'font-weight': 500,
+              'text-wrap': 'wrap',
+              'text-max-width': '160px',
+              'text-outline-color': '#0a0a0f',
+              'text-outline-width': 2,
+            },
+          },
+          {
+            selector: 'node:selected',
+            style: {
+              'border-width': 3,
+              'border-color': '#10b981',
+            },
+          },
+          {
+            selector: 'node.link-source',
+            style: {
+              'border-width': 4,
+              'border-color': '#22c55e', // green-500
+              'border-style': 'dashed',
+            },
+          },
+          {
+            selector: 'node.link-target-hover',
+            style: {
+              'border-width': 3,
+              'border-color': '#10b981',
+            },
+          },
+          {
+            selector: 'edge',
+            style: {
+              'width': 2,
+              'line-color': '#6366f1',
+              'line-opacity': 0.6,
+              'target-arrow-color': '#6366f1',
+              'target-arrow-shape': 'triangle',
+              'curve-style': 'bezier',
+              'label': 'data(label)',
+              'font-size': '10px',
+              'text-rotation': 'autorotate',
+              'text-margin-y': -10,
+              'color': '#9ca3af',
+              'text-background-color': '#0a0a0f',
+              'text-background-opacity': 0.8,
+              'text-background-padding': '4px',
+              'text-outline-color': '#000',
+              'text-outline-width': 0.5,
+            },
+          },
+          {
+            selector: 'edge:selected',
+            style: {
+              'line-color': '#667eea',
+              'target-arrow-color': '#667eea',
+              'width': 3,
+            },
+          },
+        ],
+        // User requested Tree layout (like Nmap topology)
+        layout: { 
+          name: 'breadthfirst', 
+          directed: true, 
+          padding: 50, 
+          spacingFactor: 1.5,
+          animate: true 
+        } as any,
+      });
+      cyRef.current = cy;
+      setTimeout(() => {
+        cy.resize();
+        // cy.fit(undefined, 50); // AUTO-ZOOM DISABLED
+        console.log('[GraphCanvas] Cytoscape init complete. Auto-zoom should be OFF.');
+      }, 100);
+
+      // Safe extension initialization for nodeHtmlLabel (if available)
+      try {
+          (cy as any).nodeHtmlLabel([
+            {
+              query: 'node',
+              halign: 'center',
+              valign: 'center',
+              halignBox: 'center',
+              valignBox: 'center',
+              cssClass: 'node-html-card',
+              tpl: function(data: any) {
+            // Safety checks to prevent "Super constructor null" or other rendering crashes
+            if (!data) return '';
             
-          if (idShort) allFields.push({ label: 'ID', value: idShort });
+            const typeLabel = (data.type || 'CUSTOM').replace(/_/g, ' ').toUpperCase();
+            const allFields: Array<{label: string; value: string}> = [];
+            
+            // Safer ID extraction
+            const idShort = (data.id && typeof data.id === 'string') 
+              ? data.id.substring(data.id.lastIndexOf('-') + 1, data.id.lastIndexOf('-') + 9) 
+              : '';
+              
+            if (idShort) allFields.push({ label: 'ID', value: idShort });
 
-          // Safe property access
-          const props = data.properties || {};
-          if (props.port) allFields.push({ label: 'PORT', value: String(props.port) });
-          if (props.service) allFields.push({ label: 'SERVICE', value: String(props.service) });
-          if (props.version) allFields.push({ label: 'VERSION', value: String(props.version) });
-          if (props.state) allFields.push({ label: 'STATE', value: String(props.state) });
-          if (props.ip) allFields.push({ label: 'IP', value: String(props.ip) });
-          if (props.country) allFields.push({ label: 'COUNTRY', value: String(props.country) });
+            // Safe property access
+            const props = data.properties || {};
+            if (props.port) allFields.push({ label: 'PORT', value: String(props.port) });
+            if (props.service) allFields.push({ label: 'SERVICE', value: String(props.service) });
+            if (props.version) allFields.push({ label: 'VERSION', value: String(props.version) });
+            if (props.state) allFields.push({ label: 'STATE', value: String(props.state) });
+            if (props.ip) allFields.push({ label: 'IP', value: String(props.ip) });
+            if (props.country) allFields.push({ label: 'COUNTRY', value: String(props.country) });
 
-          // Safe data object access
-          const d = data.data || {};
-          if (d.port) allFields.push({ label: 'PORT', value: String(d.port) });
-          if (d.service) allFields.push({ label: 'SERVICE', value: String(d.service) });
-          
-          // Platform/Username specific
-          if (props.platform) allFields.push({ label: 'PLATFORM', value: String(props.platform) });
-          if (props.status) allFields.push({ label: 'STATUS', value: String(props.status) });
+            // Safe data object access
+            const d = data.data || {};
+            if (d.port) allFields.push({ label: 'PORT', value: String(d.port) });
+            if (d.service) allFields.push({ label: 'SERVICE', value: String(d.service) });
+            
+            // Platform/Username specific
+            if (props.platform) allFields.push({ label: 'PLATFORM', value: String(props.platform) });
+            if (props.status) allFields.push({ label: 'STATUS', value: String(props.status) });
 
-          const displayFields = allFields.slice(0, Math.min(3, allFields.length));
-          if (displayFields.length === 0) {
-            displayFields.push({ label: 'TYPE', value: typeLabel });
-          }
-          
-          const fieldsHtml = displayFields.map(f => 
-            `<div class="info-row">
-              <span class="info-label">${f.label}</span>
-              <span class="info-value">${f.value}</span>
-            </div>`
-          ).join('');
-          
-          const color = data.color || '#6b7280';
-          const label = data.label || data.value || 'Unknown';
-          
-          return `
-            <div class="node-card" style="border-color: ${color}">
-              <div class="card-header" style="background: ${color}22">
-                <span style="color: ${color}">${typeLabel}</span>
-              </div>
-              <div class="card-body">
-                <div class="main-value">${label}</div>
-                <div class="info-box">
-                  ${fieldsHtml}
+            const displayFields = allFields.slice(0, Math.min(3, allFields.length));
+            if (displayFields.length === 0) {
+              displayFields.push({ label: 'TYPE', value: typeLabel });
+            }
+            
+            const fieldsHtml = displayFields.map(f => 
+              `<div class="info-row">
+                <span class="info-label">${f.label}</span>
+                <span class="info-value">${f.value}</span>
+              </div>`
+            ).join('');
+            
+            const color = data.color || '#6b7280';
+            const label = data.label || data.value || 'Unknown';
+            
+            return `
+              <div class="node-card" style="border-color: ${color}">
+                <div class="card-header" style="background: ${color}22">
+                  <span style="color: ${color}">${typeLabel}</span>
+                </div>
+                <div class="card-body">
+                  <div class="main-value">${label}</div>
+                  <div class="info-box">
+                    ${fieldsHtml}
+                  </div>
                 </div>
               </div>
-            </div>
-          `;
-        }
-      }
-    ]);
-    } catch (e) {
-      console.warn('[GraphCanvas] nodeHtmlLabel initialization failed:', e);
-    }
-
-    // Syntax fix verified - Block cleaned
-    cy.on('tap', 'node', (evt: EventObject) => {
-      const node = evt.target;
-      if (linkModeRef.current && linkSourceRef.current) {
-        const sourceId = linkSourceRef.current.id();
-        const targetId = node.id();
-        if (sourceId !== targetId) {
-          addLink({
-            id: `edge-${Date.now()}`,
-            source: sourceId,
-            target: targetId,
-            label: 'связан с'
-          });
-        }
-        linkSourceRef.current.removeClass('link-source');
-        linkSourceRef.current = null;
-        linkModeRef.current = false;
-        setLinkMode(false);
-      } else {
-        onEntitySelect?.(node.id());
-      }
-    });
-    cy.on('tap', 'edge', () => {
-        onEntitySelect?.(null); // Deselect nodes for now, or handle edge selection
-    });
-    cy.on('tap', (evt: EventObject) => {
-      if (evt.target === cy) {
-        onEntitySelect?.(null);
-        setContextMenu(null);
-        clearSelection();
-      }
-    });
-    cy.on('cxttap', 'node', (evt: EventObject) => {
-      evt.preventDefault();
-      setContextMenu({ x: evt.renderedPosition.x, y: evt.renderedPosition.y, target: evt.target });
-    });
-    cy.on('dragfree', 'node', () => {
-    });
-    cy.on('mouseover', 'node', (evt: EventObject) => {
-      if (linkModeRef.current && linkSourceRef.current && linkSourceRef.current.id() !== evt.target.id()) {
-        evt.target.addClass('link-target-hover');
-      }
-    });
-    cy.on('mouseout', 'node', (evt: EventObject) => {
-      evt.target.removeClass('link-target-hover');
-    });
-    const handleKeyDown = (e: KeyboardEvent) => {
-       if ((e.key === 'Delete' || (e.key === 'Backspace' && e.ctrlKey))) {
-          const selected = cy.$(':selected');
-          selected.forEach(ele => {
-              if(ele.isNode()) deleteEntity(ele.id());
-              if(ele.isEdge()) deleteLink(ele.id());
-          });
-          onEntitySelect?.(null);
-       } else if (e.key === 'Escape') {
-          handleCancelLink();
-       } else if ((e.key === 'l' || e.key === 'L') && !linkModeRef.current) {
-          const selected = cy.$('node:selected');
-          if (selected.length === 1) {
-             startLinkMode(selected[0]);
+            `;
           }
-       }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      if (cyRef.current) {
-        cyRef.current.destroy();
-        cyRef.current = null;
+        }
+      ]);
+      } catch (e) {
+        console.warn('[GraphCanvas] nodeHtmlLabel initialization failed:', e);
       }
-      isInitializedRef.current = false;
-    };
+
+      // Syntax fix verified - Block cleaned
+      cy.on('tap', 'node', (evt: EventObject) => {
+        const node = evt.target;
+        if (linkModeRef.current && linkSourceRef.current) {
+          const sourceId = linkSourceRef.current.id();
+          const targetId = node.id();
+          if (sourceId !== targetId) {
+            addLink({
+              id: `edge-${Date.now()}`,
+              source: sourceId,
+              target: targetId,
+              label: 'связан с'
+            });
+          }
+          linkSourceRef.current.removeClass('link-source');
+          linkSourceRef.current = null;
+          linkModeRef.current = false;
+          setLinkMode(false);
+        } else {
+          onEntitySelect?.(node.id());
+        }
+      });
+      cy.on('tap', 'edge', () => {
+          onEntitySelect?.(null); // Deselect nodes for now, or handle edge selection
+      });
+      cy.on('tap', (evt: EventObject) => {
+        if (evt.target === cy) {
+          onEntitySelect?.(null);
+          setContextMenu(null);
+          clearSelection();
+        }
+      });
+      cy.on('cxttap', 'node', (evt: EventObject) => {
+        evt.preventDefault();
+        setContextMenu({ x: evt.renderedPosition.x, y: evt.renderedPosition.y, target: evt.target });
+      });
+      cy.on('dragfree', 'node', () => {
+      });
+      cy.on('mouseover', 'node', (evt: EventObject) => {
+        if (linkModeRef.current && linkSourceRef.current && linkSourceRef.current.id() !== evt.target.id()) {
+          evt.target.addClass('link-target-hover');
+        }
+      });
+      cy.on('mouseout', 'node', (evt: EventObject) => {
+        evt.target.removeClass('link-target-hover');
+      });
+      const handleKeyDown = (e: KeyboardEvent) => {
+         if ((e.key === 'Delete' || (e.key === 'Backspace' && e.ctrlKey))) {
+            const selected = cy.$(':selected');
+            selected.forEach(ele => {
+                if(ele.isNode()) deleteEntity(ele.id());
+                if(ele.isEdge()) deleteLink(ele.id());
+            });
+            onEntitySelect?.(null);
+         } else if (e.key === 'Escape') {
+            handleCancelLink();
+         } else if ((e.key === 'l' || e.key === 'L') && !linkModeRef.current) {
+            const selected = cy.$('node:selected');
+            if (selected.length === 1) {
+               startLinkMode(selected[0]);
+            }
+         }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+        if (cyRef.current) {
+          cyRef.current.destroy();
+          cyRef.current = null;
+        }
+        isInitializedRef.current = false;
+      };
+    })();
   }, []);
   useEffect(() => {
     const cy = cyRef.current;
@@ -347,47 +355,16 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
             }
         });
     });
+    // Re-run tree (breadthfirst) layout after sync to preserve hierarchy (Nmap-like topology)
+    try {
+      const layout = cy.layout({ name: 'breadthfirst', directed: true, padding: 50, spacingFactor: 1.5, animate: true } as any);
+      layout.run();
+    } catch (e) {
+      console.warn('[GraphCanvas] layout run failed:', e);
+    }
     // cy.fit(undefined, 50); // Disabled dynamic auto-zoom at user request
     console.log('[GraphCanvas] Viewport updated, viewport:', cy.extent());
   }, [currentGraph]);
-  const startLinkMode = (node: NodeSingular) => {
-      linkSourceRef.current = node;
-      linkModeRef.current = true;
-      node.addClass('link-source');
-      setLinkMode(true);
-  };
-  const handleStartLink = () => {
-    const cy = cyRef.current;
-    if (!cy) return;
-    const selected = cy.$('node:selected');
-    if (selected.length === 1) {
-        startLinkMode(selected[0]);
-    } else {
-        alert('Выберите один узел для начала связи');
-    }
-  };
-  const handleCancelLink = () => {
-    if (linkSourceRef.current) {
-      linkSourceRef.current.removeClass('link-source');
-    }
-    linkSourceRef.current = null;
-    linkModeRef.current = false;
-    setLinkMode(false);
-  };
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault(); // Required to allow drop
-  };
-  const handleDelete = () => {
-    const cy = cyRef.current;
-    if (!cy) return;
-    const selected = cy.$(':selected');
-    selected.forEach(ele => {
-        if(ele.isNode()) deleteEntity(ele.id());
-        if(ele.isEdge()) deleteLink(ele.id());
-    });
-    onEntitySelect?.(null);
-  };
-  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const entityType = e.dataTransfer.getData('entityType') as EntityType;
     if (!cyRef.current || !containerRef.current) return;

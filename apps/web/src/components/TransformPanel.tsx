@@ -10,7 +10,7 @@ interface TransformPanelProps {
 const SAMPLE_TRANSFORMS = [
   { id: 'dns_resolve', name: 'Domain to IP', category: 'DNS', icon: '🌐', inputTypes: ['domain'] },
   { id: 'whois_lookup', name: 'WHOIS Lookup', category: 'WHOIS', icon: '🔍', inputTypes: ['domain'] },
-  { id: 'dns_mx_records', name: 'MX Records', category: 'DNS', icon: '📧', inputTypes: ['domain'] },
+  { id: 'dns.mx_records', name: 'MX Records', category: 'DNS', icon: '📧', inputTypes: ['domain'] },
   { id: 'oathnet_breach_check', name: 'Breach Check', category: 'Email', icon: '🔒', inputTypes: ['email_address'] },
   { id: 'username_search', name: 'Username Search', category: 'Social', icon: '👤', inputTypes: ['username', 'person'] },
   { id: 'geo_ip_location', name: 'IP to Location', category: 'Geo', icon: '📍', inputTypes: ['ip_address'] },

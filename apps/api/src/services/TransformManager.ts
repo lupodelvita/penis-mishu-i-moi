@@ -456,7 +456,7 @@ export class TransformManager {
 
     // Additional DNS Transforms (from original file)
     this.registerTransform({
-      id: 'dns_mx_records',
+      id: 'dns.mx_records',
       name: 'MX Records Lookup',
       description: 'Get mail server records for domain',
       category: 'DNS',

@@ -220,4 +220,22 @@ export const BUILTIN_TRANSFORMS = {
   // Geolocation
   IP_TO_LOCATION: 'geo.ip_to_location',
   PHONE_TO_LOCATION: 'geo.phone_to_location',
+  
+  // Additional (registered in TransformManager)
+  NMAP_QUICK: 'nmap_quick_scan',
+  NMAP_FULL: 'nmap_full_scan',
+  SHODAN_LOOKUP: 'shodan_lookup',
+  DNS_RESOLVE: 'dns_resolve',
+  WHOIS_LOOKUP: 'whois_lookup',
+  USERNAME_SEARCH_LEGACY: 'username_search',
+  TECH_STACK_DETECTION: 'tech_stack_detection',
+  SUBDOMAIN_ENUM: 'subdomain_enumeration',
+  OATHNET_BREACH: 'oathnet_breach_check',
+  OATHNET_DISCORD: 'oathnet_discord_lookup',
+  DNS_TXT: 'dns_txt_records',
+  SECURITY_HEADERS: 'security_headers_check',
+  SECURITY_SSL: 'security_ssl_check',
+  CRYPTO_BTC: 'crypto_btc_balance',
+  CRYPTO_ETH: 'crypto_eth_balance',
+  GEO_IP_LOCATION: 'geo_ip_location',
 } as const;
