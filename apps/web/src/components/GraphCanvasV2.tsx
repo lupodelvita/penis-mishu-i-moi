@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import cytoscape, { Core, EventObject, NodeSingular } from 'cytoscape';
 // Extensions managed by cytoscapeHelper
-import { useEffect, useRef, useState } from 'react';
-import cytoscape, { Core, EventObject, NodeSingular } from 'cytoscape';
-// Extensions managed by cytoscapeHelper
 import { EntityType } from '@nodeweaver/shared-types';
 import { Trash2, Link2, ZoomIn, ZoomOut, Maximize2, X, Wifi, Terminal } from 'lucide-react';
 import { useGraphStore } from '@/store';
@@ -365,6 +362,13 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
     // cy.fit(undefined, 50); // Disabled dynamic auto-zoom at user request
     console.log('[GraphCanvas] Viewport updated, viewport:', cy.extent());
   }, [currentGraph]);
+
+  // Drag & drop handlers (fixed: previously misplaced block caused syntax error)
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const entityType = e.dataTransfer.getData('entityType') as EntityType;
     if (!cyRef.current || !containerRef.current) return;
