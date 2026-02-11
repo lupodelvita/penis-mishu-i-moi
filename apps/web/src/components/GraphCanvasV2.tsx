@@ -134,11 +134,19 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
           spacingFactor: 1.5,
           animate: true 
         } as any,
+        // Limit zoom to reasonable range to avoid huge zooms on first node creation
+        minZoom: 0.3,
+        maxZoom: 2.0,
       });
       cyRef.current = cy;
       setTimeout(() => {
         cy.resize();
         // cy.fit(undefined, 50); // AUTO-ZOOM DISABLED
+        // Ensure zoom isn't extreme after initial resize
+        try {
+          const clamped = Math.min(Math.max(cy.zoom(), 0.8), 1.2);
+          cy.zoom({ level: clamped });
+        } catch (e) { /* ignore */ }
         console.log('[GraphCanvas] Cytoscape init complete. Auto-zoom should be OFF.');
       }, 100);
 
@@ -297,6 +305,21 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
     const cy = cyRef.current;
     if (!cy || !currentGraph) return;
     console.log('[GraphCanvas] Syncing entities:', currentGraph.entities.length, currentGraph.entities);
+    // If sync is large, temporarily hide node-html container to reduce DOM churn
+    let hidNodeHtml = false;
+    let nodeHtmlRoot: HTMLElement | null = null;
+    try {
+      if (containerRef.current && currentGraph.entities.length > 40) {
+        nodeHtmlRoot = containerRef.current.querySelector('[class^="cy-node-html"]') as HTMLElement | null;
+        if (nodeHtmlRoot) {
+          nodeHtmlRoot.style.display = 'none';
+          hidNodeHtml = true;
+        }
+      }
+    } catch (e) {
+      /* ignore */
+    }
+
     cy.batch(() => {
         (currentGraph.entities as any[]).forEach(entity => {
             if (cy.$id(entity.id).length === 0) {
@@ -356,9 +379,51 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
     try {
       const layout = cy.layout({ name: 'breadthfirst', directed: true, padding: 50, spacingFactor: 1.5, animate: true } as any);
       layout.run();
+
+      // After layout, apply a leveled vertical stacking with slight jitter so large WHOIS trees
+      // don't collapse into a single horizontal line. Compute BFS levels from root nodes
+      try {
+        const roots = cy.nodes().filter((n: any) => cy.edges(`[target = "${n.id()}"]`).length === 0);
+        const levels: Record<string, number> = {};
+        if (roots.length > 0) {
+          roots.forEach((root: any) => {
+            cy.elements().bfs({ roots: root, visit: (v: any, e: any, u: any, i: any, depth: number) => {
+              const id = v.id();
+              if (levels[id] === undefined || depth < levels[id]) levels[id] = depth;
+            }});
+          });
+
+          cy.batch(() => {
+            Object.entries(levels).forEach(([id, depth]) => {
+              const node = cy.$id(id);
+              if (!node || node.length === 0) return;
+              const pos = node.position();
+              const targetY = depth * 120 + (Math.random() - 0.5) * 40;
+              const targetX = pos.x + (Math.random() - 0.5) * 80;
+              node.position({ x: targetX, y: targetY });
+            });
+          });
+        }
+      } catch (e) {
+        console.warn('[GraphCanvas] post-layout leveling failed:', e);
+      }
+
+      // Clamp zoom to avoid extreme automatic zooming; animate to mild zoom for UX
+      try {
+        const cur = cy.zoom();
+        const clamped = Math.min(Math.max(cur, 0.7), 1.3);
+        cy.animate({ zoom: clamped, center: { eles: cy.nodes() }, duration: 400 });
+      } catch (e) { /* ignore */ }
     } catch (e) {
       console.warn('[GraphCanvas] layout run failed:', e);
     }
+
+    // Reveal node-html container if we hid it
+    try {
+      if (hidNodeHtml && nodeHtmlRoot) {
+        nodeHtmlRoot.style.display = '';
+      }
+    } catch (e) { /* ignore */ }
     // cy.fit(undefined, 50); // Disabled dynamic auto-zoom at user request
     console.log('[GraphCanvas] Viewport updated, viewport:', cy.extent());
   }, [currentGraph]);
