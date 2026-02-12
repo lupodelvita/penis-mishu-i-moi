@@ -50,6 +50,8 @@ interface CollaborationStore {
   isLeader: boolean;
   
   // Actions
+  initializeSocket: (userName: string) => void;
+  joinGraph: (graphId: string) => void;
   connect: (graphId: string, userName: string) => void;
   disconnect: () => void;
   sendUpdate: (update: GraphUpdate) => void;
@@ -65,7 +67,6 @@ interface CollaborationStore {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-
 const colors = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899'];
 
 export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
@@ -79,11 +80,10 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
   invitations: [],
   isLeader: false,
   
-  connect: (graphId: string, userName: string) => {
-    // CRITICAL: Disconnect existing socket if present to prevent duplicates
+  initializeSocket: (userName: string) => {
     const existingSocket = get().socket;
     if (existingSocket && existingSocket.connected) {
-      existingSocket.off(); // Remove all listeners
+      existingSocket.off();
       existingSocket.disconnect();
       set({ socket: null, isConnected: false, collaborators: [], currentUser: null });
     }
@@ -95,44 +95,14 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
       transports: ['websocket', 'polling'],
     });
     
-    let hasJoined = false;
-    
     socket.on('connect', () => {
-      if (!hasJoined) {
-        const user: Collaborator = {
-          id: socket.id || Math.random().toString(),
-          name: userName,
-          color: colors[Math.floor(Math.random() * colors.length)],
-          lastActivity: Date.now(),
-        };
-        
-        socket.emit('join-graph', { graphId, user });
-        set({ isConnected: true, currentUser: { ...user, id: socket.id! }, graphId });
-        hasJoined = true;
-
-        // Fetch command history from server
-        const fetchHistory = async () => {
-          try {
-            const response = await fetch(`${API_URL}/api/graphs/${graphId}/commands?limit=100`, {
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-              },
-            });
-            if (response.ok) {
-              const data = await response.json();
-              set({ commandHistory: data.data || [] });
-            } else if (response.status === 404) {
-              // Endpoint not yet available or migration not deployed
-              console.debug('[Collab] Command history endpoint not available (migration may not be deployed)');
-            } else {
-              console.warn('[Collab] Failed to fetch command history:', response.status);
-            }
-          } catch (error) {
-            // Network error - don't log as it's expected in development
-          }
-        };
-        fetchHistory();
-      }
+      const user: Collaborator = {
+        id: socket.id || Math.random().toString(),
+        name: userName,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        lastActivity: Date.now(),
+      };
+      set({ isConnected: true, currentUser: { ...user, id: socket.id! } });
     });
     
     socket.on('disconnect', () => {
@@ -152,51 +122,103 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
     });
     
     socket.on('command-received', (command: CollaborativeCommand) => {
-      set((state) => ({
-        commandHistory: [...state.commandHistory, command],
-      }));
+      set((state) => {
+        const exists = state.commandHistory.some(c => c.id === command.id);
+        if (exists) return state;
+        return { commandHistory: [...state.commandHistory, command] };
+      });
     });
     
-    socket.on('cursor-update', ({ userId, x, y }: any) => {
+    socket.on('cursor-update', (data: { collaboratorId: string; x: number; y: number }) => {
       set((state) => ({
         collaborators: state.collaborators.map(c =>
-          c.id === userId ? { ...c, cursor: { x, y }, lastActivity: Date.now() } : c
+          c.id === data.collaboratorId
+            ? { ...c, cursor: { x: data.x, y: data.y }, lastActivity: Date.now() }
+            : c
         ),
       }));
     });
     
-    socket.on('entity-select', ({ userId, entityId }: any) => {
+    socket.on('entity-selected', (data: { collaboratorId: string; entityId: string | null }) => {
       set((state) => ({
         collaborators: state.collaborators.map(c =>
-          c.id === userId ? { ...c, selectedEntity: entityId, lastActivity: Date.now() } : c
+          c.id === data.collaboratorId
+            ? { ...c, selectedEntity: data.entityId }
+            : c
         ),
       }));
     });
-
+    
     socket.on('invitation-received', (invitation: GraphInvitation) => {
       set((state) => ({
-        invitations: [...state.invitations, invitation],
+        invitations: [...state.invitations, { ...invitation, createdAt: new Date(invitation.createdAt) }],
       }));
     });
-
-    socket.on('collaborator-promoted', ({ userId, isLeader }: any) => {
-      if (socket.id === userId) {
-        set({ isLeader });
-      }
+    
+    socket.on('collaborator-promoted', (data: { newLeader: string }) => {
       set((state) => ({
+        isLeader: state.currentUser?.id === data.newLeader,
         collaborators: state.collaborators.map(c =>
-          c.id === userId ? { ...c, isLeader } : c
+          c.id === data.newLeader ? { ...c, isLeader: true } : { ...c, isLeader: false }
         ),
       }));
     });
-
-    socket.on('user-left', ({ userId }: any) => {
+    
+    socket.on('user-left', (data: { userId: string }) => {
       set((state) => ({
-        collaborators: state.collaborators.filter(c => c.id !== userId),
+        collaborators: state.collaborators.filter(c => c.id !== data.userId),
       }));
     });
     
     set({ socket });
+  },
+  
+  joinGraph: (graphId: string) => {
+    const state = get();
+    const socket = state.socket;
+    const currentUser = state.currentUser;
+    
+    if (!socket || !currentUser || !socket.connected) {
+      console.error('[Collab] Socket not connected or user not initialized');
+      return;
+    }
+    
+    socket.emit('join-graph', { graphId, user: currentUser });
+    set({ graphId });
+    
+    const fetchHistory = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/graphs/${graphId}/commands?limit=100`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          set({ commandHistory: data.data || [] });
+        } else if (response.status === 404) {
+          console.debug('[Collab] Command history endpoint not available');
+        } else {
+          console.warn('[Collab] Failed to fetch command history:', response.status);
+        }
+      } catch (error) {
+        // ignore
+      }
+    };
+    fetchHistory();
+  },
+  
+  connect: (graphId: string, userName: string) => {
+    get().initializeSocket(userName);
+    const checkAndJoin = () => {
+      const state = get();
+      if (state.socket && state.socket.connected) {
+        get().joinGraph(graphId);
+      } else {
+        setTimeout(checkAndJoin, 100);
+      }
+    };
+    checkAndJoin();
   },
   
   disconnect: () => {
@@ -224,7 +246,6 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
         graphId,
       };
       socket.emit('command', fullCommand);
-      // Note: Don't add to state here - 'command-received' event will handle it
     }
   },
   
@@ -254,13 +275,12 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
         graphId,
       };
       socket.emit('command', command);
-      // Note: Don't add to state here - 'command-received' event will handle it
     }
   },
 
   loadHistoricalCommands: async (graphId: string) => {
     try {
-      const response = await fetch(`${API_URL}/graphs/${graphId}/commands?limit=100`, {
+      const response = await fetch(`${API_URL}/api/graphs/${graphId}/commands?limit=100`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -284,20 +304,19 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
           id: currentUser.id,
           name: currentUser.name,
         },
-        graphName: graphId, // We can enhance this when graph names are available
+        graphName: graphId,
       });
     }
   },
 
   acceptInvitation: (invitationId: string, graphId: string) => {
-    const { socket, currentUser } = get();
+    const { socket } = get();
     if (socket && socket.connected) {
       socket.emit('accept-invitation', { invitationId, graphId });
-      // Join the graph
       set((state) => ({
         invitations: state.invitations.filter(inv => inv.id !== invitationId),
         graphId,
-        isLeader: false, // Accepting invitation means you're not the leader
+        isLeader: false,
       }));
     }
   },

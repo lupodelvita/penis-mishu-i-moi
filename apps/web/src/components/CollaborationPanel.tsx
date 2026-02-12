@@ -1,16 +1,17 @@
 'use client';
 
 import { useCollaborationStore } from '@/store/collaborationStore';
-import { Users, Wifi, WifiOff, ChevronDown, ChevronUp, Send, LogOut, UserPlus } from 'lucide-react';
+import { Users, Wifi, WifiOff, ChevronDown, ChevronUp, Send, LogOut, UserPlus, LogIn } from 'lucide-react';
 import { useState } from 'react';
 
 export default function CollaborationPanel() {
-  const { isConnected, collaborators, currentUser, commandHistory, broadcastChatMessage, inviteUser, leaveGraph, isLeader } = useCollaborationStore();
+  const { isConnected, collaborators, currentUser, commandHistory, broadcastChatMessage, inviteUser, leaveGraph, isLeader, graphId, joinGraph } = useCollaborationStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [chatMessage, setChatMessage] = useState('');
   const [inviteUserId, setInviteUserId] = useState('');
   const [inviteUserName, setInviteUserName] = useState('');
+  const [graphIdToJoin, setGraphIdToJoin] = useState('default-graph');
   
   if (!isVisible) {
     return (
@@ -180,8 +181,35 @@ export default function CollaborationPanel() {
             </div>
           )}
 
-          {/* Invite Section */}
-          {isConnected && isLeader && (
+          {/* Join Graph Section - Only show if not in a graph */}
+          {isConnected && !graphId && (
+            <div className="mb-3 pb-3 border-b border-slate-700">
+              <div className="text-xs text-slate-400 mb-2 font-semibold">Присоединиться к графу</div>
+              <div className="flex flex-col gap-2">
+                <input
+                  type="text"
+                  placeholder="ID графа"
+                  value={graphIdToJoin}
+                  onChange={(e) => setGraphIdToJoin(e.target.value)}
+                  className="px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                />
+                <button
+                  onClick={() => {
+                    if (graphIdToJoin.trim()) {
+                      joinGraph(graphIdToJoin);
+                    }
+                  }}
+                  className="w-full px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors flex items-center justify-center gap-1"
+                >
+                  <LogIn className="w-3 h-3" />
+                  Присоединиться
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Invite Section - Only for leaders who are in a graph */}
+          {isConnected && graphId && isLeader && (
             <div className="mb-3 pb-3 border-b border-slate-700">
               <div className="text-xs text-slate-400 mb-2 font-semibold">Пригласить участника</div>
               <div className="flex flex-col gap-2">
@@ -216,8 +244,8 @@ export default function CollaborationPanel() {
             </div>
           )}
 
-          {/* Leave Graph Button */}
-          {isConnected && (
+          {/* Leave Graph Button - Only show if user is in a graph */}
+          {isConnected && graphId && (
             <div className="mb-3 pb-3 border-b border-slate-700">
               <button
                 onClick={() => leaveGraph()}

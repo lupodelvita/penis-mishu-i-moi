@@ -75,20 +75,20 @@ export default function Home() {
     return undefined;
   }, [addEntity, selectEntity]);
 
-  // Auto-connect to collaboration on mount
+  // Initialize Socket.IO connection on mount (don't auto-join a graph)
   useEffect(() => {
     if (user) {
-      const graphId = 'default-graph';
       const userName = user.username || `User-${Math.floor(Math.random() * 1000)}`;
-      connect(graphId, userName);
+      const { initializeSocket } = useCollaborationStore.getState();
+      initializeSocket(userName);
       
       // CRITICAL: Cleanup on unmount to prevent duplicates
       return () => {
-        // disconnect(); // Don't disconnect on every re-render, only on unmount
+        // Socket cleanup handled by store
       };
     }
     return undefined;
-  }, [user]); // Removed 'connect' from deps to prevent reconnection loops
+  }, [user]);
 
   if (loading || !user) {
     return <div className="h-screen w-screen bg-black flex items-center justify-center text-white">Loading NodeWeaver...</div>;
