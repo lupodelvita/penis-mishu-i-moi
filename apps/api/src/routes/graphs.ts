@@ -241,8 +241,8 @@ router.get('/:id/commands', authenticateToken, async (req, res, next) => {
     });
 
     // Also check in-memory cache for recent commands not yet saved
-    const { CollaborationService } = await import('../services/CollaborationService');
-    const memoryCommands = CollaborationService.getInstance().getCommandHistory(id, limit);
+    const { collaborationService } = await import('../services/CollaborationService');
+    const memoryCommands = collaborationService.getCommandHistory(id, limit);
 
     // Merge and deduplicate (memory has priority for latest)
     const allCommands = [...memoryCommands];
