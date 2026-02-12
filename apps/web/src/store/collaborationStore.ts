@@ -6,7 +6,7 @@ interface Collaborator {
   name: string;
   color: string;
   cursor?: { x: number; y: number };
-  selectedEntity?: string;
+  selectedEntity?: string | null;
   lastActivity?: number;
   isLeader?: boolean;
 }
