@@ -212,46 +212,4 @@ class CollaborationService {
   }
 }
 
-export const collaborationService = CollaborationService.getInstance();          
-          console.log(`[Collab] ${name} left graph ${graphId}. Remaining: ${remainingCollaborators.length}`);
-        }
-        
-        console.log(`[Collab] Client disconnected: ${socket.id}`);
-      });
-    });
-
-    console.log('[Collab] WebSocket server initialized');
-  }
-
-  private getGraphCollaborators(graphId: string): Collaborator[] {
-    const room = this.graphRooms.get(graphId);
-    if (!room) return [];
-
-    return Array.from(room)
-      .map(socketId => this.collaborators.get(socketId))
-      .filter((c): c is Collaborator => c !== undefined);
-  }
-
-  /**
-   * Get command history for a graph
-   */
-  getCommandHistory(graphId: string, limit?: number): CollaborativeCommand[] {
-    const history = this.commandHistory.get(graphId) || [];
-    return limit ? history.slice(-limit) : history;
-  }
-
-  getIO() {
-    return this.io;
-  }
-
-  private static instance: CollaborationService;
-
-  static getInstance(): CollaborationService {
-    if (!this.instance) {
-      this.instance = new CollaborationService();
-    }
-    return this.instance;
-  }
-}
-
 export const collaborationService = CollaborationService.getInstance();
