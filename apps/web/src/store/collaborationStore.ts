@@ -46,7 +46,6 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
     // CRITICAL: Disconnect existing socket if present to prevent duplicates
     const existingSocket = get().socket;
     if (existingSocket && existingSocket.connected) {
-      console.log('[Collab] Disconnecting existing socket before reconnecting');
       existingSocket.off(); // Remove all listeners
       existingSocket.disconnect();
       set({ socket: null, isConnected: false, collaborators: [], currentUser: null });
@@ -62,8 +61,6 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
     let hasJoined = false;
     
     socket.on('connect', () => {
-      console.log('[Collab] Connected to collaboration server, socket ID:', socket.id);
-      
       if (!hasJoined) {
         const user: Collaborator = {
           id: socket.id || Math.random().toString(),
@@ -78,18 +75,15 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
     });
     
     socket.on('disconnect', () => {
-      console.log('[Collab] Disconnected from collaboration server');
       set({ isConnected: false, collaborators: [] });
     });
     
     socket.on('collaborators-update', (collaborators: Collaborator[]) => {
       // CRITICAL FIX: Get current user from state, not from outer scope
       const currentUser = get().currentUser;
-      console.log('[Collab] Collaborators update:', collaborators.length, 'Current user:', currentUser?.id);
       
       // Filter out current user from collaborators list
       const filtered = collaborators.filter(c => c.id !== currentUser?.id);
-      console.log('[Collab] Filtered collaborators:', filtered.length);
       set({ collaborators: filtered });
     });
     

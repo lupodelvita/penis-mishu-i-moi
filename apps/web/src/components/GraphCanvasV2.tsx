@@ -201,7 +201,6 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
           const clamped = Math.min(Math.max(cy.zoom(), 0.8), 1.2);
           cy.zoom({ level: clamped });
         } catch (e) { /* ignore */ }
-        console.log('[GraphCanvas] Cytoscape init complete. Auto-zoom should be OFF.');
       }, 100);
 
 // Safe extension initialization for nodeHtmlLabel (only for small initial graphs)
@@ -210,7 +209,6 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
         setupNodeHtml(cy);
       } else {
         nodeHtmlEnabledRef.current = false;
-        console.log('[GraphCanvas] nodeHtmlLabel skipped due to large initial graph.');
       }
 
       // Syntax fix verified - Block cleaned
@@ -290,7 +288,6 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy || !currentGraph) return;
-    console.log('[GraphCanvas] Syncing entities:', currentGraph.entities.length, currentGraph.entities);
     // If sync is large, temporarily hide node-html container to reduce DOM churn
     let hidNodeHtml = false;
     let nodeHtmlRoot: HTMLElement | null = null;
@@ -300,7 +297,6 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
         const roots = Array.from(containerRef.current.querySelectorAll('[class^="cy-node-html"]')) as HTMLElement[];
         roots.forEach(r => r.remove());
         nodeHtmlEnabledRef.current = false;
-        console.log('[GraphCanvas] nodeHtmlLabel removed due to large graph during sync.');
       } else if (containerRef.current && currentGraph.entities.length > NODE_HTML_THRESHOLD) {
         // If nodeHtml not enabled but DOM exists, remove any leftover
         nodeHtmlRoot = containerRef.current.querySelector('[class^="cy-node-html"]') as HTMLElement | null;
@@ -419,7 +415,6 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
       }
     } catch (e) { /* ignore */ }
     // cy.fit(undefined, 50); // Disabled dynamic auto-zoom at user request
-    console.log('[GraphCanvas] Viewport updated, viewport:', cy.extent());
   }, [currentGraph]);
 
   // Drag & drop handlers (fixed: previously misplaced block caused syntax error)
@@ -594,10 +589,9 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
                       isp: result.data.isp
                   }
               });
-              console.log(`[Geolocation] IP ${entity.value} located at:`, result.data.city, result.data.country);
           }
       } catch (error) {
-          console.error('[Geolocation] Error:', error);
+          // Geolocation error silently handled
       }
   };
 
@@ -611,8 +605,6 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
           setNmapTarget(null);
           return;
       }
-
-      console.log('[GraphCanvas] Received Nmap data from Backend:', scanData);
 
       // 1. Add Entities (Host, Scan Result, Ports)
       if (Array.isArray(scanData.results)) {
@@ -775,7 +767,6 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
         <MapCanvas
           entities={(currentGraph?.entities || []).filter(e => e.data?.lat && e.data?.lon) as any}
           onEntityClick={(entity) => {
-            console.log('Map entity clicked:', entity);
             const fullEntity = currentGraph?.entities.find(e => e.id === entity.id);
             if (fullEntity) selectEntity(fullEntity);
           }}
@@ -798,7 +789,7 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
           setNmapTarget(null);
         }}
         onScanComplete={(results) => {
-          console.log('Nmap scan completed:', results);
+          // Nmap scan completed handler
         }}
       />
       {}

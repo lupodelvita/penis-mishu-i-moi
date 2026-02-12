@@ -161,8 +161,6 @@ export const useAnalyticsStore = create<AnalyticsStore>((set, get) => ({
       generatedAt: new Date().toISOString(),
     };
     
-    console.log('Exporting report:', reportData);
-    
     // Создать blob и скачать
     const blob = new Blob([JSON.stringify(reportData, null, 2)], {
       type: 'application/json',

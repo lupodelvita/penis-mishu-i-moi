@@ -70,13 +70,11 @@ export default function TransformBuilder({ onClose }: TransformBuilderProps) {
   };
 
   const saveTransform = async () => {
-    console.log('Saving custom transform:', transform);
     alert('Transform saved successfully! (mock)');
     onClose?.();
   };
 
   const testTransform = async () => {
-    console.log('Testing transform:', transform);
     alert('Transform test started! Check console for details.');
   };
 

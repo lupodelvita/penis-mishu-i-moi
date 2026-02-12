@@ -99,7 +99,6 @@ export default function TerminalConsole({ isOpen, onClose, initialCommand }: Ter
 
                      // If command provided, write it
                      if (initialCommand) {
-                        console.log('Sending initial command:', initialCommand);
                         win.electron.terminal.write(initialCommand + '\r\n');
                      }
                 }, 300);

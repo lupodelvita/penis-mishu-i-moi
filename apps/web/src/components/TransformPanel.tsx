@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Play, Settings2 } from 'lucide-react';
+import { Search, Play, Settings2, Loader2 } from 'lucide-react';
 import { useGraphStore } from '@/store';
 import { EntityType } from '@nodeweaver/shared-types';
 interface TransformPanelProps {
@@ -12,6 +12,7 @@ const SAMPLE_TRANSFORMS = [
   { id: 'whois_lookup', name: 'WHOIS Lookup', category: 'WHOIS', icon: '🔍', inputTypes: ['domain'] },
   { id: 'dns.mx_records', name: 'MX Records', category: 'DNS', icon: '📧', inputTypes: ['domain'] },
   { id: 'oathnet_breach_check', name: 'Breach Check', category: 'Email', icon: '🔒', inputTypes: ['email_address'] },
+  { id: 'email_validate', name: 'Email Validator', category: 'Email', icon: '✅', inputTypes: ['email_address'] },
   { id: 'username_search', name: 'Username Search', category: 'Social', icon: '👤', inputTypes: ['username', 'person'] },
   { id: 'geo_ip_location', name: 'IP to Location', category: 'Geo', icon: '📍', inputTypes: ['ip_address'] },
   { id: 'nmap_quick_scan', name: 'Port Scan (Active)', category: 'Security', icon: '🛡️', inputTypes: ['domain', 'ip_address'] },
@@ -21,7 +22,17 @@ const SAMPLE_TRANSFORMS = [
 export default function TransformPanel({ selectedEntityId, onOpenTerminal }: TransformPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'info' | 'success' | 'error' } | null>(null);
   const { currentGraph, addEntity, addLink } = useGraphStore();
+  
+  // Auto-hide toast after 4s
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
   
   const categories = Array.from(new Set(SAMPLE_TRANSFORMS.map((t) => t.category)));
   const filteredTransforms = SAMPLE_TRANSFORMS.filter((transform) => {
@@ -49,6 +60,10 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
     }
     const sourceEntity = currentGraph.entities.find((e) => e.id === selectedEntityId);
     if (!sourceEntity) return;
+    
+    // Set loading state
+    setLoadingId(transformId);
+    setToastMessage({ text: `Запуск трансформа "${transformId}"...`, type: 'info' });
 
     // --- UNIFIED TERMINAL INTERCEPTOR ---
     // If the transform has a CLI equivalent, run it in terminal instead of API
@@ -71,8 +86,6 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
     if (isSecurityScan) {
       // NOTE: Terminal opening skipped for security scans to avoid SES "Super constructor null" error
       // Results are added to graph via API callback instead
-      console.log(`[TransformPanel] Running ${transformId} (terminal mode disabled due to SES restriction)`);
-
       
       // Background API call for data collection
       let endpoint = '';
@@ -92,11 +105,8 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
         let url = sourceEntity.value;
         if (!url.startsWith('http')) url = `http://${url}`;
         body = { url };
-      } else {
-          console.log('Unknown security transform, falling back to legacy');
       }
       if (endpoint) {
-          console.log(`Running REAL security scan: ${endpoint}`, body);
           try {
             const token = localStorage.getItem('token');
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}${endpoint}`, {
@@ -109,20 +119,17 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
             });
             const data = await response.json();
             
-            console.log('[TransformPanel] Got API response:', transformId, data);
-            
-            // Write results to terminal only if terminal is available
-            if (typeof window !== 'undefined' && (window as any).electron?.terminal?.write) {
-              // Terminal writing disabled for security scans to avoid SES issues
-              // Results are visible in the graph instead
-              console.log('[TransformPanel] Skipping terminal write for security scan (SES restricted)');
-            }
-            
             if (data.success && data.data.results) {
-               console.log('[TransformPanel] ✅ Starting graph update. Results count:', data.data.results.length);
+               setToastMessage({ text: `Найдено ${data.data.results.length} результатов`, type: 'success' });
 
                if (data.data.results.length === 0) {
-                   alert('Сканирование завершено: Уязвимости не найдены.');
+                   // Suggest IP extraction for NMAP if running on domain
+                   if (transformId === 'nmap_quick_scan' && sourceEntity.type === EntityType.Domain) {
+                       alert('Сканирование завершено но результатов не найдено.\n\nПодсказка: Сначала извлеките IP адрес сайта используя "Domain to IP", затем запустите "Port Scan (Active)" на IP адресе.');
+                   } else {
+                       alert('Сканирование завершено: Результатов не найдено.');
+                   }
+                   setLoadingId(null);
                    return; // Exit early if no results
                }
                
@@ -132,7 +139,6 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
 
                if (hasBackendLinks) {
                    // 1. TRUST BACKEND TOPOLOGY + SMART LAYOUT (Tree/Grid)
-                   console.log('[TransformPanel] Using Backend Topology with Smart Layout:', data.data);
                    
                    const sourcePos = (sourceEntity as any).position || { x: 0, y: 0 };
                    const scanResult = data.data.results.find((e: any) => e.type === 'scan_result');
@@ -207,7 +213,6 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
                } else {
                    // 2. UNIVERSAL GRID TOPOLOGY (Fallback for XSS, SQLi, Whois, etc.)
                    // Replaces the old chaotic "Star/Spiral" with a neat Grid.
-                   console.log('[TransformPanel] Using Universal Grid Topology');
                    
                    const COLS = 5; 
                    const SPACING_X = 200; 
@@ -220,8 +225,32 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
                    const startX = sourcePos.x - (gridWidth / 2);
                    const startY = sourcePos.y + 250; // Place below source
 
+                   let addedCount = 0;
                    data.data.results.forEach((result: any, index: number) => {
-                       const newEntityId = `node-${Date.now()}-${index}`;
+                       // DEDUPLICATION: Check if entity with same value already exists
+                       const existingEntity = currentGraph.entities.find(e => 
+                           e.value.toLowerCase() === result.value.toLowerCase() && 
+                           e.type === result.type
+                       );
+                       
+                       if (existingEntity) {
+                           // Skip duplicate, but link it if not already linked
+                           const existingLink = currentGraph.links?.find(l => 
+                               (l.source === selectedEntityId && l.target === existingEntity.id) ||
+                               (l.source === existingEntity.id && l.target === selectedEntityId)
+                           );
+                           if (!existingLink) {
+                               addLink({
+                                   id: `link-${Date.now()}-${index}`,
+                                   source: selectedEntityId,
+                                   target: existingEntity.id,
+                                   label: result.link?.label || 'related'
+                               });
+                           }
+                           return;
+                       }
+                       
+                       const newEntityId = `node-${Date.now()}-${addedCount}`;
                        let mappedType = EntityType.Custom; 
                        let color = '#cbd5e1'; // Default grey
                        
@@ -234,8 +263,8 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
                        else if (result.type === 'email_address') { mappedType = EntityType.EmailAddress; color = '#8b5cf6'; }
                        else if (result.type === 'social_profile') { mappedType = EntityType.SocialProfile; color = '#06b6d4'; }
                        
-                       const row = Math.floor(index / COLS);
-                       const col = index % COLS;
+                       const row = Math.floor(addedCount / COLS);
+                       const col = addedCount % COLS;
 
                        const newEntity = {
                            id: newEntityId,
@@ -257,26 +286,99 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
                        };
                        addEntity(newEntity as any);
                        addLink({
-                         id: `link-${Date.now()}-${index}`,
+                         id: `link-${Date.now()}-${addedCount}`,
                          source: selectedEntityId,
                          target: newEntityId,
                          label: result.link?.label || 'detected'
                        });
+                       addedCount++;
                    });
                }
             } else {
-                console.error('Scan failed:', data.error);
-                alert(`Ошибка сканирования: ${data.error?.message || (typeof data.error === 'string' ? data.error : 'Unknown error')}`);
+                const errorMsg = data.error?.message || (typeof data.error === 'string' ? data.error : 'Unknown error');
+                setToastMessage({ text: `Ошибка: ${errorMsg}`, type: 'error' });
+                alert(`Ошибка сканирования: ${errorMsg}`);
             }
           } catch (err) {
-              console.error('API Call failed:', err);
+              setToastMessage({ text: 'Ошибка соединения с API', type: 'error' });
               alert('Ошибка соединения с API');
+          } finally {
+              setLoadingId(null);
           }
           return; 
       }
     }
+    
+    // ======================================
+    // EMAIL VALIDATION (Eyes)
+    // ======================================
+    if (transformId === 'email_validate') {
+        try {
+            const email = sourceEntity.value;
+            const token = localStorage.getItem('token');
+            
+            // Call email validation endpoint
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/osint/email/validate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ email })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.data) {
+                const validationResult = data.data;
+                setToastMessage({
+                    text: validationResult.valid ? `✅ Email валиден: ${validationResult.domain}` : `❌ Email невалиден`,
+                    type: validationResult.valid ? 'success' : 'error'
+                });
+                
+                // Add validation entity and metadata
+                if (validationResult.valid) {
+                    const newEntity = {
+                        id: `email-validation-${Date.now()}`,
+                        type: EntityType.Custom,
+                        value: `${email} (validated)`,
+                        data: {
+                            label: email,
+                            type: EntityType.Custom,
+                            color: '#22c55e',
+                            validity: validationResult.valid,
+                            domain: validationResult.domain,
+                            hasMX: validationResult.hasMX,
+                            smtpCheck: validationResult.smtpCheck
+                        },
+                        position: {
+                            x: (sourceEntity as any).position?.x || 400,
+                            y: ((sourceEntity as any).position?.y || 400) + 150
+                        },
+                        created: new Date().toISOString(),
+                        updated: new Date().toISOString(),
+                        properties: validationResult
+                    };
+                    addEntity(newEntity as any);
+                    addLink({
+                        id: `link-email-validate-${Date.now()}`,
+                        source: selectedEntityId,
+                        target: newEntity.id,
+                        label: 'validated'
+                    });
+                }
+            } else {
+                setToastMessage({ text: data.error?.message || 'Email validation failed', type: 'error' });
+            }
+        } catch (err) {
+            setToastMessage({ text: 'Email validation error', type: 'error' });
+        } finally {
+            setLoadingId(null);
+        }
+        return;
+    }
+    
     try {
-        console.log(`Running legacy transform ${transformId} on ${sourceEntity.value}`);
         const token = localStorage.getItem('token');
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/transforms/execute`, {
             method: 'POST',
@@ -295,14 +397,44 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
             })
         });
         const json = await response.json();
-        console.log('Transform execution result:', json);
         if (json.success) {
             if (!json.data.entities || json.data.entities.length === 0) {
+                setToastMessage({ text: 'Результатов не найдено', type: 'info' });
                 alert('Трансформ завершен, но результатов не найдено.');
             } else {
+                setToastMessage({ text: `Добавлено ${json.data.entities.length} результатов`, type: 'success' });
                 const results = json.data.entities;
+                let addedCount = 0;
                 results.forEach((result: any, index: number) => {
-                  const newEntityId = `node-${Date.now()}-${index}`;
+                  // For social profiles, only add if profile exists (has status/data indicating real account)
+                  if (result.type === 'social_profile' && !result.properties?.exists) {
+                      return; // Skip non-existent profiles
+                  }
+                  
+                  // DEDUPLICATION: Check if entity with same value already exists
+                  const existingEntity = currentGraph.entities.find(e => 
+                      e.value.toLowerCase() === result.value.toLowerCase() && 
+                      e.type === result.type
+                  );
+                  
+                  if (existingEntity) {
+                      // Skip duplicate, but link it if not already linked
+                      const existingLink = currentGraph.links?.find(l => 
+                          (l.source === selectedEntityId && l.target === existingEntity.id) ||
+                          (l.source === existingEntity.id && l.target === selectedEntityId)
+                      );
+                      if (!existingLink) {
+                          addLink({
+                              id: `link-${Date.now()}-${index}`,
+                              source: selectedEntityId,
+                              target: existingEntity.id,
+                              label: result.link?.label || 'related'
+                          });
+                      }
+                      return;
+                  }
+                  
+                  const newEntityId = `node-${Date.now()}-${addedCount}`;
                   let mappedType = EntityType.Custom;
                   let color = '#cbd5e1';
                   switch(result.type) {
@@ -319,8 +451,8 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
                       value: result.value,
                       data: { label: result.value, type: mappedType, color, ...result.properties },
                       position: { 
-                          x: sourcePos.x + Math.cos(index * (2 * Math.PI) / results.length) * 250, 
-                          y: sourcePos.y + Math.sin(index * (2 * Math.PI) / results.length) * 250 
+                          x: sourcePos.x + Math.cos(addedCount * (2 * Math.PI) / results.length) * 250, 
+                          y: sourcePos.y + Math.sin(addedCount * (2 * Math.PI) / results.length) * 250 
                       },
                       created: new Date().toISOString(),
                       updated: new Date().toISOString(),
@@ -328,21 +460,22 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
                   };
                   addEntity(newEntity as any);
                   addLink({
-                      id: `link-${Date.now()}-${index}`,
+                      id: `link-${Date.now()}-${addedCount}`,
                       source: selectedEntityId,
                       target: newEntityId,
                       label: result.link?.label || 'related'
                   });
+                  addedCount++;
              });
            }
         } else {
+            setToastMessage({ text: `Ошибка: ${json.error || 'Неизвестная ошибка'}`, type: 'error' });
             alert(`Ошибка выполнения: ${json.error || 'Неизвестная ошибка'}`);
         }
-
-
-
     } catch (err) {
-       console.error('Failed to execute transform:', err);
+       setToastMessage({ text: 'Ошибка выполнения трансформа', type: 'error' });
+    } finally {
+       setLoadingId(null);
     }
   }, [selectedEntityId, currentGraph, addEntity, addLink]);
   useEffect(() => {
@@ -356,7 +489,16 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
   }, [handleRunTransform]);
   return (
     <div className="flex-1 border-b border-border flex flex-col">
-      {}
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className={`px-4 py-2 border-b text-sm font-medium ${
+          toastMessage.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' :
+          toastMessage.type === 'error' ? 'bg-red-50 text-red-800 border-red-200' :
+          'bg-blue-50 text-blue-800 border-blue-200'
+        }`}>
+          {toastMessage.text}
+        </div>
+      )}
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold">Трансформы</h2>
@@ -424,10 +566,15 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
                     e.stopPropagation();
                     handleRunTransform(transform.id);
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-primary/10 rounded transition-all"
+                  disabled={loadingId === transform.id}
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-primary/10 rounded transition-all disabled:opacity-100"
                   title="Запустить"
                 >
-                  <Play className="w-4 h-4 text-primary" />
+                  {loadingId === transform.id ? (
+                    <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                  ) : (
+                    <Play className="w-4 h-4 text-primary" />
+                  )}
                 </button>
               </div>
             ))}

@@ -17,8 +17,7 @@ export const registerCytoscapeExtensions = async () => {
       cytoscape.use(nodeHtmlLabel);
     }
     extensionsRegistered = true;
-    console.log('[CytoscapeHelper] Extensions registered successfully');
   } catch (error) {
-    console.warn('[CytoscapeHelper] Error registering extensions:', error);
+    // Extension registration error silently handled
   }
 };

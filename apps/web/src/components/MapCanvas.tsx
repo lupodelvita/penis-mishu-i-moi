@@ -53,12 +53,30 @@ function MapController({ entities }: { entities: LocationEntity[] }) {
 export default function MapCanvas({ entities, onEntityClick }: MapCanvasProps) {
   // Filter entities that have geolocation data
   const locationEntities = useMemo(() => {
-    return entities.filter(e => 
-      e.data?.lat !== undefined && 
-      e.data?.lon !== undefined &&
-      !isNaN(e.data.lat) &&
-      !isNaN(e.data.lon)
-    );
+    return entities.filter(e => {
+      // Multiple checks for lat/lon data attributes
+      const hasCoords = (
+        (e.data?.lat !== undefined && e.data?.lon !== undefined) ||
+        (e.data?.latitude !== undefined && e.data?.longitude !== undefined) ||
+        (e.data?.properties?.lat !== undefined && e.data?.properties?.lon !== undefined)
+      );
+      
+      if (!hasCoords) return false;
+      
+      // Get the actual lat/lon values
+      const lat = e.data?.lat ?? e.data?.latitude ?? e.data?.properties?.lat;
+      const lon = e.data?.lon ?? e.data?.longitude ?? e.data?.properties?.lon;
+      
+      return !isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+    }).map(e => ({
+      ...e,
+      // Normalize lat/lon properties
+      data: {
+        ...e.data,
+        lat: e.data?.lat ?? e.data?.latitude ?? e.data?.properties?.lat,
+        lon: e.data?.lon ?? e.data?.longitude ?? e.data?.properties?.lon,
+      }
+    }));
   }, [entities]);
 
   // Default center (London)
