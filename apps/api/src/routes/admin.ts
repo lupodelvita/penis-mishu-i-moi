@@ -90,7 +90,7 @@ router.post('/licenses', async (req, res, next) => {
 router.get('/users', async (_req, res, next) => {
     try {
         const users = await prisma.user.findMany({
-            include: { license: true, _count: { select: { graphs: true, bots: true } } },
+            include: { license: true, _count: { select: { ownedGraphs: true, bots: true } } },
             orderBy: { created: 'desc' },
             take: 50
         });

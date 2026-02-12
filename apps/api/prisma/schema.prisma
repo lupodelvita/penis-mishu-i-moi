@@ -38,10 +38,12 @@ model User {
   
   // Relations
   license      License?
-  graphs       Graph[]
+  ownedGraphs  Graph[]          @relation("GraphOwner")
+  ledGraphs    Graph[]          @relation("GraphLeader")
+  graphMembers GraphMember[]
   bots         BotConfig[]
   memories     AIMemory[]
-  ownedTeams   Team[]       @relation("TeamOwner")
+  ownedTeams   Team[]           @relation("TeamOwner")
   teamMembers  TeamMember[]
 }
 
@@ -73,6 +75,11 @@ model BotConfig {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+enum GraphMemberRole {
+  LEADER
+  MEMBER
+}
+
 model Graph {
   id          String   @id @default(uuid())
   name        String
@@ -80,13 +87,29 @@ model Graph {
   created     DateTime @default(now())
   updated     DateTime @updatedAt
   
-  // Relations
-  userId      String?  // Optional for now to support public/legacy, but ideally required
-  user        User?    @relation(fields: [userId], references: [id])
+  // Ownership & Leadership
+  ownerId     String   // User who created the graph
+  owner       User     @relation("GraphOwner", fields: [ownerId], references: [id])
+  leaderId    String?  // Current leader (can be different from owner)
+  leader      User?    @relation("GraphLeader", fields: [leaderId], references: [id])
   
+  // Relations
   entities    Entity[]
   links       Link[]
   commands    GraphCommand[]
+  members     GraphMember[]
+}
+
+model GraphMember {
+  id        String            @id @default(uuid())
+  graphId   String
+  graph     Graph             @relation(fields: [graphId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User              @relation(fields: [userId], references: [id])
+  role      GraphMemberRole   @default(MEMBER)
+  joinedAt  DateTime          @default(now())
+  
+  @@unique([graphId, userId])
 }
 
 model Entity {

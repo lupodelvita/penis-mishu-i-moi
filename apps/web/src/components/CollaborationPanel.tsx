@@ -1,17 +1,26 @@
 'use client';
 
 import { useCollaborationStore } from '@/store/collaborationStore';
-import { Users, Wifi, WifiOff, ChevronDown, ChevronUp, Send, LogOut, UserPlus, LogIn } from 'lucide-react';
+import { Users, Wifi, WifiOff, ChevronDown, ChevronUp, Send, LogOut, UserPlus, LogIn, Copy, UserMinus, Crown } from 'lucide-react';
 import { useState } from 'react';
 
 export default function CollaborationPanel() {
-  const { isConnected, collaborators, currentUser, commandHistory, broadcastChatMessage, inviteUser, leaveGraph, isLeader, graphId, joinGraph } = useCollaborationStore();
+  const { isConnected, collaborators, currentUser, commandHistory, broadcastChatMessage, inviteUser, leaveGraph, isLeader, graphId, joinGraph, kickUser, promoteToLeader } = useCollaborationStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [chatMessage, setChatMessage] = useState('');
   const [inviteUserId, setInviteUserId] = useState('');
   const [inviteUserName, setInviteUserName] = useState('');
-  const [graphIdToJoin, setGraphIdToJoin] = useState('default-graph');
+  const [graphIdToJoin, setGraphIdToJoin] = useState('');
+  const [copiedGraphId, setCopiedGraphId] = useState(false);
+  
+  const copyGraphId = () => {
+    if (graphId) {
+      navigator.clipboard.writeText(graphId);
+      setCopiedGraphId(true);
+      setTimeout(() => setCopiedGraphId(false), 2000);
+    }
+  };
   
   if (!isVisible) {
     return (
@@ -86,7 +95,30 @@ export default function CollaborationPanel() {
                   style={{ backgroundColor: currentUser.color }}
                 />
                 <span className="text-sm text-white font-medium truncate">{currentUser.name}</span>
+                {isLeader && (
+                  <Crown className="w-3 h-3 text-yellow-500" title="Лидер" />
+                )}
               </div>
+            </div>
+          )}
+
+          {/* Graph ID - Only show if in a graph */}
+          {graphId && (
+            <div className="mb-3 pb-3 border-b border-slate-700">
+              <div className="text-xs text-slate-400 mb-2">ID графа</div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 px-2 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-slate-300 truncate font-mono">
+                  {graphId.slice(0, 12)}...
+                </div>
+                <button
+                  onClick={copyGraphId}
+                  className="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded transition-colors"
+                  title="Скопировать полный ID"
+                >
+                  {copiedGraphId ? '✓' : <Copy className="w-3 h-3" />}
+                </button>
+              </div>
+              <div className="text-[10px] text-slate-500 mt-1">Поделитесь этим ID для совместной работы</div>
             </div>
           )}
 
@@ -188,22 +220,60 @@ export default function CollaborationPanel() {
               <div className="flex flex-col gap-2">
                 <input
                   type="text"
-                  placeholder="ID графа"
+                  placeholder="Введите UUID графа..."
                   value={graphIdToJoin}
                   onChange={(e) => setGraphIdToJoin(e.target.value)}
-                  className="px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                  className="px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 font-mono"
                 />
-                <button
-                  onClick={() => {
-                    if (graphIdToJoin.trim()) {
-                      joinGraph(graphIdToJoin);
-                    }
-                  }}
-                  className="w-full px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors flex items-center justify-center gap-1"
-                >
-                  <LogIn className="w-3 h-3" />
-                  Присоединиться
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (graphIdToJoin.trim()) {
+                        joinGraph(graphIdToJoin.trim());
+                      }
+                    }}
+                    disabled={!graphIdToJoin.trim()}
+                    className="flex-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:text-slate-500 text-white text-xs font-medium rounded transition-colors flex items-center justify-center gap-1"
+                  >
+                    <LogIn className="w-3 h-3" />
+                    Войти
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const token = localStorage.getItem('token');
+                        if (!token) return;
+                        
+                        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/graphs/`, {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            name: 'Новый граф',
+                            description: 'Создано через панель коллаборации'
+                          }),
+                        });
+                        
+                        if (response.ok) {
+                          const data = await response.json();
+                          joinGraph(data.data.id);
+                        }
+                      } catch (error) {
+                        console.error('Failed to create graph:', error);
+                      }
+                    }}
+                    className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors flex items-center justify-center gap-1"
+                    title="Создать новый граф"
+                  >
+                    <UserPlus className="w-3 h-3" />
+                    Создать
+                  </button>
+                </div>
+                <div className="text-[10px] text-slate-500">
+                  Можно войти по ID графа или создать новый
+                </div>
               </div>
             </div>
           )}
@@ -270,15 +340,42 @@ export default function CollaborationPanel() {
                 {collaborators.map((collab) => (
                   <div key={collab.id} className="flex items-center gap-2 p-2 hover:bg-slate-800/50 rounded transition-colors">
                     <div
-                      className="w-3 h-3 rounded-full animate-pulse"
+                      className="w-3 h-3 rounded-full animate-pulse flex-shrink-0"
                       style={{ backgroundColor: collab.color }}
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm text-slate-200 truncate">{collab.name}</div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm text-slate-200 truncate">{collab.name}</span>
+                        {collab.isLeader && (
+                          <Crown className="w-3 h-3 text-yellow-500 flex-shrink-0" title="Лидер" />
+                        )}
+                      </div>
                       {collab.selectedEntity && (
                         <div className="text-xs text-slate-500">Редактирует...</div>
                       )}
                     </div>
+                    
+                    {/* Leader controls */}
+                    {isLeader && graphId && (
+                      <div className="flex gap-1 flex-shrink-0">
+                        {!collab.isLeader && (
+                          <button
+                            onClick={() => promoteToLeader(collab.id)}
+                            className="px-1.5 py-1 bg-yellow-600 hover:bg-yellow-700 text-white text-xs rounded transition-colors"
+                            title="Назначить лидером"
+                          >
+                            <Crown className="w-3 h-3" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => kickUser(collab.id)}
+                          className="px-1.5 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
+                          title="Исключить из графа"
+                        >
+                          <UserMinus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

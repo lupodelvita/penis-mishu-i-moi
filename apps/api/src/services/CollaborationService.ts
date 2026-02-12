@@ -48,24 +48,60 @@ class CollaborationService {
       console.log(`[Collab] Client connected: ${socket.id}`);
 
       // Join graph room
-      socket.on('join-graph', ({ graphId, user }: { graphId: string; user: Omit<Collaborator, 'graphId'> }) => {
-        const collaborator: Collaborator = { ...user, graphId, id: socket.id };
-        
-        socket.join(graphId);
-        this.collaborators.set(socket.id, collaborator);
+      socket.on('join-graph', async ({ graphId, user }: { graphId: string; user: Omit<Collaborator, 'graphId'> }) => {
+        try {
+          // Validate graph exists and user is a member
+          const graph = await prisma.graph.findUnique({
+            where: { id: graphId },
+            include: {
+              members: {
+                where: { userId: user.id },
+              },
+              leader: { select: { id: true, username: true } },
+            },
+          });
 
-        if (!this.graphRooms.has(graphId)) {
-          this.graphRooms.set(graphId, new Set());
+          if (!graph) {
+            socket.emit('error', { message: 'Graph not found' });
+            console.log(`[Collab] Join-graph failed: Graph ${graphId} not found`);
+            return;
+          }
+
+          if (graph.members.length === 0) {
+            socket.emit('error', { message: 'You are not a member of this graph' });
+            console.log(`[Collab] Join-graph failed: User ${user.id} not a member of ${graphId}`);
+            return;
+          }
+
+          const collaborator: Collaborator = { ...user, graphId, id: socket.id };
+          
+          socket.join(graphId);
+          this.collaborators.set(socket.id, collaborator);
+
+          if (!this.graphRooms.has(graphId)) {
+            this.graphRooms.set(graphId, new Set());
+          }
+          this.graphRooms.get(graphId)!.add(socket.id);
+
+          // Get collaborators for the room
+          const roomCollaborators = this.getGraphCollaborators(graphId);
+          
+          // Send to everyone in the room (each client filters out themselves)
+          this.io!.to(graphId).emit('collaborators-update', roomCollaborators);
+          
+          // Send leader info from database
+          if (graph.leader) {
+            this.io!.to(graphId).emit('collaborator-promoted', {
+              userId: graph.leader.id,
+              isLeader: true,
+            });
+          }
+
+          console.log(`[Collab] ${user.name} joined graph ${graphId}. Total: ${roomCollaborators.length}`);
+        } catch (error) {
+          console.error('[Collab] Error in join-graph:', error);
+          socket.emit('error', { message: 'Failed to join graph' });
         }
-        this.graphRooms.get(graphId)!.add(socket.id);
-
-        // Get collaborators for the room
-        const roomCollaborators = this.getGraphCollaborators(graphId);
-        
-        // Send to everyone in the room (each client filters out themselves)
-        this.io!.to(graphId).emit('collaborators-update', roomCollaborators);
-
-        console.log(`[Collab] ${user.name} joined graph ${graphId}. Total: ${roomCollaborators.length}`);
       });
 
       // Graph updates
@@ -226,6 +262,57 @@ class CollaborationService {
 
           collaborator.graphId = ''; // Clear graph association
           console.log(`[Collab] ${collaborator.name} left graph ${graphId}`);
+        }
+      });
+
+      // Kick user from graph (leader only)
+      socket.on('kick-user', async ({ graphId, targetUserId }: { graphId: string; targetUserId: string }) => {
+        try {
+          const requester = this.collaborators.get(socket.id);
+          if (!requester) return;
+
+          // Verify requester is leader
+          const graph = await prisma.graph.findUnique({
+            where: { id: graphId },
+            select: { leaderId: true },
+          });
+
+          if (graph?.leaderId !== requester.id) {
+            socket.emit('error', { message: 'Only leaders can kick members' });
+            console.log(`[Collab] Kick-user failed: ${requester.id} is not leader of ${graphId}`);
+            return;
+          }
+
+          // Find target socket and remove from room
+          const targetSocket = Array.from(this.collaborators.entries()).find(
+            ([_, collab]) => collab.id === targetUserId && collab.graphId === graphId
+          );
+
+          if (targetSocket) {
+            const [targetSocketId, targetCollab] = targetSocket;
+            // Get the actual socket object
+            const socketToKick = this.io?.sockets.sockets.get(targetSocketId);
+            if (socketToKick) {
+              socketToKick.leave(graphId);
+              socketToKick.emit('kick-notification', { graphId, reason: 'You were removed from the graph by the leader' });
+              
+              this.collaborators.delete(targetSocketId);
+              const room = this.graphRooms.get(graphId);
+              if (room) {
+                room.delete(targetSocketId);
+              }
+
+              // Notify remaining users
+              const remainingCollaborators = this.getGraphCollaborators(graphId);
+              this.io!.to(graphId).emit('collaborators-update', remainingCollaborators);
+              this.io!.to(graphId).emit('user-left', { userId: targetUserId });
+              
+              console.log(`[Collab] ${targetCollab.name} was kicked from ${graphId} by ${requester.name}`);
+            }
+          }
+        } catch (error) {
+          console.error('[Collab] Error in kick-user:', error);
+          socket.emit('error', { message: 'Failed to kick user' });
         }
       });
 

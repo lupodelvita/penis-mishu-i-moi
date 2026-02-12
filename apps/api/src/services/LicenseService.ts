@@ -82,7 +82,7 @@ export class LicenseService {
     const limits = await this.getLimits(userId);
     if (limits.maxGraphs === Infinity) return true;
 
-    const count = await prisma.graph.count({ where: { userId } });
+    const count = await prisma.graph.count({ where: { ownerId: userId } });
     return count < limits.maxGraphs;
   }
 

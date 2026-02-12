@@ -56,21 +56,40 @@ router.get('/:id', authenticateToken, async (req, res, next) => {
   }
 });
 
-// Create new graph
+// Create new graph (user becomes owner & leader)
 router.post('/', authenticateToken, requireGraphLimit, async (req, res, next) => {
   try {
     const userId = (req as AuthRequest).user!.userId;
     const { name, description } = req.body;
     
+    if (!name || name.trim().length === 0) {
+      res.status(400).json({ success: false, error: 'Graph name is required' });
+      return;
+    }
+    
     const newGraph = await prisma.graph.create({
         data: {
-            name: name || 'Untitled Graph',
-            description: description || '',
-            userId: userId
+            name: name.trim() || 'Untitled Graph',
+            description: description?.trim() || '',
+            ownerId: userId,
+            leaderId: userId,
+            members: {
+              create: {
+                userId: userId,
+                role: 'LEADER'
+              }
+            }
         },
         include: {
             entities: true,
-            links: true
+            links: true,
+            owner: { select: { id: true, username: true } },
+            leader: { select: { id: true, username: true } },
+            members: {
+              include: {
+                user: { select: { id: true, username: true } }
+              }
+            }
         }
     });
     
@@ -89,7 +108,7 @@ router.put('/:id', authenticateToken, async (req, res, next) => {
     try {
         // Optional: Verify graph ownership before updating
         const existingGraph = await prisma.graph.findUnique({ where: { id } });
-        if (!existingGraph || existingGraph.userId !== userId) {
+        if (!existingGraph || existingGraph.ownerId !== userId) {
             res.status(403).json({ success: false, error: 'Access denied or Graph not found' });
             return;
         }
@@ -271,6 +290,226 @@ router.get('/:id/commands', authenticateToken, async (req, res, next) => {
       total: result.length
     });
   } catch (error) {
+    next(error);
+  }
+});
+
+// ===== MEMBERSHIP MANAGEMENT =====
+
+// POST /graphs/:id/join - Join an existing graph
+router.post('/:id/join', authenticateToken, async (req, res, next) => {
+  try {
+    const userId = (req as AuthRequest).user!.userId;
+    const { id } = req.params;
+
+    // Verify graph exists
+    const graph = await prisma.graph.findUnique({
+      where: { id },
+      select: { id: true, name: true },
+    });
+
+    if (!graph) {
+      res.status(404).json({ success: false, error: 'Graph not found' });
+      return;
+    }
+
+    // Check if user is already a member
+    const existingMember = await prisma.graphMember.findUnique({
+      where: { graphId_userId: { graphId: id, userId } },
+    });
+
+    if (existingMember) {
+      res.status(400).json({ success: false, error: 'Already a member of this graph' });
+      return;
+    }
+
+    // Add user to graph
+    const member = await prisma.graphMember.create({
+      data: {
+        graphId: id,
+        userId: userId,
+        role: 'MEMBER',
+      },
+    });
+
+    res.json({
+      success: true,
+      message: `Joined graph: ${graph.name}`,
+      data: { graphId: id, role: member.role },
+    });
+  } catch (error: any) {
+    next(error);
+  }
+});
+
+// DELETE /graphs/:id/leave - Leave a graph
+router.delete('/:id/leave', authenticateToken, async (req, res, next) => {
+  try {
+    const userId = (req as AuthRequest).user!.userId;
+    const { id } = req.params;
+
+    // Get graph info first
+    const graph = await prisma.graph.findUnique({
+      where: { id },
+      select: { id: true, name: true, leaderId: true, ownerId: true },
+    });
+
+    if (!graph) {
+      res.status(404).json({ success: false, error: 'Graph not found' });
+      return;
+    }
+
+    // Check if user is member
+    const member = await prisma.graphMember.findUnique({
+      where: { graphId_userId: { graphId: id, userId } },
+    });
+
+    if (!member) {
+      res.status(403).json({ success: false, error: 'Not a member of this graph' });
+      return;
+    }
+
+    // Delete membership
+    await prisma.graphMember.delete({
+      where: { graphId_userId: { graphId: id, userId } },
+    });
+
+    // If leaving user was leader, promote another member or delete graph if only member
+    if (graph.leaderId === userId) {
+      const remainingMembers = await prisma.graphMember.findMany({
+        where: { graphId: id },
+        include: { user: true },
+        take: 1,
+      });
+
+      if (remainingMembers.length > 0) {
+        // Promote the next member to leader
+        await prisma.graph.update({
+          where: { id },
+          data: { leaderId: remainingMembers[0].userId },
+        });
+      } else {
+        // Delete empty graph
+        await prisma.graph.delete({ where: { id } });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Left graph: ${graph.name}`,
+    });
+  } catch (error: any) {
+    next(error);
+  }
+});
+
+// POST /graphs/:id/kick/:userId - Remove a user from graph (leader only)
+router.post('/:id/kick/:targetUserId', authenticateToken, async (req, res, next) => {
+  try {
+    const userId = (req as AuthRequest).user!.userId;
+    const { id: graphId, targetUserId } = req.params;
+
+    // Verify user is leader
+    const graph = await prisma.graph.findUnique({
+      where: { id: graphId },
+      select: { id: true, leaderId: true, name: true },
+    });
+
+    if (!graph) {
+      res.status(404).json({ success: false, error: 'Graph not found' });
+      return;
+    }
+
+    if (graph.leaderId !== userId) {
+      res.status(403).json({ success: false, error: 'Only leaders can kick members' });
+      return;
+    }
+
+    // Can't kick yourself
+    if (userId === targetUserId) {
+      res.status(400).json({ success: false, error: 'Cannot kick yourself' });
+      return;
+    }
+
+    // Check if target is member
+    const targetMember = await prisma.graphMember.findUnique({
+      where: { graphId_userId: { graphId, userId: targetUserId } },
+      include: { user: true },
+    });
+
+    if (!targetMember) {
+      res.status(404).json({ success: false, error: 'User is not a member of this graph' });
+      return;
+    }
+
+    // Remove target from graph
+    await prisma.graphMember.delete({
+      where: { graphId_userId: { graphId, userId: targetUserId } },
+    });
+
+    res.json({
+      success: true,
+      message: `Removed ${targetMember.user.username} from graph`,
+    });
+  } catch (error: any) {
+    next(error);
+  }
+});
+
+// POST /graphs/:id/promote/:userId - Promote member to leader (current leader only)
+router.post('/:id/promote/:targetUserId', authenticateToken, async (req, res, next) => {
+  try {
+    const userId = (req as AuthRequest).user!.userId;
+    const { id: graphId, targetUserId } = req.params;
+
+    // Verify user is current leader
+    const graph = await prisma.graph.findUnique({
+      where: { id: graphId },
+      select: { id: true, leaderId: true, name: true },
+    });
+
+    if (!graph) {
+      res.status(404).json({ success: false, error: 'Graph not found' });
+      return;
+    }
+
+    if (graph.leaderId !== userId) {
+      res.status(403).json({ success: false, error: 'Only leaders can promote members' });
+      return;
+    }
+
+    // Check if target is member
+    const targetMember = await prisma.graphMember.findUnique({
+      where: { graphId_userId: { graphId, userId: targetUserId } },
+      include: { user: true },
+    });
+
+    if (!targetMember) {
+      res.status(404).json({ success: false, error: 'User is not a member of this graph' });
+      return;
+    }
+
+    // Update target and current leader roles
+    await prisma.$transaction([
+      prisma.graphMember.update({
+        where: { graphId_userId: { graphId, userId: targetUserId } },
+        data: { role: 'LEADER' },
+      }),
+      prisma.graphMember.update({
+        where: { graphId_userId: { graphId, userId } },
+        data: { role: 'MEMBER' },
+      }),
+      prisma.graph.update({
+        where: { id: graphId },
+        data: { leaderId: targetUserId },
+      }),
+    ]);
+
+    res.json({
+      success: true,
+      message: `Promoted ${targetMember.user.username} to leader`,
+    });
+  } catch (error: any) {
     next(error);
   }
 });

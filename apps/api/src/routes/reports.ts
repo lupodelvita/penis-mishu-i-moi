@@ -28,7 +28,7 @@ router.post('/generate/:graphId', authenticateToken, async (req, res, next) => {
         }
 
         // Verify Ownership (or Admin)
-        if (graph.userId && graph.userId !== userId && user?.role !== 'ADMIN') {
+        if (graph.ownerId && graph.ownerId !== userId && user?.role !== 'ADMIN') {
              res.status(403).json({ success: false, error: 'Access Denied' });
              return;
         }

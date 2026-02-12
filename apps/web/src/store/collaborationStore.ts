@@ -64,6 +64,8 @@ interface CollaborationStore {
   acceptInvitation: (invitationId: string, graphId: string) => void;
   rejectInvitation: (invitationId: string) => void;
   leaveGraph: () => void;
+  kickUser: (userId: string) => void;
+  promoteToLeader: (userId: string) => void;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
@@ -168,6 +170,22 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
       set((state) => ({
         collaborators: state.collaborators.filter(c => c.id !== data.userId),
       }));
+    });
+    
+    socket.on('error', (errorData: { message: string }) => {
+      console.error('[Collab] Socket error:', errorData.message);
+      // Optionally set error state to show in UI
+    });
+    
+    socket.on('kick-notification', (data: { graphId: string; reason: string }) => {
+      console.warn('[Collab] Kicked from graph:', data.reason);
+      set({
+        graphId: null,
+        collaborators: [],
+        commandHistory: [],
+        isLeader: false,
+      });
+      // Optionally show toast notification
     });
     
     set({ socket });
@@ -342,6 +360,37 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
         isLeader: false,
       });
     }
+  },
+  
+  kickUser: (targetUserId: string) => {
+    const { socket, graphId } = get();
+    if (socket && socket.connected && graphId) {
+      socket.emit('kick-user', { graphId, targetUserId });
+      // User will be removed from collaborators list via 'user-left' event
+    }
+  },
+  
+  promoteToLeader: (targetUserId: string) => {
+    const { graphId } = get();
+    if (!graphId) return;
+    
+    // Call API to promote user
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    fetch(`${API_URL}/api/graphs/${graphId}/promote/${targetUserId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }).then(response => {
+      if (response.ok) {
+        set({ isLeader: false });
+      }
+    }).catch(error => {
+      console.error('[Collab] Failed to promote to leader:', error);
+    });
   },
 }));
 
