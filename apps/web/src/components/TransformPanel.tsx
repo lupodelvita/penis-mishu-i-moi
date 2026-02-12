@@ -69,24 +69,10 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
     // ======================================
     const isSecurityScan = transformId.startsWith('security.') || transformId.includes('nmap_quick_scan');
     if (isSecurityScan) {
-      // Open terminal with preview command
-      if (onOpenTerminal) {
-        let previewCommand = '';
-        if (transformId === 'security.xss_scan') {
-          let url = sourceEntity.value;
-          if (!url.startsWith('http')) url = `http://${url}`;
-          previewCommand = `echo "Running XSS Fuzzer on ${url}..."`;
-        } else if (transformId === 'security.sqli_scan') {
-          let url = sourceEntity.value;
-          if (!url.startsWith('http')) url = `http://${url}`;
-          previewCommand = `echo "Running SQLi Fuzzer on ${url}..."`;
-        }
-        
-        if (previewCommand) {
-          console.log(`[TransformPanel] Opening terminal for ${transformId}`);
-          onOpenTerminal(previewCommand);
-        }
-      }
+      // NOTE: Terminal opening skipped for security scans to avoid SES "Super constructor null" error
+      // Results are added to graph via API callback instead
+      console.log(`[TransformPanel] Running ${transformId} (terminal mode disabled due to SES restriction)`);
+
       
       // Background API call for data collection
       let endpoint = '';
@@ -125,53 +111,11 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
             
             console.log('[TransformPanel] Got API response:', transformId, data);
             
-            // Write results to terminal
+            // Write results to terminal only if terminal is available
             if (typeof window !== 'undefined' && (window as any).electron?.terminal?.write) {
-              const termWrite = (window as any).electron.terminal.write;
-              console.log('[TransformPanel] Terminal write available, results:', data.data?.results?.length);
-              
-              if (data.success && data.data.results) {
-                const results = data.data.results;
-                
-                // Format and write results to terminal
-                if (transformId === 'security.xss_scan') {
-                  termWrite(`\r\n[XSS Scan Results]\r\n`);
-                  termWrite(`Target: ${body.url}\r\n`);
-                  termWrite(`Parameters scanned: ${new URL(body.url).searchParams.size}\r\n`);
-                  
-                  if (results.length === 0) {
-                    termWrite(`\x1b[32m✓ No XSS vulnerabilities found\x1b[0m\r\n`);
-                  } else {
-                    termWrite(`\x1b[31m✗ Found ${results.length} XSS vulnerabilities:\x1b[0m\r\n`);
-                    results.forEach((vuln: any, i: number) => {
-                      termWrite(`  ${i + 1}. Parameter: ${vuln.properties?.parameter}\r\n`);
-                      termWrite(`     Payload: ${vuln.properties?.payload}\r\n`);
-                      termWrite(`     Severity: ${vuln.properties?.severity}\r\n`);
-                    });
-                  }
-                  termWrite(`\r\nNodeWeaver> `);
-                  
-                } else if (transformId === 'security.sqli_scan') {
-                  termWrite(`\r\n[SQLi Scan Results]\r\n`);
-                  termWrite(`Target: ${body.url}\r\n`);
-                  termWrite(`Parameters scanned: ${new URL(body.url).searchParams.size}\r\n`);
-                  
-                  if (results.length === 0) {
-                    termWrite(`\x1b[32m✓ No SQL Injection vulnerabilities found\x1b[0m\r\n`);
-                  } else {
-                    termWrite(`\x1b[31m✗ Found ${results.length} SQLi vulnerabilities:\x1b[0m\r\n`);
-                    results.forEach((vuln: any, i: number) => {
-                      termWrite(`  ${i + 1}. Parameter: ${vuln.properties?.parameter}\r\n`);
-                      termWrite(`     Evidence: ${vuln.properties?.evidence}\r\n`);
-                      termWrite(`     Severity: ${vuln.properties?.severity}\r\n`);
-                    });
-                  }
-                  termWrite(`\r\nNodeWeaver> `);
-                }
-              } else {
-                termWrite(`\r\n\x1b[31mScan failed: ${data.error?.message || typeof data.error === 'string' ? data.error : 'Unknown error'}\x1b[0m\r\n`);
-                termWrite(`NodeWeaver> `);
-              }
+              // Terminal writing disabled for security scans to avoid SES issues
+              // Results are visible in the graph instead
+              console.log('[TransformPanel] Skipping terminal write for security scan (SES restricted)');
             }
             
             if (data.success && data.data.results) {

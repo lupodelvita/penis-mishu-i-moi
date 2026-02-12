@@ -16,6 +16,7 @@ export default function TerminalConsole({ isOpen, onClose, initialCommand }: Ter
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [terminalError, setTerminalError] = useState(false);
 
   // Initialize Terminal - runs once
   useEffect(() => {
@@ -23,91 +24,97 @@ export default function TerminalConsole({ isOpen, onClose, initialCommand }: Ter
 
     // Only create terminal instance once
     if (!xtermRef.current) {
-        const term = new Terminal({
-            cursorBlink: true,
-            theme: {
-                background: '#0f172a',
-                foreground: '#f8fafc',
-                cursor: '#22c55e',
-                selectionBackground: '#22c55e44',
-                black: '#000000',
-                red: '#ef4444',
-                green: '#22c55e',
-                yellow: '#eab308',
-                blue: '#3b82f6',
-                magenta: '#d946ef',
-                cyan: '#06b6d4',
-                white: '#ffffff',
-            },
-            fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-            fontSize: 14,
-            allowProposedApi: true
-        });
-
-        const fitAddon = new FitAddon();
-        term.loadAddon(fitAddon);
-        
-        term.open(terminalRef.current);
-        fitAddon.fit();
-
-        xtermRef.current = term;
-        fitAddonRef.current = fitAddon;
-
-        const win = window as any;
-        
-        if (win.electron?.terminal) {
-            // Create/attach to persistent session
-            win.electron.terminal.create();
-
-            // Handle user input
-            term.onData((data: string) => {
-                win.electron.terminal.write(data);
+        try {
+            const term = new Terminal({
+                cursorBlink: true,
+                theme: {
+                    background: '#0f172a',
+                    foreground: '#f8fafc',
+                    cursor: '#22c55e',
+                    selectionBackground: '#22c55e44',
+                    black: '#000000',
+                    red: '#ef4444',
+                    green: '#22c55e',
+                    yellow: '#eab308',
+                    blue: '#3b82f6',
+                    magenta: '#d946ef',
+                    cyan: '#06b6d4',
+                    white: '#ffffff',
+                },
+                fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                fontSize: 14,
+                allowProposedApi: true
             });
 
-            // Handle terminal resize
-            term.onResize((size: { cols: number, rows: number }) => {
-                win.electron.terminal.resize(size.cols, size.rows);
-            });
+            const fitAddon = new FitAddon();
+            term.loadAddon(fitAddon);
+        
+            term.open(terminalRef.current);
+            fitAddon.fit();
+
+            xtermRef.current = term;
+            fitAddonRef.current = fitAddon;
+
+            const win = window as any;
             
-            // Handle output from backend - WITH AUTO-SCROLL
-            const cleanup = win.electron.terminal.onData((data: string) => {
-                term.write(data);
-                // CRITICAL: Scroll to bottom on EVERY write
-                term.scrollToBottom();
-            });
+            if (win.electron?.terminal) {
+                // Create/attach to persistent session
+                win.electron.terminal.create();
 
-            // Use ResizeObserver for robust sizing (debounced to prevent warnings)
-            let resizeTimeout: NodeJS.Timeout;
-            const resizeObserver = new ResizeObserver(() => {
-                clearTimeout(resizeTimeout);
-                resizeTimeout = setTimeout(() => {
-                    if (terminalRef.current && fitAddonRef.current) {
-                        try {
-                             fitAddonRef.current.fit();
-                        } catch (e) { /* silently ignore fit errors */ }
-                    }
-                }, 100); // Debounce by 100ms
-            });
-            resizeObserver.observe(terminalRef.current);
+                // Handle user input
+                term.onData((data: string) => {
+                    win.electron.terminal.write(data);
+                });
 
-            setTimeout(() => {
-                 // Force immediate fit once
-                 if (fitAddonRef.current) fitAddonRef.current.fit();
-                 xtermRef.current?.focus(); 
+                // Handle terminal resize
+                term.onResize((size: { cols: number, rows: number }) => {
+                    win.electron.terminal.resize(size.cols, size.rows);
+                });
+                
+                // Handle output from backend - WITH AUTO-SCROLL
+                const cleanup = win.electron.terminal.onData((data: string) => {
+                    term.write(data);
+                    // CRITICAL: Scroll to bottom on EVERY write
+                    term.scrollToBottom();
+                });
 
-                 // If command provided, write it
-                 if (initialCommand) {
-                    console.log('Sending initial command:', initialCommand);
-                    win.electron.terminal.write(initialCommand + '\r\n');
-                 }
-            }, 300);
+                // Use ResizeObserver for robust sizing (debounced to prevent warnings)
+                let resizeTimeout: NodeJS.Timeout;
+                const resizeObserver = new ResizeObserver(() => {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(() => {
+                        if (terminalRef.current && fitAddonRef.current) {
+                            try {
+                                 fitAddonRef.current.fit();
+                            } catch (e) { /* silently ignore fit errors */ }
+                        }
+                    }, 100); // Debounce by 100ms
+                });
+                resizeObserver.observe(terminalRef.current);
 
-            // Cleanup
-            return () => {
-                cleanup();
-                resizeObserver.disconnect();
-                xtermRef.current = null;
-            };
+                setTimeout(() => {
+                     // Force immediate fit once
+                     if (fitAddonRef.current) fitAddonRef.current.fit();
+                     xtermRef.current?.focus(); 
+
+                     // If command provided, write it
+                     if (initialCommand) {
+                        console.log('Sending initial command:', initialCommand);
+                        win.electron.terminal.write(initialCommand + '\r\n');
+                     }
+                }, 300);
+
+                // Cleanup
+                return () => {
+                    cleanup();
+                    resizeObserver.disconnect();
+                    xtermRef.current = null;
+                };
+            }
+        } catch (e) {
+            console.warn('[TerminalConsole] xterm initialization failed (likely SES restriction):', e);
+            setTerminalError(true);
+            xtermRef.current = null;
         }
     }
   }, [isOpen]);
@@ -125,6 +132,7 @@ export default function TerminalConsole({ isOpen, onClose, initialCommand }: Ter
         <div className="flex items-center gap-2">
           <TerminalIcon size={16} className="text-green-400" />
           <span className="text-sm font-medium text-slate-200">NodeWeaver Terminal</span>
+          {terminalError && <span className="text-xs text-yellow-400">(Fallback mode - SES restriction)</span>}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -148,8 +156,17 @@ export default function TerminalConsole({ isOpen, onClose, initialCommand }: Ter
         </div>
       </div>
 
-      {/* Terminal */}
-      <div ref={terminalRef} className="flex-1 p-2" />
+      {/* Terminal or Fallback */}
+      {terminalError ? (
+        <div className="flex-1 p-4 flex flex-col justify-center items-center text-center">
+          <div className="text-slate-400 text-sm">
+            <p className="mb-2">Terminal couldn't be initialized due to security restrictions.</p>
+            <p className="text-xs">Results are being added to the graph. Check the graph panel for updates.</p>
+          </div>
+        </div>
+      ) : (
+        <div ref={terminalRef} className="flex-1 p-2" />
+      )}
     </div>
   );
 }
