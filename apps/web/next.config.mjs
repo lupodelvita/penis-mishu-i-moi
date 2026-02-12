@@ -7,6 +7,7 @@ const nextConfig = {
         ignoreDuringBuilds: true,
     },
     reactStrictMode: true,
+    productionBrowserSourceMaps: true,
   transpilePackages: ['@nodeweaver/shared-types'],
   webpack: (config, { isServer }) => {
     if (!isServer) {

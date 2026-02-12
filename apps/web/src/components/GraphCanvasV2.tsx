@@ -21,6 +21,60 @@ interface GraphCanvasProps {
 }
 export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const nodeHtmlEnabledRef = useRef(false);
+  const NODE_HTML_THRESHOLD = 40;
+
+  // Helper to (re)initialize nodeHtmlLabel when needed
+  const setupNodeHtml = (cy: Core) => {
+    try {
+      if (typeof (cy as any).nodeHtmlLabel !== 'function') return;
+      (cy as any).nodeHtmlLabel([
+        {
+          query: 'node',
+          halign: 'center',
+          valign: 'center',
+          halignBox: 'center',
+          valignBox: 'center',
+          cssClass: 'node-html-card',
+          tpl: function(data: any) {
+            if (!data) return '';
+            const typeLabel = (data.type || 'CUSTOM').replace(/_/g, ' ').toUpperCase();
+            const allFields: Array<{label: string; value: string}> = [];
+            const idShort = (data.id && typeof data.id === 'string') 
+              ? data.id.substring(data.id.lastIndexOf('-') + 1, data.id.lastIndexOf('-') + 9) 
+              : '';
+            if (idShort) allFields.push({ label: 'ID', value: idShort });
+            const props = data.properties || {};
+            if (props.port) allFields.push({ label: 'PORT', value: String(props.port) });
+            if (props.service) allFields.push({ label: 'SERVICE', value: String(props.service) });
+            if (props.version) allFields.push({ label: 'VERSION', value: String(props.version) });
+            if (props.state) allFields.push({ label: 'STATE', value: String(props.state) });
+            if (props.ip) allFields.push({ label: 'IP', value: String(props.ip) });
+            if (props.country) allFields.push({ label: 'COUNTRY', value: String(props.country) });
+            const d = data.data || {};
+            if (d.port) allFields.push({ label: 'PORT', value: String(d.port) });
+            if (d.service) allFields.push({ label: 'SERVICE', value: String(d.service) });
+            if (props.platform) allFields.push({ label: 'PLATFORM', value: String(props.platform) });
+            if (props.status) allFields.push({ label: 'STATUS', value: String(props.status) });
+            const displayFields = allFields.slice(0, Math.min(3, allFields.length));
+            if (displayFields.length === 0) {
+              displayFields.push({ label: 'TYPE', value: typeLabel });
+            }
+            const fieldsHtml = displayFields.map(f => 
+              `<div class="info-row"><span class="info-label">${f.label}</span><span class="info-value">${f.value}</span></div>`
+            ).join('');
+            const color = data.color || '#6b7280';
+            const label = data.label || data.value || 'Unknown';
+            return `\n              <div class="node-card" style="border-color: ${color}">\n                <div class="card-header" style="background: ${color}22">\n                  <span style="color: ${color}">${typeLabel}</span>\n                </div>\n                <div class="card-body">\n                  <div class="main-value">${label}</div>\n                  <div class="info-box">\n                    ${fieldsHtml}\n                  </div>\n                </div>\n              </div>\n            `;
+          }
+        }
+      ]);
+      nodeHtmlEnabledRef.current = true;
+    } catch (e) {
+      nodeHtmlEnabledRef.current = false;
+      console.warn('[GraphCanvas] setupNodeHtml failed:', e);
+    }
+  };
   const cyRef = useRef<Core | null>(null);
   const isInitializedRef = useRef(false);
   const linkModeRef = useRef(false);
@@ -150,81 +204,13 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
         console.log('[GraphCanvas] Cytoscape init complete. Auto-zoom should be OFF.');
       }, 100);
 
-      // Safe extension initialization for nodeHtmlLabel (if available)
-      try {
-          (cy as any).nodeHtmlLabel([
-            {
-              query: 'node',
-              halign: 'center',
-              valign: 'center',
-              halignBox: 'center',
-              valignBox: 'center',
-              cssClass: 'node-html-card',
-              tpl: function(data: any) {
-            // Safety checks to prevent "Super constructor null" or other rendering crashes
-            if (!data) return '';
-            
-            const typeLabel = (data.type || 'CUSTOM').replace(/_/g, ' ').toUpperCase();
-            const allFields: Array<{label: string; value: string}> = [];
-            
-            // Safer ID extraction
-            const idShort = (data.id && typeof data.id === 'string') 
-              ? data.id.substring(data.id.lastIndexOf('-') + 1, data.id.lastIndexOf('-') + 9) 
-              : '';
-              
-            if (idShort) allFields.push({ label: 'ID', value: idShort });
-
-            // Safe property access
-            const props = data.properties || {};
-            if (props.port) allFields.push({ label: 'PORT', value: String(props.port) });
-            if (props.service) allFields.push({ label: 'SERVICE', value: String(props.service) });
-            if (props.version) allFields.push({ label: 'VERSION', value: String(props.version) });
-            if (props.state) allFields.push({ label: 'STATE', value: String(props.state) });
-            if (props.ip) allFields.push({ label: 'IP', value: String(props.ip) });
-            if (props.country) allFields.push({ label: 'COUNTRY', value: String(props.country) });
-
-            // Safe data object access
-            const d = data.data || {};
-            if (d.port) allFields.push({ label: 'PORT', value: String(d.port) });
-            if (d.service) allFields.push({ label: 'SERVICE', value: String(d.service) });
-            
-            // Platform/Username specific
-            if (props.platform) allFields.push({ label: 'PLATFORM', value: String(props.platform) });
-            if (props.status) allFields.push({ label: 'STATUS', value: String(props.status) });
-
-            const displayFields = allFields.slice(0, Math.min(3, allFields.length));
-            if (displayFields.length === 0) {
-              displayFields.push({ label: 'TYPE', value: typeLabel });
-            }
-            
-            const fieldsHtml = displayFields.map(f => 
-              `<div class="info-row">
-                <span class="info-label">${f.label}</span>
-                <span class="info-value">${f.value}</span>
-              </div>`
-            ).join('');
-            
-            const color = data.color || '#6b7280';
-            const label = data.label || data.value || 'Unknown';
-            
-            return `
-              <div class="node-card" style="border-color: ${color}">
-                <div class="card-header" style="background: ${color}22">
-                  <span style="color: ${color}">${typeLabel}</span>
-                </div>
-                <div class="card-body">
-                  <div class="main-value">${label}</div>
-                  <div class="info-box">
-                    ${fieldsHtml}
-                  </div>
-                </div>
-              </div>
-            `;
-          }
-        }
-      ]);
-      } catch (e) {
-        console.warn('[GraphCanvas] nodeHtmlLabel initialization failed:', e);
+// Safe extension initialization for nodeHtmlLabel (only for small initial graphs)
+      const shouldEnableNodeHtml = (currentGraph && currentGraph.entities && currentGraph.entities.length <= NODE_HTML_THRESHOLD);
+      if (shouldEnableNodeHtml) {
+        setupNodeHtml(cy);
+      } else {
+        nodeHtmlEnabledRef.current = false;
+        console.log('[GraphCanvas] nodeHtmlLabel skipped due to large initial graph.');
       }
 
       // Syntax fix verified - Block cleaned
@@ -309,10 +295,17 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
     let hidNodeHtml = false;
     let nodeHtmlRoot: HTMLElement | null = null;
     try {
-      if (containerRef.current && currentGraph.entities.length > 40) {
+      // If graph is large and nodeHtml is enabled, remove node-html elements and disable it
+      if (containerRef.current && currentGraph.entities.length > NODE_HTML_THRESHOLD && nodeHtmlEnabledRef.current) {
+        const roots = Array.from(containerRef.current.querySelectorAll('[class^="cy-node-html"]')) as HTMLElement[];
+        roots.forEach(r => r.remove());
+        nodeHtmlEnabledRef.current = false;
+        console.log('[GraphCanvas] nodeHtmlLabel removed due to large graph during sync.');
+      } else if (containerRef.current && currentGraph.entities.length > NODE_HTML_THRESHOLD) {
+        // If nodeHtml not enabled but DOM exists, remove any leftover
         nodeHtmlRoot = containerRef.current.querySelector('[class^="cy-node-html"]') as HTMLElement | null;
         if (nodeHtmlRoot) {
-          nodeHtmlRoot.style.display = 'none';
+          nodeHtmlRoot.remove();
           hidNodeHtml = true;
         }
       }
@@ -412,16 +405,17 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
       try {
         const cur = cy.zoom();
         const clamped = Math.min(Math.max(cur, 0.7), 1.3);
-        cy.animate({ zoom: clamped, center: { eles: cy.nodes() }, duration: 400 });
+        // Only animate zoom level, do not change pan/center to avoid viewport 'drift'
+        cy.animate({ zoom: clamped, duration: 400 });
       } catch (e) { /* ignore */ }
     } catch (e) {
       console.warn('[GraphCanvas] layout run failed:', e);
     }
 
-    // Reveal node-html container if we hid it
+    // If graph has shrunk below threshold and nodeHtml isn't enabled yet, initialize it
     try {
-      if (hidNodeHtml && nodeHtmlRoot) {
-        nodeHtmlRoot.style.display = '';
+      if (currentGraph.entities.length <= NODE_HTML_THRESHOLD && !nodeHtmlEnabledRef.current) {
+        setupNodeHtml(cy);
       }
     } catch (e) { /* ignore */ }
     // cy.fit(undefined, 50); // Disabled dynamic auto-zoom at user request
