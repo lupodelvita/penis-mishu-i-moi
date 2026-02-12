@@ -86,6 +86,7 @@ model Graph {
   
   entities    Entity[]
   links       Link[]
+  commands    GraphCommand[]
 }
 
 model Entity {
@@ -163,4 +164,20 @@ model AIMemory {
   // Relations
   userId    String?
   user      User?    @relation(fields: [userId], references: [id])
+}
+
+model GraphCommand {
+  id        String   @id @default(cuid())
+  graphId   String
+  type      String   // add_entity, delete_entity, transform, chat, etc
+  payload   Json
+  userId    String
+  userName  String
+  timestamp DateTime @default(now())
+  
+  // Relations
+  graph     Graph    @relation(fields: [graphId], references: [id], onDelete: Cascade)
+  
+  @@index([graphId])
+  @@index([timestamp])
 }

@@ -1,11 +1,10 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { Search, Play, Settings2, Loader2 } from 'lucide-react';
-import { useGraphStore } from '@/store';
+import { useGraphStore, useCollaborationStore } from '@/store';
 import { EntityType } from '@nodeweaver/shared-types';
 interface TransformPanelProps {
   selectedEntityId: string | null;
-  onOpenTerminal?: (command: string) => void;
 }
 const SAMPLE_TRANSFORMS = [
   { id: 'dns_resolve', name: 'Domain to IP', category: 'DNS', icon: '🌐', inputTypes: ['domain'] },
@@ -19,12 +18,13 @@ const SAMPLE_TRANSFORMS = [
   { id: 'security.xss_scan', name: 'XSS Fuzzer (Active)', category: 'Security', icon: '☣️', inputTypes: ['url', 'domain'] },
   { id: 'security.sqli_scan', name: 'SQLi Fuzzer (Active)', category: 'Security', icon: '💉', inputTypes: ['url', 'domain'] },
 ];
-export default function TransformPanel({ selectedEntityId, onOpenTerminal }: TransformPanelProps) {
+export default function TransformPanel({ selectedEntityId }: TransformPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'info' | 'success' | 'error' } | null>(null);
   const { currentGraph, addEntity, addLink } = useGraphStore();
+  const { sendCommand, isConnected } = useCollaborationStore();
   
   // Auto-hide toast after 4s
   useEffect(() => {
@@ -74,10 +74,7 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
         cliCommand = `nmap -F -sV -T4 --script-args http.useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" "${target}"`;
     }
 
-    if (cliCommand && onOpenTerminal) {
-        onOpenTerminal(cliCommand);
-        // Do NOT return. Allow the API call to proceed so the graph is updated.
-    }
+    // NOTE: Terminal opening completely disabled - all transforms use API callbacks instead
     
     // ======================================
     // SECURITY SCANS (Port, XSS, SQLi) - ALL VIA TERMINAL
@@ -131,6 +128,15 @@ export default function TransformPanel({ selectedEntityId, onOpenTerminal }: Tra
                    }
                    setLoadingId(null);
                    return; // Exit early if no results
+               }
+               
+               // Broadcast transform command to collaborators
+               if (isConnected) {
+                 sendCommand({
+                   type: 'transform',
+                   payload: { transformId, sourceEntity: sourceEntity.value, resultCount: data.data.results.length },
+                   userId: 'local',
+                 });
                }
                
                // HYBRID HANDLING: If backend provides specific links (Topology Aware), use them.

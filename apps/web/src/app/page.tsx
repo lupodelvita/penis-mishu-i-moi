@@ -12,7 +12,6 @@ import AIAssistant from '@/components/AIAssistant';
 import CollaborationPanel from '@/components/CollaborationPanel';
 import SettingsModal from '@/components/SettingsModal';
 import SeoConsole from '@/components/SeoConsole';
-import TerminalConsole from '@/components/TerminalConsole';
 import TransformBuilder from '@/components/TransformBuilder';
 import { useCollaborationStore } from '@/store';
 import { useAuth } from '@/context/AuthContext';
@@ -28,8 +27,6 @@ export default function Home() {
   const [showBuilder, setShowBuilder] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showSeoConsole, setShowSeoConsole] = useState(false);
-  const [showTerminal, setShowTerminal] = useState(false);
-  const [terminalCommand, setTerminalCommand] = useState<string | undefined>(undefined);
   const [actionInput, setActionInput] = useState<{ type: 'nmap' | 'whois', isOpen: boolean }>({ type: 'nmap', isOpen: false });
   const [inputValue, setInputValue] = useState('');
   
@@ -143,7 +140,7 @@ export default function Home() {
         onToggleCollaboration={() => setShowCollab(!showCollab)}
         onToggleAI={() => setShowAI(!showAI)}
         onToggleSeoConsole={() => setShowSeoConsole(!showSeoConsole)}
-        onToggleTerminal={() => setShowTerminal(!showTerminal)}
+        onToggleTerminal={() => {}}
       />
       
       <SettingsModal 
@@ -152,11 +149,6 @@ export default function Home() {
       />
       
       <SeoConsole isOpen={showSeoConsole} onClose={() => setShowSeoConsole(false)} />
-      <TerminalConsole 
-        isOpen={showTerminal} 
-        onClose={() => setShowTerminal(false)} 
-        initialCommand={terminalCommand} 
-      />
 
       {/* Main Content Area */}
       <div className="flex-1 relative overflow-hidden flex">
@@ -166,22 +158,14 @@ export default function Home() {
         {/* Center - Graph Canvas */}
         <div className="flex-1 relative">
           <GraphCanvas 
-            onEntitySelect={setSelectedEntityId} 
-             onOpenTerminal={(cmd) => {
-                setTerminalCommand(cmd);
-                setShowTerminal(true);
-             }}
+            onEntitySelect={setSelectedEntityId}
           />
         </div>
 
         {/* Right Sidebar - Transform Panel & Details */}
         <div className="w-80 flex flex-col border-l border-border">
           <TransformPanel 
-            selectedEntityId={selectedEntityId} 
-             onOpenTerminal={(cmd) => {
-                setTerminalCommand(cmd);
-                setShowTerminal(true);
-             }}
+            selectedEntityId={selectedEntityId}
           />
           <DetailPanel selectedEntityId={selectedEntityId} />
         </div>

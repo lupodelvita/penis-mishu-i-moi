@@ -7,6 +7,7 @@ interface Collaborator {
   color: string;
   cursor?: { x: number; y: number };
   selectedEntity?: string;
+  lastActivity?: number;
 }
 
 interface GraphUpdate {
@@ -16,19 +17,33 @@ interface GraphUpdate {
   timestamp: Date;
 }
 
+interface CollaborativeCommand {
+  id: string;
+  type: 'add_entity' | 'delete_entity' | 'update_entity' | 'add_link' | 'delete_link' | 'transform' | 'chat';
+  payload: any;
+  userId: string;
+  timestamp: Date;
+  graphId: string;
+}
+
 interface CollaborationStore {
   socket: Socket | null;
   isConnected: boolean;
   collaborators: Collaborator[];
   graphUpdates: GraphUpdate[];
+  commandHistory: CollaborativeCommand[];
   currentUser: Collaborator | null;
+  graphId: string | null;
   
   // Actions
   connect: (graphId: string, userName: string) => void;
   disconnect: () => void;
   sendUpdate: (update: GraphUpdate) => void;
+  sendCommand: (command: Omit<CollaborativeCommand, 'id' | 'timestamp' | 'graphId'>) => void;
   updateCursor: (x: number, y: number) => void;
   selectEntity: (entityId: string | null) => void;
+  broadcastChatMessage: (message: string) => void;
+  loadHistoricalCommands: (graphId: string) => Promise<void>;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
@@ -40,7 +55,9 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
   isConnected: false,
   collaborators: [],
   graphUpdates: [],
+  commandHistory: [],
   currentUser: null,
+  graphId: null,
   
   connect: (graphId: string, userName: string) => {
     // CRITICAL: Disconnect existing socket if present to prevent duplicates
@@ -66,11 +83,30 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
           id: socket.id || Math.random().toString(),
           name: userName,
           color: colors[Math.floor(Math.random() * colors.length)],
+          lastActivity: Date.now(),
         };
         
         socket.emit('join-graph', { graphId, user });
-        set({ isConnected: true, currentUser: { ...user, id: socket.id! } });
+        set({ isConnected: true, currentUser: { ...user, id: socket.id! }, graphId });
         hasJoined = true;
+
+        // Fetch command history from server
+        const fetchHistory = async () => {
+          try {
+            const response = await fetch(`${API_URL}/api/graphs/${graphId}/commands?limit=100`, {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              },
+            });
+            if (response.ok) {
+              const data = await response.json();
+              set({ commandHistory: data.data || [] });
+            }
+          } catch (error) {
+            console.error('[Collab] Failed to fetch command history:', error);
+          }
+        };
+        fetchHistory();
       }
     });
     
@@ -79,10 +115,7 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
     });
     
     socket.on('collaborators-update', (collaborators: Collaborator[]) => {
-      // CRITICAL FIX: Get current user from state, not from outer scope
       const currentUser = get().currentUser;
-      
-      // Filter out current user from collaborators list
       const filtered = collaborators.filter(c => c.id !== currentUser?.id);
       set({ collaborators: filtered });
     });
@@ -93,10 +126,16 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
       }));
     });
     
+    socket.on('command-received', (command: CollaborativeCommand) => {
+      set((state) => ({
+        commandHistory: [...state.commandHistory, command],
+      }));
+    });
+    
     socket.on('cursor-update', ({ userId, x, y }: any) => {
       set((state) => ({
         collaborators: state.collaborators.map(c =>
-          c.id === userId ? { ...c, cursor: { x, y } } : c
+          c.id === userId ? { ...c, cursor: { x, y }, lastActivity: Date.now() } : c
         ),
       }));
     });
@@ -104,7 +143,7 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
     socket.on('entity-select', ({ userId, entityId }: any) => {
       set((state) => ({
         collaborators: state.collaborators.map(c =>
-          c.id === userId ? { ...c, selectedEntity: entityId } : c
+          c.id === userId ? { ...c, selectedEntity: entityId, lastActivity: Date.now() } : c
         ),
       }));
     });
@@ -116,7 +155,7 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
     const { socket } = get();
     if (socket) {
       socket.disconnect();
-      set({ socket: null, isConnected: false, collaborators: [], currentUser: null });
+      set({ socket: null, isConnected: false, collaborators: [], currentUser: null, graphId: null });
     }
   },
   
@@ -124,6 +163,22 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
     const { socket } = get();
     if (socket && socket.connected) {
       socket.emit('graph-update', update);
+    }
+  },
+  
+  sendCommand: (command: Omit<CollaborativeCommand, 'id' | 'timestamp' | 'graphId'>) => {
+    const { socket, graphId, currentUser } = get();
+    if (socket && socket.connected && graphId && currentUser) {
+      const fullCommand: CollaborativeCommand = {
+        ...command,
+        id: `cmd-${Date.now()}-${Math.random()}`,
+        timestamp: new Date(),
+        graphId,
+      };
+      socket.emit('command', fullCommand);
+      set((state) => ({
+        commandHistory: [...state.commandHistory, fullCommand],
+      }));
     }
   },
   
@@ -140,4 +195,39 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
       socket.emit('entity-select', { entityId });
     }
   },
+  
+  broadcastChatMessage: (message: string) => {
+    const { socket, graphId, currentUser } = get();
+    if (socket && socket.connected && graphId && currentUser) {
+      const command: CollaborativeCommand = {
+        id: `chat-${Date.now()}-${Math.random()}`,
+        type: 'chat',
+        payload: { message, sender: currentUser.name },
+        userId: currentUser.id,
+        timestamp: new Date(),
+        graphId,
+      };
+      socket.emit('command', command);
+      set((state) => ({
+        commandHistory: [...state.commandHistory, command],
+      }));
+    }
+  },
+
+  loadHistoricalCommands: async (graphId: string) => {
+    try {
+      const response = await fetch(`${API_URL}/graphs/${graphId}/commands?limit=100`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        set({ commandHistory: data.data || [] });
+      }
+    } catch (error) {
+      console.error('[Collab] Failed to load historical commands:', error);
+    }
+  },
 }));
+

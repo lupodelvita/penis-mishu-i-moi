@@ -1,5 +1,6 @@
 import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
+import { prisma } from '../lib/prisma';
 
 interface Collaborator {
   id: string;
@@ -17,10 +18,20 @@ interface GraphUpdate {
   timestamp: Date;
 }
 
+interface CollaborativeCommand {
+  id: string;
+  type: 'add_entity' | 'delete_entity' | 'update_entity' | 'add_link' | 'delete_link' | 'transform' | 'chat';
+  payload: any;
+  userId: string;
+  timestamp: Date;
+  graphId: string;
+}
+
 class CollaborationService {
   private io: SocketIOServer | null = null;
   private collaborators: Map<string, Collaborator> = new Map();
   private graphRooms: Map<string, Set<string>> = new Map(); // graphId -> Set<socketId>
+  private commandHistory: Map<string, CollaborativeCommand[]> = new Map(); // graphId -> commands
 
   initialize(httpServer: HttpServer) {
     this.io = new SocketIOServer(httpServer, {
@@ -45,7 +56,7 @@ class CollaborationService {
         }
         this.graphRooms.get(graphId)!.add(socket.id);
 
-        // CRITICAL FIX: Get collaborators for the room
+        // Get collaborators for the room
         const roomCollaborators = this.getGraphCollaborators(graphId);
         
         // Send to everyone in the room (each client filters out themselves)
@@ -64,6 +75,32 @@ class CollaborationService {
             userId: socket.id,
             timestamp: new Date(),
           });
+        }
+      });
+
+      // Handle collaborative commands
+      socket.on('command', async (command: Omit<CollaborativeCommand, 'id' | 'timestamp' | 'graphId'>) => {
+        const collaborator = this.collaborators.get(socket.id);
+        if (collaborator) {
+          const fullCommand: CollaborativeCommand = {
+            ...command,
+            id: `cmd-${Date.now()}-${Math.random()}`,
+            timestamp: new Date(),
+            graphId: collaborator.graphId,
+          };
+
+          // Store in memory history
+          if (!this.commandHistory.has(collaborator.graphId)) {
+            this.commandHistory.set(collaborator.graphId, []);
+          }
+          this.commandHistory.get(collaborator.graphId)!.push(fullCommand);
+
+          // Persist to database
+          await this.persistCommand(fullCommand);
+
+          // Broadcast to all in graph
+          this.io!.to(collaborator.graphId).emit('command-received', fullCommand);
+          console.log(`[Collab] Command ${command.type} in graph ${collaborator.graphId}`);
         }
       });
 
@@ -113,6 +150,69 @@ class CollaborationService {
           const remainingCollaborators = this.getGraphCollaborators(graphId);
           this.io!.to(graphId).emit('collaborators-update', remainingCollaborators);
           
+          console.log(`[Collab] ${name} disconnected from graph ${graphId}. Remaining: ${remainingCollaborators.length}`);
+        }
+      });
+    });
+  }
+
+  /**
+   * Persist command to database
+   */
+  private async persistCommand(command: CollaborativeCommand): Promise<void> {
+    try {
+      await prisma.graphCommand.create({
+        data: {
+          graphId: command.graphId,
+          type: command.type,
+          payload: command.payload,
+          userId: command.userId,
+          userName: command.payload?.sender || 'Unknown',
+          timestamp: command.timestamp,
+        },
+      });
+    } catch (error) {
+      console.error('[Collab] Failed to persist command:', error);
+    }
+  }
+
+  /**
+   * Get collaborators in a graph room
+   */
+  getGraphCollaborators(graphId: string): Collaborator[] {
+    if (!this.io) return [];
+
+    const room = this.io.sockets.adapter.rooms.get(graphId);
+    if (!room) return [];
+
+    return Array.from(room)
+      .map(socketId => this.collaborators.get(socketId))
+      .filter((c): c is Collaborator => c !== undefined);
+  }
+
+  /**
+   * Get command history for a graph
+   */
+  getCommandHistory(graphId: string, limit?: number): CollaborativeCommand[] {
+    const history = this.commandHistory.get(graphId) || [];
+    return limit ? history.slice(-limit) : history;
+  }
+
+  getIO() {
+    return this.io;
+  }
+
+  private static instance: CollaborationService;
+
+  static getInstance(): CollaborationService {
+    if (!this.instance) {
+      this.instance = new CollaborationService();
+    }
+    return this.instance;
+  }
+}
+
+export const collaborationService = CollaborationService.getInstance();          
           console.log(`[Collab] ${name} left graph ${graphId}. Remaining: ${remainingCollaborators.length}`);
         }
         
@@ -132,9 +232,26 @@ class CollaborationService {
       .filter((c): c is Collaborator => c !== undefined);
   }
 
+  /**
+   * Get command history for a graph
+   */
+  getCommandHistory(graphId: string, limit?: number): CollaborativeCommand[] {
+    const history = this.commandHistory.get(graphId) || [];
+    return limit ? history.slice(-limit) : history;
+  }
+
   getIO() {
     return this.io;
   }
+
+  private static instance: CollaborationService;
+
+  static getInstance(): CollaborationService {
+    if (!this.instance) {
+      this.instance = new CollaborationService();
+    }
+    return this.instance;
+  }
 }
 
-export const collaborationService = new CollaborationService();
+export const collaborationService = CollaborationService.getInstance();

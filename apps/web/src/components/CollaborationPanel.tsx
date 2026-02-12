@@ -1,13 +1,14 @@
 'use client';
 
 import { useCollaborationStore } from '@/store/collaborationStore';
-import { Users, Wifi, WifiOff, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, Wifi, WifiOff, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { useState } from 'react';
 
 export default function CollaborationPanel() {
-  const { isConnected, collaborators, currentUser } = useCollaborationStore();
+  const { isConnected, collaborators, currentUser, commandHistory, broadcastChatMessage } = useCollaborationStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  const [chatMessage, setChatMessage] = useState('');
   
   if (!isVisible) {
     return (
@@ -83,6 +84,97 @@ export default function CollaborationPanel() {
                 />
                 <span className="text-sm text-white font-medium truncate">{currentUser.name}</span>
               </div>
+            </div>
+          )}
+
+          {/* Chat Messages */}
+          <div className="mb-3 pb-3 border-b border-slate-700">
+            <div className="text-xs text-slate-400 mb-2">История действий</div>
+            <div className="space-y-1 max-h-[200px] overflow-y-auto">
+              {commandHistory.length === 0 ? (
+                <p className="text-xs text-slate-500 italic py-2">Пусто</p>
+              ) : (
+                commandHistory.slice().reverse().map((cmd) => {
+                  let displayText = '';
+                  let emoji = '•';
+                  
+                  switch (cmd.type) {
+                    case 'add_entity':
+                      emoji = '➕';
+                      displayText = `Добавлена сущность`;
+                      break;
+                    case 'delete_entity':
+                      emoji = '➖';
+                      displayText = `Удалена сущность`;
+                      break;
+                    case 'transform':
+                      emoji = '🔄';
+                      const transformName = cmd.payload?.transformId || 'трансформ';
+                      const resultCount = cmd.payload?.resultCount || 0;
+                      displayText = `${transformName} (${resultCount} результатов)`;
+                      break;
+                    case 'chat':
+                      emoji = '💬';
+                      displayText = `${cmd.payload?.sender}: ${cmd.payload?.message}`;
+                      break;
+                    case 'add_link':
+                      emoji = '🔗';
+                      displayText = `Добавлена связь`;
+                      break;
+                    case 'delete_link':
+                      emoji = '✂️';
+                      displayText = `Удалена связь`;
+                      break;
+                    default:
+                      displayText = cmd.type;
+                  }
+                  
+                  const timestamp = new Date(cmd.timestamp);
+                  const timeStr = timestamp.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                  
+                  return (
+                    <div key={cmd.id} className="text-xs text-slate-400 px-2 py-1 rounded bg-slate-800/30 hover:bg-slate-800/50 transition-colors">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="flex items-start gap-1.5 flex-1 min-w-0">
+                          <span className="mt-0.5 text-sm">{emoji}</span>
+                          <span className="text-slate-300 truncate flex-1">{displayText}</span>
+                        </div>
+                        <span className="text-slate-500 text-xs whitespace-nowrap">{timeStr}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Chat Input */}
+          {isConnected && (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Сообщение..."
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && chatMessage.trim()) {
+                    broadcastChatMessage(chatMessage);
+                    setChatMessage('');
+                  }
+                }}
+                className="flex-1 px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+              />
+              <button
+                onClick={() => {
+                  if (chatMessage.trim()) {
+                    broadcastChatMessage(chatMessage);
+                    setChatMessage('');
+                  }
+                }}
+                className="p-1 hover:bg-slate-800 rounded transition-colors text-slate-400 hover:text-white"
+              >
+                <Send className="w-3 h-3" />
+              </button>
             </div>
           )}
 

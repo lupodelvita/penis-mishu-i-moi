@@ -211,14 +211,14 @@ export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeo
       {/* Right section - View controls & Auth */}
       <div className="flex items-center gap-1">
         <div className="flex items-center gap-1 mr-4">
-            {/* Terminal Toggle */}
-            <button 
+            {/* Terminal Toggle - DISABLED */}
+            {/* <button 
               onClick={onToggleTerminal}
               className="p-2 hover:bg-accent rounded-md transition-colors group relative"
               title="Terminal Console (Ctrl+`)"
             >
                <span className="w-4 h-4 flex items-center justify-center font-mono font-bold text-xs pointer-events-none">&gt;_</span>
-            </button>
+            </button> */}
             
             {/* CEO Console Button */}
             {user?.licenseTier === 'CEO' && (

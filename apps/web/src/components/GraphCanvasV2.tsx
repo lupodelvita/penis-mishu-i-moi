@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import cytoscape, { Core, EventObject, NodeSingular } from 'cytoscape';
 // Extensions managed by cytoscapeHelper
 import { EntityType } from '@nodeweaver/shared-types';
-import { Trash2, Link2, ZoomIn, ZoomOut, Maximize2, X, Wifi, Terminal } from 'lucide-react';
-import { useGraphStore } from '@/store';
+import { Trash2, Link2, ZoomIn, ZoomOut, Maximize2, X, Wifi } from 'lucide-react';
+import { useGraphStore, useCollaborationStore } from '@/store';
 import NmapScanModal from './NmapScanModal';
 import ViewToggle from './ViewToggle';
 import dynamic from 'next/dynamic';
@@ -17,9 +17,8 @@ import { registerCytoscapeExtensions } from '@/utils/cytoscapeHelper';
 
 interface GraphCanvasProps {
   onEntitySelect?: (entityId: string | null) => void;
-  onOpenTerminal?: (command: string) => void;
 }
-export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCanvasProps) {
+export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const nodeHtmlEnabledRef = useRef(false);
   const NODE_HTML_THRESHOLD = 40;
@@ -80,6 +79,7 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
   const linkModeRef = useRef(false);
   const linkSourceRef = useRef<NodeSingular | null>(null);
   const { currentGraph, addEntity, deleteEntity, addLink, deleteLink, selectEntity, clearSelection } = useGraphStore();
+  const { sendCommand, updateCursor, selectEntity: selectEntityCollab, isConnected, collaborators } = useCollaborationStore();
   const [linkMode, setLinkMode] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; target: any } | null>(null);
   const [showNameDialog, setShowNameDialog] = useState(false);
@@ -285,6 +285,23 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
       };
     })();
   }, []);
+
+  // Track cursor position for collaboration
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !isConnected) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      updateCursor(x, y);
+    };
+
+    container.addEventListener('mousemove', handleMouseMove);
+    return () => container.removeEventListener('mousemove', handleMouseMove);
+  }, [isConnected, updateCursor]);
+
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy || !currentGraph) return;
@@ -499,7 +516,7 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
         [EntityType.Location]: '#ef4444',
         [EntityType.PhoneNumber]: '#06b6d4',
       };
-      addEntity({
+      const newEntity = {
           id: newEntityId,
           type: pendingEntity.type,
           value: finalName,
@@ -510,7 +527,18 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
               initialX: pendingEntity.x,
               initialY: pendingEntity.y,
           },
-      });
+      };
+      addEntity(newEntity);
+      
+      // Broadcast to collaborators
+      if (isConnected) {
+        sendCommand({
+          type: 'add_entity',
+          payload: newEntity,
+          userId: 'local',
+        });
+      }
+      
       setShowNameDialog(false);
       setPendingEntity(null);
       setNewEntityName('');
@@ -682,6 +710,48 @@ export default function GraphCanvas({ onEntitySelect, onOpenTerminal }: GraphCan
           <button onClick={handleDelete} className="p-2 hover:bg-red-600 rounded" title="Удалить (Del)"><Trash2 className="w-5 h-5 text-slate-300" /></button>
         </div>
       )}
+      
+      {/* Collaborator Cursors */}
+      {collaborators.map((collab) => (
+        collab.cursor && (
+          <div
+            key={collab.id}
+            className="fixed z-30 pointer-events-none"
+            style={{
+              left: `${collab.cursor.x}px`,
+              top: `${collab.cursor.y}px`,
+              transform: 'translateX(-50%)',
+            }}
+          >
+            <div className="flex flex-col items-center gap-1">
+              <svg
+                width="20"
+                height="28"
+                viewBox="0 0 20 28"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{ filter: `drop-shadow(0 0 2px ${collab.color})` }}
+              >
+                <path
+                  d="M2 2L2 26L10 18.5L17.5 26L18.5 25L11 17.5L18.5 2H2Z"
+                  fill={collab.color}
+                  stroke={collab.color}
+                  strokeWidth="0.5"
+                />
+              </svg>
+              <div
+                className="px-2 py-0.5 rounded text-xs font-medium text-white whitespace-nowrap"
+                style={{
+                  backgroundColor: collab.color,
+                  boxShadow: `0 0 8px ${collab.color}40`,
+                }}
+              >
+                {collab.name}
+              </div>
+            </div>
+          </div>
+        )
+      ))}
       
       {contextMenu && (
         <div 

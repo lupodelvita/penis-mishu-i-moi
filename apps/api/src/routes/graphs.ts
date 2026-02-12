@@ -220,4 +220,59 @@ router.patch('/:id/entities/:entityId/note', authenticateToken, async (req, res,
   }
 });
 
+// Get command history for a graph
+router.get('/:id/commands', authenticateToken, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const limit = parseInt(req.query.limit as string) || 50;
+
+    // Verify graph exists
+    const graph = await prisma.graph.findUnique({ where: { id } });
+    if (!graph) {
+      res.status(404).json({ success: false, error: 'Graph not found' });
+      return;
+    }
+
+    // Load from database, then in-memory cache
+    const dbCommands = await prisma.graphCommand.findMany({
+      where: { graphId: id },
+      orderBy: { timestamp: 'desc' },
+      take: limit,
+    });
+
+    // Also check in-memory cache for recent commands not yet saved
+    const { CollaborationService } = await import('../services/CollaborationService');
+    const memoryCommands = CollaborationService.getInstance().getCommandHistory(id, limit);
+
+    // Merge and deduplicate (memory has priority for latest)
+    const allCommands = [...memoryCommands];
+    const dbIds = new Set(memoryCommands.map(c => c.id));
+    
+    for (const dbCmd of dbCommands) {
+      if (!dbIds.has(dbCmd.id as any)) {
+        allCommands.push({
+          id: dbCmd.id,
+          type: dbCmd.type as any,
+          payload: dbCmd.payload,
+          userId: dbCmd.userId,
+          timestamp: dbCmd.timestamp,
+          graphId: dbCmd.graphId,
+        });
+      }
+    }
+
+    // Sort by timestamp descending, take limit
+    allCommands.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    const result = allCommands.slice(0, limit);
+
+    res.json({ 
+      success: true, 
+      data: result,
+      total: result.length
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
