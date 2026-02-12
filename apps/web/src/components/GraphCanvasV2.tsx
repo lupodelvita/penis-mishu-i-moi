@@ -649,7 +649,7 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
       <div className="absolute bottom-4 right-4 text-xs text-slate-600 pointer-events-none select-none">
         GraphCanvas v2.1 (Backend Topology Fix)
       </div>
-      {nodeCount === 0 && (
+      {nodeCount === 0 && currentView === 'graph' && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center space-y-4">
             <div className="text-xl font-medium text-slate-300">Начните расследование</div>

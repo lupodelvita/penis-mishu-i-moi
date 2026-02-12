@@ -62,13 +62,13 @@ class CollaborationService {
           });
 
           if (!graph) {
-            socket.emit('error', { message: 'Graph not found' });
+            socket.emit('join-failed', { message: 'Graph not found' });
             console.log(`[Collab] Join-graph failed: Graph ${graphId} not found`);
             return;
           }
 
           if (graph.members.length === 0) {
-            socket.emit('error', { message: 'You are not a member of this graph' });
+            socket.emit('join-failed', { message: 'You are not a member of this graph' });
             console.log(`[Collab] Join-graph failed: User ${user.id} not a member of ${graphId}`);
             return;
           }
@@ -86,6 +86,9 @@ class CollaborationService {
           // Get collaborators for the room
           const roomCollaborators = this.getGraphCollaborators(graphId);
           
+          // Confirm join to the client
+          socket.emit('join-confirmed', { graphId });
+          
           // Send to everyone in the room (each client filters out themselves)
           this.io!.to(graphId).emit('collaborators-update', roomCollaborators);
           
@@ -100,7 +103,7 @@ class CollaborationService {
           console.log(`[Collab] ${user.name} joined graph ${graphId}. Total: ${roomCollaborators.length}`);
         } catch (error) {
           console.error('[Collab] Error in join-graph:', error);
-          socket.emit('error', { message: 'Failed to join graph' });
+          socket.emit('join-failed', { message: 'Failed to join graph' });
         }
       });
 

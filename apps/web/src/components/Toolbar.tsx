@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Save, FolderOpen, Upload, Download, Users, Sparkles, Bot, Shield, LogOut, Crown } from 'lucide-react';
+import { Save, FolderOpen, Upload, Download, Users, Sparkles, Bot, Shield, LogOut, Crown, Database } from 'lucide-react';
 import { useGraphStore } from '@/store';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
@@ -12,10 +12,11 @@ interface ToolbarProps {
   onToggleAI?: () => void;
   onToggleSeoConsole?: () => void;
   onToggleTerminal?: () => void;
+  onToggleBreachVIP?: () => void;
 }
 
 
-export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeoConsole, onToggleTerminal }: ToolbarProps) {
+export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeoConsole, onToggleTerminal, onToggleBreachVIP }: ToolbarProps) {
   const { currentGraph, exportGraph, importGraph } = useGraphStore();
   const { user, logout } = useAuth();
   const [graphName, setGraphName] = useState('Untitled Graph');
@@ -192,6 +193,16 @@ export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeo
             <Sparkles className="w-4 h-4" />
             <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-900 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
               AI Ассистент
+            </span>
+          </button>
+          <button 
+            onClick={onToggleBreachVIP}
+            className="p-2 hover:bg-accent rounded-md transition-colors group relative" 
+            title="BreachVIP OSINT"
+          >
+            <Database className="w-4 h-4 text-red-400" />
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-900 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              BreachVIP
             </span>
           </button>
 

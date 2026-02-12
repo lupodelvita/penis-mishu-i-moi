@@ -9,6 +9,7 @@ interface Collaborator {
   selectedEntity?: string | null;
   lastActivity?: number;
   isLeader?: boolean;
+  userId?: string; // DB user ID for membership validation
 }
 
 interface GraphInvitation {
@@ -50,7 +51,7 @@ interface CollaborationStore {
   isLeader: boolean;
   
   // Actions
-  initializeSocket: (userName: string) => void;
+  initializeSocket: (userName: string, userId: string) => void;
   joinGraph: (graphId: string) => void;
   connect: (graphId: string, userName: string) => void;
   disconnect: () => void;
@@ -82,7 +83,7 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
   invitations: [],
   isLeader: false,
   
-  initializeSocket: (userName: string) => {
+  initializeSocket: (userName: string, userId: string) => {
     const existingSocket = get().socket;
     if (existingSocket && existingSocket.connected) {
       existingSocket.off();
@@ -103,6 +104,7 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
         name: userName,
         color: colors[Math.floor(Math.random() * colors.length)],
         lastActivity: Date.now(),
+        userId: userId, // Store the DB user ID
       };
       set({ isConnected: true, currentUser: { ...user, id: socket.id! } });
     });
@@ -174,7 +176,36 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
     
     socket.on('error', (errorData: { message: string }) => {
       console.error('[Collab] Socket error:', errorData.message);
-      // Optionally set error state to show in UI
+    });
+    
+    // Server confirms join
+    socket.on('join-confirmed', (data: { graphId: string }) => {
+      console.log('[Collab] Join confirmed for graph:', data.graphId);
+      set({ graphId: data.graphId });
+      
+      // Fetch command history
+      const fetchHistory = async () => {
+        try {
+          const response = await fetch(`${API_URL}/api/graphs/${data.graphId}/commands?limit=100`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+          });
+          if (response.ok) {
+            const result = await response.json();
+            set({ commandHistory: result.data || [] });
+          }
+        } catch (error) {
+          // ignore
+        }
+      };
+      fetchHistory();
+    });
+    
+    // Server rejects join
+    socket.on('join-failed', (data: { message: string }) => {
+      console.error('[Collab] Join failed:', data.message);
+      set({ graphId: null });
     });
     
     socket.on('kick-notification', (data: { graphId: string; reason: string }) => {
@@ -201,33 +232,54 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
       return;
     }
     
-    socket.emit('join-graph', { graphId, user: currentUser });
-    set({ graphId });
-    
-    const fetchHistory = async () => {
+    // First, ensure membership via REST API (POST /join)
+    const ensureMembershipAndJoin = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/graphs/${graphId}/commands?limit=100`, {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.error('[Collab] No auth token');
+          return;
+        }
+        
+        // Try to join as member (will return 400 if already a member, which is fine)
+        const response = await fetch(`${API_URL}/api/graphs/${graphId}/join`, {
+          method: 'POST',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
           },
         });
-        if (response.ok) {
+        
+        if (!response.ok) {
           const data = await response.json();
-          set({ commandHistory: data.data || [] });
-        } else if (response.status === 404) {
-          console.debug('[Collab] Command history endpoint not available');
-        } else {
-          console.warn('[Collab] Failed to fetch command history:', response.status);
+          // 400 "Already a member" is OK, continue
+          // 404 "Graph not found" is a real error
+          if (response.status === 404) {
+            console.error('[Collab] Graph not found:', graphId);
+            set({ graphId: null });
+            return;
+          }
+          // For other errors (already member etc), continue to socket join
         }
+        
+        // Now emit socket join-graph with the DB userId
+        socket.emit('join-graph', {
+          graphId,
+          user: {
+            ...currentUser,
+            id: currentUser.userId || currentUser.id, // Send DB user ID for membership check
+          },
+        });
+        // Don't set graphId here — wait for 'join-confirmed' from server
       } catch (error) {
-        // ignore
+        console.error('[Collab] Error joining graph:', error);
       }
     };
-    fetchHistory();
+    ensureMembershipAndJoin();
   },
   
   connect: (graphId: string, userName: string) => {
-    get().initializeSocket(userName);
+    get().initializeSocket(userName, '');
     const checkAndJoin = () => {
       const state = get();
       if (state.socket && state.socket.connected) {
