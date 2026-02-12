@@ -1,14 +1,16 @@
 'use client';
 
 import { useCollaborationStore } from '@/store/collaborationStore';
-import { Users, Wifi, WifiOff, ChevronDown, ChevronUp, Send } from 'lucide-react';
+import { Users, Wifi, WifiOff, ChevronDown, ChevronUp, Send, LogOut, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 
 export default function CollaborationPanel() {
-  const { isConnected, collaborators, currentUser, commandHistory, broadcastChatMessage } = useCollaborationStore();
+  const { isConnected, collaborators, currentUser, commandHistory, broadcastChatMessage, inviteUser, leaveGraph, isLeader } = useCollaborationStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [chatMessage, setChatMessage] = useState('');
+  const [inviteUserId, setInviteUserId] = useState('');
+  const [inviteUserName, setInviteUserName] = useState('');
   
   if (!isVisible) {
     return (
@@ -89,8 +91,8 @@ export default function CollaborationPanel() {
 
           {/* Chat Messages */}
           <div className="mb-3 pb-3 border-b border-slate-700">
-            <div className="text-xs text-slate-400 mb-2">История действий</div>
-            <div className="space-y-1 max-h-[200px] overflow-y-auto">
+            <div className="text-xs text-slate-400 mb-2 font-semibold">История действий</div>
+            <div className="space-y-1.5 max-h-[250px] overflow-y-auto pr-1">
               {commandHistory.length === 0 ? (
                 <p className="text-xs text-slate-500 italic py-2">Пусто</p>
               ) : (
@@ -133,13 +135,13 @@ export default function CollaborationPanel() {
                   const timeStr = timestamp.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
                   
                   return (
-                    <div key={cmd.id} className="text-xs text-slate-400 px-2 py-1 rounded bg-slate-800/30 hover:bg-slate-800/50 transition-colors">
-                      <div className="flex justify-between items-start gap-2">
-                        <div className="flex items-start gap-1.5 flex-1 min-w-0">
-                          <span className="mt-0.5 text-sm">{emoji}</span>
-                          <span className="text-slate-300 truncate flex-1">{displayText}</span>
+                    <div key={cmd.id} className="text-xs px-2 py-1.5 rounded bg-slate-800/40 hover:bg-slate-800/60 transition-colors border border-slate-700/50">
+                      <div className="flex items-start justify-between gap-2 min-h-[20px]">
+                        <div className="flex items-start gap-1 flex-1 min-w-0">
+                          <span className="flex-shrink-0 mt-0.5">{emoji}</span>
+                          <span className="text-slate-300 break-words flex-1 leading-tight">{displayText}</span>
                         </div>
-                        <span className="text-slate-500 text-xs whitespace-nowrap">{timeStr}</span>
+                        <span className="text-slate-500 text-[10px] whitespace-nowrap flex-shrink-0 ml-1">{timeStr}</span>
                       </div>
                     </div>
                   );
@@ -150,7 +152,7 @@ export default function CollaborationPanel() {
 
           {/* Chat Input */}
           {isConnected && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 mb-3 pb-3 border-b border-slate-700">
               <input
                 type="text"
                 placeholder="Сообщение..."
@@ -174,6 +176,55 @@ export default function CollaborationPanel() {
                 className="p-1 hover:bg-slate-800 rounded transition-colors text-slate-400 hover:text-white"
               >
                 <Send className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+
+          {/* Invite Section */}
+          {isConnected && isLeader && (
+            <div className="mb-3 pb-3 border-b border-slate-700">
+              <div className="text-xs text-slate-400 mb-2 font-semibold">Пригласить участника</div>
+              <div className="flex flex-col gap-2">
+                <input
+                  type="text"
+                  placeholder="ID пользователя"
+                  value={inviteUserId}
+                  onChange={(e) => setInviteUserId(e.target.value)}
+                  className="px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                />
+                <input
+                  type="text"
+                  placeholder="Имя пользователя"
+                  value={inviteUserName}
+                  onChange={(e) => setInviteUserName(e.target.value)}
+                  className="px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                />
+                <button
+                  onClick={() => {
+                    if (inviteUserId.trim() && inviteUserName.trim()) {
+                      inviteUser(inviteUserId, inviteUserName);
+                      setInviteUserId('');
+                      setInviteUserName('');
+                    }
+                  }}
+                  className="w-full px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded transition-colors flex items-center justify-center gap-1"
+                >
+                  <UserPlus className="w-3 h-3" />
+                  Пригласить
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Leave Graph Button */}
+          {isConnected && (
+            <div className="mb-3 pb-3 border-b border-slate-700">
+              <button
+                onClick={() => leaveGraph()}
+                className="w-full px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors flex items-center justify-center gap-1"
+              >
+                <LogOut className="w-3 h-3" />
+                Покинуть граф
               </button>
             </div>
           )}

@@ -32,6 +32,9 @@ class CollaborationService {
   private collaborators: Map<string, Collaborator> = new Map();
   private graphRooms: Map<string, Set<string>> = new Map(); // graphId -> Set<socketId>
   private commandHistory: Map<string, CollaborativeCommand[]> = new Map(); // graphId -> commands
+  private graphLeaders: Map<string, string> = new Map(); // graphId -> first userId (leader)
+  private userSockets: Map<string, string> = new Map(); // userId -> socketId (for direct messaging)
+  private pendingInvitations: Map<string, any> = new Map(); // invitationId -> invitation data
 
   initialize(httpServer: HttpServer) {
     this.io = new SocketIOServer(httpServer, {
@@ -129,6 +132,103 @@ class CollaborationService {
         }
       });
 
+      // Send invitation
+      socket.on('send-invitation', ({ graphId, targetUserId, fromUser, graphName }: any) => {
+        const collaborator = this.collaborators.get(socket.id);
+        if (collaborator) {
+          const invitationId = `inv-${Date.now()}-${Math.random()}`;
+          const invitation = {
+            id: invitationId,
+            graphId,
+            graphName,
+            fromUser,
+            createdAt: new Date(),
+            targetUserId,
+          };
+
+          this.pendingInvitations.set(invitationId, invitation);
+
+          // Get first user in room (leader)
+          const leader = this.getGraphLeader(graphId);
+          if (!this.graphLeaders.has(graphId) && collaborator) {
+            this.graphLeaders.set(graphId, collaborator.id);
+          }
+
+          // Broadcast to all in graph to update their UI
+          this.io!.to(graphId).emit('invitation-sent', { invitationId, targetUserId });
+
+          // TODO: Send to specific user when user service is available
+          // For now, just broadcast to room
+          console.log(`[Collab] Invitation sent from ${fromUser.name} to ${targetUserId} for graph ${graphId}`);
+        }
+      });
+
+      // Accept invitation
+      socket.on('accept-invitation', ({ invitationId, graphId }: any) => {
+        const invitation = this.pendingInvitations.get(invitationId);
+        if (invitation) {
+          // Add user to graph room
+          socket.join(graphId);
+
+          const collaborator = this.collaborators.get(socket.id);
+          if (collaborator) {
+            collaborator.graphId = graphId;
+            if (!this.graphRooms.has(graphId)) {
+              this.graphRooms.set(graphId, new Set());
+            }
+            this.graphRooms.get(graphId)!.add(socket.id);
+
+            // Mark current user as not leader (unless they're the first)
+            const isLeader = this.graphRooms.get(graphId)!.size === 1;
+            if (isLeader && !this.graphLeaders.has(graphId)) {
+              this.graphLeaders.set(graphId, socket.id);
+            }
+
+            // Notify all in room
+            const roomCollaborators = this.getGraphCollaborators(graphId);
+            this.io!.to(graphId).emit('collaborators-update', roomCollaborators);
+            this.io!.to(graphId).emit('collaborator-promoted', {
+              userId: this.graphLeaders.get(graphId),
+              isLeader: true,
+            });
+
+            this.pendingInvitations.delete(invitationId);
+            console.log(`[Collab] ${collaborator.name} accepted invitation to ${graphId}`);
+          }
+        }
+      });
+
+      // Reject invitation
+      socket.on('reject-invitation', ({ invitationId }: any) => {
+        this.pendingInvitations.delete(invitationId);
+        console.log(`[Collab] Invitation ${invitationId} rejected`);
+      });
+
+      // Leave graph
+      socket.on('leave-graph', ({ graphId }: any) => {
+        const collaborator = this.collaborators.get(socket.id);
+        if (collaborator && collaborator.graphId === graphId) {
+          socket.leave(graphId);
+
+          const room = this.graphRooms.get(graphId);
+          if (room) {
+            room.delete(socket.id);
+            if (room.size === 0) {
+              this.graphRooms.delete(graphId);
+              this.graphLeaders.delete(graphId);
+            } else {
+              // Notify remaining users
+              const remainingCollaborators = this.getGraphCollaborators(graphId);
+              this.io!.to(graphId).emit('collaborators-update', remainingCollaborators);
+              this.io!.to(graphId).emit('user-left', { userId: socket.id });
+            }
+          }
+
+          collaborator.graphId = ''; // Clear graph association
+          console.log(`[Collab] ${collaborator.name} left graph ${graphId}`);
+        }
+      });
+
       // Disconnect
       socket.on('disconnect', () => {
         const collaborator = this.collaborators.get(socket.id);
@@ -143,14 +243,26 @@ class CollaborationService {
             room.delete(socket.id);
             if (room.size === 0) {
               this.graphRooms.delete(graphId);
+              this.graphLeaders.delete(graphId);
+            } else {
+              // Notify remaining users
+              const remainingCollaborators = this.getGraphCollaborators(graphId);
+              this.io!.to(graphId).emit('collaborators-update', remainingCollaborators);
+              this.io!.to(graphId).emit('user-left', { userId: socket.id });
+
+              // If disconnected user was leader, promote first remaining user
+              if (this.graphLeaders.get(graphId) === socket.id && room.size > 0) {
+                const firstSocketId = Array.from(room)[0];
+                this.graphLeaders.set(graphId, firstSocketId);
+                this.io!.to(graphId).emit('collaborator-promoted', {
+                  userId: firstSocketId,
+                  isLeader: true,
+                });
+              }
             }
           }
           
-          // Notify remaining users
-          const remainingCollaborators = this.getGraphCollaborators(graphId);
-          this.io!.to(graphId).emit('collaborators-update', remainingCollaborators);
-          
-          console.log(`[Collab] ${name} disconnected from graph ${graphId}. Remaining: ${remainingCollaborators.length}`);
+          console.log(`[Collab] ${name} disconnected from graph ${graphId}. Remaining: ${this.getGraphCollaborators(graphId).length}`);
         }
       });
     });
@@ -196,6 +308,13 @@ class CollaborationService {
   getCommandHistory(graphId: string, limit?: number): CollaborativeCommand[] {
     const history = this.commandHistory.get(graphId) || [];
     return limit ? history.slice(-limit) : history;
+  }
+
+  /**
+   * Get graph leader (first user)
+   */
+  getGraphLeader(graphId: string): string | undefined {
+    return this.graphLeaders.get(graphId);
   }
 
   getIO() {

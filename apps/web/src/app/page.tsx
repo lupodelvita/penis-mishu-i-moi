@@ -10,6 +10,7 @@ import DetailPanel from '@/components/DetailPanel';
 import Toolbar from '@/components/Toolbar';
 import AIAssistant from '@/components/AIAssistant';
 import CollaborationPanel from '@/components/CollaborationPanel';
+import { InvitationModal } from '@/components/InvitationModal';
 import SettingsModal from '@/components/SettingsModal';
 import SeoConsole from '@/components/SeoConsole';
 import TransformBuilder from '@/components/TransformBuilder';
@@ -173,6 +174,7 @@ export default function Home() {
 
       {/* Floating Components */}
       {showCollab && <CollaborationPanel />}
+      <InvitationModal />
       {showBuilder && <TransformBuilder onClose={() => setShowBuilder(false)} />}
       
       {/* Action Input Modal */}

@@ -8,6 +8,15 @@ interface Collaborator {
   cursor?: { x: number; y: number };
   selectedEntity?: string;
   lastActivity?: number;
+  isLeader?: boolean;
+}
+
+interface GraphInvitation {
+  id: string;
+  fromUser: { id: string; name: string };
+  graphId: string;
+  graphName: string;
+  createdAt: Date;
 }
 
 interface GraphUpdate {
@@ -26,6 +35,9 @@ interface CollaborativeCommand {
   graphId: string;
 }
 
+export type { Collaborator, GraphInvitation, GraphUpdate, CollaborativeCommand };
+export type { CollaborationStore };
+
 interface CollaborationStore {
   socket: Socket | null;
   isConnected: boolean;
@@ -34,6 +46,8 @@ interface CollaborationStore {
   commandHistory: CollaborativeCommand[];
   currentUser: Collaborator | null;
   graphId: string | null;
+  invitations: GraphInvitation[];
+  isLeader: boolean;
   
   // Actions
   connect: (graphId: string, userName: string) => void;
@@ -44,6 +58,10 @@ interface CollaborationStore {
   selectEntity: (entityId: string | null) => void;
   broadcastChatMessage: (message: string) => void;
   loadHistoricalCommands: (graphId: string) => Promise<void>;
+  inviteUser: (userId: string, userName: string) => void;
+  acceptInvitation: (invitationId: string, graphId: string) => void;
+  rejectInvitation: (invitationId: string) => void;
+  leaveGraph: () => void;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
@@ -58,6 +76,8 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
   commandHistory: [],
   currentUser: null,
   graphId: null,
+  invitations: [],
+  isLeader: false,
   
   connect: (graphId: string, userName: string) => {
     // CRITICAL: Disconnect existing socket if present to prevent duplicates
@@ -101,9 +121,14 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
             if (response.ok) {
               const data = await response.json();
               set({ commandHistory: data.data || [] });
+            } else if (response.status === 404) {
+              // Endpoint not yet available or migration not deployed
+              console.debug('[Collab] Command history endpoint not available (migration may not be deployed)');
+            } else {
+              console.warn('[Collab] Failed to fetch command history:', response.status);
             }
           } catch (error) {
-            console.error('[Collab] Failed to fetch command history:', error);
+            // Network error - don't log as it's expected in development
           }
         };
         fetchHistory();
@@ -147,6 +172,29 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
         ),
       }));
     });
+
+    socket.on('invitation-received', (invitation: GraphInvitation) => {
+      set((state) => ({
+        invitations: [...state.invitations, invitation],
+      }));
+    });
+
+    socket.on('collaborator-promoted', ({ userId, isLeader }: any) => {
+      if (socket.id === userId) {
+        set({ isLeader });
+      }
+      set((state) => ({
+        collaborators: state.collaborators.map(c =>
+          c.id === userId ? { ...c, isLeader } : c
+        ),
+      }));
+    });
+
+    socket.on('user-left', ({ userId }: any) => {
+      set((state) => ({
+        collaborators: state.collaborators.filter(c => c.id !== userId),
+      }));
+    });
     
     set({ socket });
   },
@@ -176,9 +224,7 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
         graphId,
       };
       socket.emit('command', fullCommand);
-      set((state) => ({
-        commandHistory: [...state.commandHistory, fullCommand],
-      }));
+      // Note: Don't add to state here - 'command-received' event will handle it
     }
   },
   
@@ -208,9 +254,7 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
         graphId,
       };
       socket.emit('command', command);
-      set((state) => ({
-        commandHistory: [...state.commandHistory, command],
-      }));
+      // Note: Don't add to state here - 'command-received' event will handle it
     }
   },
 
@@ -227,6 +271,57 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
       }
     } catch (error) {
       console.error('[Collab] Failed to load historical commands:', error);
+    }
+  },
+
+  inviteUser: (targetUserId: string, targetUserName: string) => {
+    const { socket, graphId, currentUser } = get();
+    if (socket && socket.connected && graphId && currentUser) {
+      socket.emit('send-invitation', {
+        graphId,
+        targetUserId,
+        fromUser: {
+          id: currentUser.id,
+          name: currentUser.name,
+        },
+        graphName: graphId, // We can enhance this when graph names are available
+      });
+    }
+  },
+
+  acceptInvitation: (invitationId: string, graphId: string) => {
+    const { socket, currentUser } = get();
+    if (socket && socket.connected) {
+      socket.emit('accept-invitation', { invitationId, graphId });
+      // Join the graph
+      set((state) => ({
+        invitations: state.invitations.filter(inv => inv.id !== invitationId),
+        graphId,
+        isLeader: false, // Accepting invitation means you're not the leader
+      }));
+    }
+  },
+
+  rejectInvitation: (invitationId: string) => {
+    const { socket } = get();
+    if (socket && socket.connected) {
+      socket.emit('reject-invitation', { invitationId });
+    }
+    set((state) => ({
+      invitations: state.invitations.filter(inv => inv.id !== invitationId),
+    }));
+  },
+
+  leaveGraph: () => {
+    const { socket, graphId } = get();
+    if (socket && socket.connected && graphId) {
+      socket.emit('leave-graph', { graphId });
+      set({
+        graphId: null,
+        collaborators: [],
+        commandHistory: [],
+        isLeader: false,
+      });
     }
   },
 }));

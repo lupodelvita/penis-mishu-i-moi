@@ -199,7 +199,7 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
         // Ensure zoom isn't extreme after initial resize
         try {
           const clamped = Math.min(Math.max(cy.zoom(), 0.8), 1.2);
-          cy.zoom({ level: clamped });
+          cy.zoom(clamped);
         } catch (e) { /* ignore */ }
       }, 100);
 
@@ -544,7 +544,7 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
       setNewEntityName('');
       setNewEntityNote('');
   };
-  const handleContextAction = (action: 'link' | 'delete' | 'nmap' | 'geolocate' | 'terminal') => {
+  const handleContextAction = (action: 'link' | 'delete' | 'nmap' | 'geolocate') => {
       if(!contextMenu?.target) return;
       const target = contextMenu.target;
       if(action === 'delete') {
@@ -553,31 +553,12 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
           onEntitySelect?.(null);
       } else if (action === 'link' && target.isNode()) {
           startLinkMode(target);
-      } else if (action === 'terminal' && target.isNode()) {
-          // GENERATE SMART COMMAND
-          const entity = currentGraph?.entities.find(e => e.id === target.id());
-          if (entity) {
-              let cmd = '';
-              const val = entity.value || '';
-              if (entity.type === EntityType.IPAddress) {
-                  cmd = `nmap -A -T4 ${val}`;
-              } else if (entity.type === EntityType.Domain) {
-                  cmd = `whois ${val}`;
-              } else if (val.startsWith('http')) {
-                  cmd = `python sqlmap.py -u "${val}" --batch --random-agent`;
-              } else {
-                  cmd = `echo "Analyzing ${val}..."`;
-              }
-              onOpenTerminal?.(cmd);
-          }
       } else if (action === 'nmap' && target.isNode()) {
-          // REDIRECT TO TERMINAL (Unified Logic)
+          // Nmap scan - handled via modal
           const entity = currentGraph?.entities.find(e => e.id === target.id());
-          if (entity) {
-              // Same logic as 'smart command' basically
-               const val = entity.value || '';
-               const cmd = `nmap -A -T4 ${val}`;
-               onOpenTerminal?.(cmd);
+          if (entity && entity.type === EntityType.IPAddress) {
+              setNmapTarget(entity);
+              setShowNmapModal(true);
           }
       } else if (action === 'geolocate' && target.isNode()) {
           const entity = currentGraph?.entities.find(e => e.id === target.id());
@@ -720,30 +701,24 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
             style={{
               left: `${collab.cursor.x}px`,
               top: `${collab.cursor.y}px`,
-              transform: 'translateX(-50%)',
             }}
           >
-            <div className="flex flex-col items-center gap-1">
-              <svg
-                width="20"
-                height="28"
-                viewBox="0 0 20 28"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                style={{ filter: `drop-shadow(0 0 2px ${collab.color})` }}
-              >
-                <path
-                  d="M2 2L2 26L10 18.5L17.5 26L18.5 25L11 17.5L18.5 2H2Z"
-                  fill={collab.color}
-                  stroke={collab.color}
-                  strokeWidth="0.5"
-                />
-              </svg>
+            <div className="flex flex-col items-start gap-1">
+              {/* Cursor */}
               <div
-                className="px-2 py-0.5 rounded text-xs font-medium text-white whitespace-nowrap"
+                className="w-5 h-6 triangular-cursor"
+                style={{
+                  clipPath: 'polygon(0 0, 100% 0, 100% 85%, 65% 85%, 30% 100%, 0 85%)',
+                  backgroundColor: collab.color,
+                  filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.5))`,
+                }}
+              />
+              {/* Name Label */}
+              <div
+                className="px-2 py-1 rounded text-xs font-semibold text-white whitespace-nowrap shadow-lg"
                 style={{
                   backgroundColor: collab.color,
-                  boxShadow: `0 0 8px ${collab.color}40`,
+                  marginLeft: '4px',
                 }}
               >
                 {collab.name}
@@ -768,16 +743,10 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
                 <>
                     <div className="h-px bg-border my-1" />
                     <button 
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-accent flex items-center gap-2"
-                        onClick={() => handleContextAction('terminal')}
-                    >
-                        <Terminal className="w-4 h-4 text-slate-400" /> Open Terminal
-                    </button>
-                    <button 
                         className="w-full text-left px-4 py-2 text-sm hover:bg-green-500/10 text-green-400 flex items-center gap-2"
                         onClick={() => handleContextAction('nmap')}
                     >
-                        <Wifi className="w-4 h-4" /> Nmap Scan (Terminal)
+                        <Wifi className="w-4 h-4" /> Nmap Scan
                     </button>
                     {contextMenu.target.data().type === 'ip_address' && (
                       <button 

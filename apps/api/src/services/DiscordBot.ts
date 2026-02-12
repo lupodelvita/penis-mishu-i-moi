@@ -1,3 +1,4 @@
+// @ts-ignore - discord.js v14 compatibility
 import { Client, GatewayIntentBits, TextChannel, ActivityType } from 'discord.js';
 
 export class DiscordBot {
@@ -18,6 +19,7 @@ export class DiscordBot {
     this.client.on('ready', () => {
       this.isReady = true;
       console.log(`🤖 Discord Bot (${this.botId}) Logged in as ${this.client.user?.tag}`);
+      // @ts-ignore - ActivityType compatibility
       this.client.user?.setActivity('NodeWeaver OSINT', { type: ActivityType.Playing });
     });
 
