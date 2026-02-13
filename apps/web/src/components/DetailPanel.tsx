@@ -2,7 +2,7 @@
 
 import { Info, Tag, Clock, Edit3, Plus, X, Upload, FileText } from 'lucide-react';
 import { useGraphStore } from '@/store';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface DetailPanelProps {
   selectedEntityId: string | null;
@@ -17,6 +17,7 @@ export default function DetailPanel({ selectedEntityId }: DetailPanelProps) {
   const selectedEntity = currentGraph?.entities.find(e => e.id === selectedEntityId);
 
   const [localValue, setLocalValue] = useState('');
+  const valueInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (selectedEntity) {
@@ -123,7 +124,14 @@ export default function DetailPanel({ selectedEntityId }: DetailPanelProps) {
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-semibold">Детали</h2>
-          <button className="p-1 hover:bg-accent rounded-md transition-colors text-muted-foreground" title="Редактировать">
+          <button 
+            className="p-1 hover:bg-accent rounded-md transition-colors text-muted-foreground" 
+            title="Редактировать"
+            onClick={() => {
+              valueInputRef.current?.focus();
+              valueInputRef.current?.select();
+            }}
+          >
             <Edit3 className="w-4 h-4" />
           </button>
         </div>
@@ -139,6 +147,7 @@ export default function DetailPanel({ selectedEntityId }: DetailPanelProps) {
             Значение
           </div>
           <input
+            ref={valueInputRef}
             type="text"
             value={localValue}
             onChange={(e) => setLocalValue(e.target.value)}

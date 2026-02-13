@@ -94,7 +94,7 @@ app.get('/api/setup-keys', async (req, res) => {
 });
 app.use('/api/reports', reportRoutes);
 app.use('/api/teams', teamsRoutes);
-app.use('/api', uploadRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));

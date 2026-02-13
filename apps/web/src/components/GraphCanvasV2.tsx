@@ -759,11 +759,11 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
       )}
 
       {linkMode && (
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 glass px-6 py-3 rounded-xl shadow-2xl border-2 border-green-500/50 z-20">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" /><span className="text-green-400 font-semibold">Режим связи</span></div>
-            <span className="text-slate-300 text-sm">Кликните по целевому узлу</span>
-            <button onClick={handleCancelLink} className="px-3 py-1 bg-red-600/20 hover:bg-red-600/30 rounded-lg text-red-400 text-sm flex items-center gap-1"><X className="w-3 h-3" />Отмена (Esc)</button>
+        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-20">
+          <div className="bg-green-600/90 backdrop-blur-sm px-5 py-2 rounded-full shadow-lg animate-pulse flex items-center gap-2">
+            <div className="w-2 h-2 bg-white rounded-full" />
+            <span className="text-white text-sm font-semibold">Режим связи — кликните по целевому узлу</span>
+            <button onClick={handleCancelLink} className="ml-2 px-2 py-0.5 bg-white/20 hover:bg-white/30 rounded-full text-white text-xs transition-colors">Esc</button>
           </div>
         </div>
       )}
@@ -782,15 +782,6 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
           <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
             {}
           </div>
-          {}
-          {linkMode && (
-            <div className="absolute top-4 right-4 z-10 bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 rounded-lg shadow-lg animate-pulse">
-              <p className="text-white text-sm font-medium flex items-center gap-2">
-                <Link2 className="w-4 h-4" />
-                Link Mode Active - Click source then target
-              </p>
-            </div>
-          )}
         </>
       ) : (
         <MapCanvas

@@ -10,7 +10,6 @@ import DetailPanel from '@/components/DetailPanel';
 import Toolbar from '@/components/Toolbar';
 import AIAssistant from '@/components/AIAssistant';
 import CollaborationPanel from '@/components/CollaborationPanel';
-import BreachVIPPanel from '@/components/BreachVIPPanel';
 import { InvitationModal } from '@/components/InvitationModal';
 import SettingsModal from '@/components/SettingsModal';
 import SeoConsole from '@/components/SeoConsole';
@@ -29,7 +28,6 @@ export default function Home() {
   const [showBuilder, setShowBuilder] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showSeoConsole, setShowSeoConsole] = useState(false);
-  const [showBreachVIP, setShowBreachVIP] = useState(false);
   const [actionInput, setActionInput] = useState<{ type: 'nmap' | 'whois', isOpen: boolean }>({ type: 'nmap', isOpen: false });
   const [inputValue, setInputValue] = useState('');
   
@@ -144,7 +142,6 @@ export default function Home() {
         onToggleAI={() => setShowAI(!showAI)}
         onToggleSeoConsole={() => setShowSeoConsole(!showSeoConsole)}
         onToggleTerminal={() => {}}
-        onToggleBreachVIP={() => setShowBreachVIP(!showBreachVIP)}
       />
       
       <SettingsModal 
@@ -167,7 +164,7 @@ export default function Home() {
         </div>
 
         {/* Right Sidebar - Transform Panel & Details */}
-        <div className="w-80 flex flex-col border-l border-border">
+        <div className="w-80 flex flex-col border-l border-border overflow-hidden">
           <TransformPanel 
             selectedEntityId={selectedEntityId}
           />
@@ -177,11 +174,6 @@ export default function Home() {
 
       {/* Floating Components */}
       {showCollab && <CollaborationPanel />}
-      {showBreachVIP && (
-        <div className="fixed bottom-6 left-96 w-[500px] z-40">
-          <BreachVIPPanel onClose={() => setShowBreachVIP(false)} />
-        </div>
-      )}
       <InvitationModal />
       {showBuilder && <TransformBuilder onClose={() => setShowBuilder(false)} />}
       

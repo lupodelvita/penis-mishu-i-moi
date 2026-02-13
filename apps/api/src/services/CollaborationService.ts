@@ -392,7 +392,10 @@ class CollaborationService {
       });
 
       if (remaining === 0) {
-        // No members left — delete the graph
+        // No members left — notify any remaining sockets and delete the graph
+        if (this.io) {
+          this.io.to(graphId).emit('graph-deleted', { graphId });
+        }
         await prisma.graph.delete({ where: { id: graphId } });
         console.log(`[Collab] Graph ${graphId} deleted (no members remaining)`);
       } else {

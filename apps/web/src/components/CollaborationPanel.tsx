@@ -1,11 +1,11 @@
 'use client';
 
 import { useCollaborationStore } from '@/store/collaborationStore';
-import { Users, Wifi, WifiOff, ChevronDown, ChevronUp, Send, LogOut, UserPlus, LogIn, Copy, UserMinus, Crown } from 'lucide-react';
+import { Users, Wifi, WifiOff, ChevronDown, ChevronUp, Send, LogOut, UserPlus, LogIn, Copy, UserMinus, Crown, X, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
 
 export default function CollaborationPanel() {
-  const { isConnected, collaborators, currentUser, commandHistory, broadcastChatMessage, inviteUser, leaveGraph, isLeader, graphId, joinGraph, kickUser, promoteToLeader } = useCollaborationStore();
+  const { isConnected, collaborators, currentUser, commandHistory, broadcastChatMessage, inviteUser, leaveGraph, isLeader, graphId, joinGraph, kickUser, promoteToLeader, disconnectReason, clearDisconnectReason } = useCollaborationStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [chatMessage, setChatMessage] = useState('');
@@ -26,7 +26,7 @@ export default function CollaborationPanel() {
     return (
       <button
         onClick={() => setIsVisible(true)}
-        className="fixed top-20 right-6 glass rounded-lg p-3 shadow-xl hover:scale-105 transition-transform z-40"
+        className="fixed top-20 right-[340px] glass rounded-lg p-3 shadow-xl hover:scale-105 transition-transform z-40"
         title="Show Collaboration"
       >
         <Users className="w-5 h-5 text-slate-300" />
@@ -35,7 +35,7 @@ export default function CollaborationPanel() {
   }
   
   return (
-    <div className="fixed top-20 right-6 bg-slate-900/95 backdrop-blur-xl border border-purple-500/20 rounded-xl shadow-xl z-40 min-w-[200px] max-w-[300px]">
+    <div className="fixed top-20 right-[340px] bg-slate-900/95 backdrop-blur-xl border border-purple-500/20 rounded-xl shadow-xl z-40 min-w-[200px] max-w-[300px]">
       {/* Header */}
       <div 
         className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-800/50 transition-colors rounded-t-xl"
@@ -63,6 +63,25 @@ export default function CollaborationPanel() {
           )}
         </div>
       </div>
+      
+      {/* Disconnect Reason Banner */}
+      {disconnectReason && (
+        <div className="mx-3 mt-2 p-2.5 bg-red-900/40 border border-red-500/30 rounded-lg flex items-start gap-2 animate-in fade-in slide-in-from-top-2">
+          <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-red-300 font-medium leading-relaxed">{disconnectReason}</p>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              clearDisconnectReason();
+            }}
+            className="p-0.5 hover:bg-red-800/50 rounded transition-colors flex-shrink-0"
+          >
+            <X className="w-3 h-3 text-red-400" />
+          </button>
+        </div>
+      )}
       
       {/* Content */}
       {isExpanded && (

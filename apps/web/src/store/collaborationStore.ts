@@ -49,6 +49,7 @@ interface CollaborationStore {
   graphId: string | null;
   invitations: GraphInvitation[];
   isLeader: boolean;
+  disconnectReason: string | null;
   
   // Actions
   initializeSocket: (userName: string, userId: string) => void;
@@ -67,6 +68,7 @@ interface CollaborationStore {
   leaveGraph: () => void;
   kickUser: (userId: string) => void;
   promoteToLeader: (userId: string) => void;
+  clearDisconnectReason: () => void;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
@@ -82,6 +84,7 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
   graphId: null,
   invitations: [],
   isLeader: false,
+  disconnectReason: null,
   
   initializeSocket: (userName: string, userId: string) => {
     const existingSocket = get().socket;
@@ -205,7 +208,7 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
     // Server rejects join
     socket.on('join-failed', (data: { message: string }) => {
       console.error('[Collab] Join failed:', data.message);
-      set({ graphId: null });
+      set({ graphId: null, disconnectReason: `Не удалось подключиться: ${data.message}` });
     });
     
     socket.on('kick-notification', (data: { graphId: string; reason: string }) => {
@@ -215,8 +218,20 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
         collaborators: [],
         commandHistory: [],
         isLeader: false,
+        disconnectReason: 'Вы были удалены из коллаборации лидером',
       });
-      // Optionally show toast notification
+    });
+    
+    // Graph was deleted (all members removed)
+    socket.on('graph-deleted', (data: { graphId: string }) => {
+      console.warn('[Collab] Graph deleted:', data.graphId);
+      set({
+        graphId: null,
+        collaborators: [],
+        commandHistory: [],
+        isLeader: false,
+        disconnectReason: 'Коллаборация была удалена',
+      });
     });
     
     set({ socket });
@@ -423,6 +438,7 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
         collaborators: [],
         commandHistory: [],
         isLeader: false,
+        disconnectReason: 'Вы покинули коллаборацию',
       });
     }
   },
@@ -456,6 +472,10 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
     }).catch(error => {
       console.error('[Collab] Failed to promote to leader:', error);
     });
+  },
+  
+  clearDisconnectReason: () => {
+    set({ disconnectReason: null });
   },
 }));
 
