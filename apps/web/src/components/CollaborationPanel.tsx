@@ -96,7 +96,7 @@ export default function CollaborationPanel() {
                 />
                 <span className="text-sm text-white font-medium truncate">{currentUser.name}</span>
                 {isLeader && (
-                  <Crown className="w-3 h-3 text-yellow-500" title="Лидер" />
+                  <span title="Лидер"><Crown className="w-3 h-3 text-yellow-500" /></span>
                 )}
               </div>
             </div>
@@ -347,7 +347,7 @@ export default function CollaborationPanel() {
                       <div className="flex items-center gap-1">
                         <span className="text-sm text-slate-200 truncate">{collab.name}</span>
                         {collab.isLeader && (
-                          <Crown className="w-3 h-3 text-yellow-500 flex-shrink-0" title="Лидер" />
+                          <span title="Лидер"><Crown className="w-3 h-3 text-yellow-500 flex-shrink-0" /></span>
                         )}
                       </div>
                       {collab.selectedEntity && (

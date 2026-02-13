@@ -5,6 +5,25 @@ import { dnsReconService } from './osint/DNSReconService';
 import { shodanService } from './osint/ShodanService';
 import { oathNetService } from './osint/OathNetService';
 import { geoLocationService } from './osint/GeoLocationService';
+import { haveIBeenPwnedService } from './osint/HaveIBeenPwnedService';
+import { alienVaultService } from './osint/AlienVaultService';
+import { certificateTransparencyService } from './osint/CertificateTransparencyService';
+import { urlScanService } from './osint/URLScanService';
+import { hunterService } from './osint/HunterService';
+import { threatCrowdService } from './osint/ThreatCrowdService';
+import { breachVIPService } from './osint/BreachVIPService';
+import { virusTotalService } from './osint/VirusTotalService';
+import { greyNoiseService } from './osint/GreyNoiseService';
+import { abuseIPDBService } from './osint/AbuseIPDBService';
+import { gitHubService } from './osint/GitHubService';
+import { phishTankService } from './osint/PhishTankService';
+import { clearbitService } from './osint/ClearbitService';
+import { securityTrailsService } from './osint/SecurityTrailsService';
+import { censysService } from './osint/CensysService';
+import { binaryEdgeService } from './osint/BinaryEdgeService';
+import { fullContactService } from './osint/FullContactService';
+import { emailRepService } from './osint/EmailRepService';
+import { rateLimitTracker } from './RateLimitTracker';
 import * as dns from 'dns/promises';
 
 export interface Transform {
@@ -642,6 +661,1341 @@ export class TransformManager {
         }
       }
     });
+
+    // Breach Intelligence
+    this.registerTransform({
+      id: 'hibp_breach_check',
+      name: 'HaveIBeenPwned Breach Check',
+      description: 'Check if email appears in known data breaches',
+      category: 'Breach Intelligence',
+      inputTypes: ['email_address'],
+      outputTypes: ['breach', 'data_leak', 'paste'],
+      icon: '🔓',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!haveIBeenPwnedService.isConfigured()) {
+            return { success: false, error: 'HaveIBeenPwned API key not configured (requires commercial tier)' };
+          }
+
+          const breaches = await haveIBeenPwnedService.getBreachesByEmail(input.value);
+          const pastes = await haveIBeenPwnedService.getPastesByEmail(input.value);
+          
+          if (breaches.length === 0 && pastes.length === 0) {
+            return { success: true, entities: [], links: [], metadata: { message: 'No breaches or pastes found' } };
+          }
+
+          const breachData = haveIBeenPwnedService.convertToEntities(input.value, breaches, pastes);
+          
+          return {
+            success: true,
+            entities: breachData.entities,
+            links: breachData.links,
+            metadata: {
+              breachCount: breaches.length,
+              pasteCount: pastes.length,
+              totalPwnCount: breaches.reduce((sum, b) => sum + b.pwnCount, 0)
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'breachvip_email',
+      name: 'BreachVIP Email Search',
+      description: 'Search BreachVIP database by email',
+      category: 'Breach Intelligence',
+      inputTypes: ['email_address'],
+      outputTypes: ['breach', 'credentials'],
+      icon: '🔍',
+      execute: async (input) => {
+        try {
+          const results = await breachVIPService.searchByEmail(input.value);
+          const graphData = breachVIPService.convertToEntities(results, input.value);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: { resultsCount: results.total }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'breachvip_username',
+      name: 'BreachVIP Username Search',
+      description: 'Search BreachVIP database by username',
+      category: 'Breach Intelligence',
+      inputTypes: ['username'],
+      outputTypes: ['breach', 'credentials'],
+      icon: '🔍',
+      execute: async (input) => {
+        try {
+          const results = await breachVIPService.searchByUsername(input.value);
+          const graphData = breachVIPService.convertToEntities(results, input.value);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: { resultsCount: results.total }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'breachvip_phone',
+      name: 'BreachVIP Phone Search',
+      description: 'Search BreachVIP database by phone number',
+      category: 'Breach Intelligence',
+      inputTypes: ['phone_number'],
+      outputTypes: ['breach', 'credentials'],
+      icon: '📱',
+      execute: async (input) => {
+        try {
+          const results = await breachVIPService.searchByPhone(input.value);
+          const graphData = breachVIPService.convertToEntities(results, input.value);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: { resultsCount: results.total }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'breachvip_domain',
+      name: 'BreachVIP Domain Search',
+      description: 'Find breached emails from domain',
+      category: 'Breach Intelligence',
+      inputTypes: ['domain'],
+      outputTypes: ['breach', 'email_address'],
+      icon: '🌐',
+      execute: async (input) => {
+        try {
+          const results = await breachVIPService.searchByDomain(input.value);
+          const graphData = breachVIPService.convertToEntities(results, input.value);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: { resultsCount: results.total }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'breachvip_ip',
+      name: 'BreachVIP IP Search',
+      description: 'Search BreachVIP database by IP address',
+      category: 'Breach Intelligence',
+      inputTypes: ['ip_address'],
+      outputTypes: ['breach', 'credentials'],
+      icon: '🌐',
+      execute: async (input) => {
+        try {
+          const results = await breachVIPService.searchByIP(input.value);
+          const graphData = breachVIPService.convertToEntities(results, input.value);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: { resultsCount: results.total }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    // Threat Intelligence
+    this.registerTransform({
+      id: 'alienvault_domain',
+      name: 'AlienVault OTX Domain',
+      description: 'Get threat intelligence for domain from AlienVault',
+      category: 'Threat Intelligence',
+      inputTypes: ['domain'],
+      outputTypes: ['threat_intel', 'malware'],
+      icon: '🛡️',
+      execute: async (input) => {
+        try {
+          const indicator = await alienVaultService.getIndicator(input.value, 'domain');
+          
+          if (!indicator || !indicator.pulses || indicator.pulses.length === 0) {
+            return { success: true, entities: [], links: [], metadata: { message: 'No threat intelligence found' } };
+          }
+
+          const graphData = alienVaultService.convertToEntities(input.value, indicator);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              pulseCount: indicator.pulses.length,
+              malwareFamilies: indicator.pulses.flatMap(p => p.malwareFamilies || [])
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'alienvault_ip',
+      name: 'AlienVault OTX IP',
+      description: 'Get threat intelligence and reputation for IP from AlienVault',
+      category: 'Threat Intelligence',
+      inputTypes: ['ip_address'],
+      outputTypes: ['threat_intel', 'malware', 'location'],
+      icon: '🛡️',
+      execute: async (input) => {
+        try {
+          const [indicator, reputation] = await Promise.all([
+            alienVaultService.getIndicator(input.value, 'IPv4'),
+            alienVaultService.getIPReputation(input.value)
+          ]);
+          
+          if (!indicator && !reputation) {
+            return { success: true, entities: [], links: [], metadata: { message: 'No threat intelligence found' } };
+          }
+
+          const entities: any[] = [];
+          const links: any[] = [];
+
+          if (indicator) {
+            const graphData = alienVaultService.convertToEntities(input.value, indicator);
+            entities.push(...graphData.entities);
+            links.push(...graphData.links);
+          }
+          
+          return {
+            success: true,
+            entities,
+            links,
+            metadata: {
+              reputation: reputation?.reputation,
+              country: reputation?.country,
+              pulseCount: indicator?.pulses?.length || 0
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'threatcrowd_domain',
+      name: 'ThreatCrowd Domain',
+      description: 'Get passive DNS, subdomains, and emails from ThreatCrowd',
+      category: 'Threat Intelligence',
+      inputTypes: ['domain'],
+      outputTypes: ['ip_address', 'subdomain', 'email_address'],
+      icon: '👥',
+      execute: async (input) => {
+        try {
+          const data = await threatCrowdService.searchDomain(input.value);
+          
+          if (!data) {
+            return { success: true, entities: [], links: [], metadata: { message: 'No data found' } };
+          }
+
+          const graphData = threatCrowdService.convertDomainToEntities(input.value, data);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              ipsFound: data.resolutions?.length || 0,
+              subdomainsFound: data.subdomains?.length || 0,
+              emailsFound: data.emails?.length || 0
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'threatcrowd_ip',
+      name: 'ThreatCrowd IP',
+      description: 'Get domains and malware hashes associated with IP',
+      category: 'Threat Intelligence',
+      inputTypes: ['ip_address'],
+      outputTypes: ['domain', 'file_hash'],
+      icon: '👥',
+      execute: async (input) => {
+        try {
+          const data = await threatCrowdService.searchIP(input.value);
+          
+          if (!data) {
+            return { success: true, entities: [], links: [], metadata: { message: 'No data found' } };
+          }
+
+          const graphData = threatCrowdService.convertIPToEntities(input.value, data);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              domainsFound: data.resolutions?.length || 0,
+              hashesFound: data.hashes?.length || 0
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    // Domain Intelligence - Additional
+    this.registerTransform({
+      id: 'cert_transparency',
+      name: 'Certificate Transparency',
+      description: 'Find subdomains via SSL certificate logs (crt.sh)',
+      category: 'Domain Intelligence',
+      inputTypes: ['domain'],
+      outputTypes: ['subdomain', 'certificate_authority'],
+      icon: '🔐',
+      execute: async (input) => {
+        try {
+          const certificates = await certificateTransparencyService.searchDomain(input.value);
+          
+          if (!certificates || certificates.length === 0) {
+            return { success: true, entities: [], links: [], metadata: { message: 'No certificates found' } };
+          }
+
+          const graphData = certificateTransparencyService.convertToEntities(input.value, certificates);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              certificatesFound: certificates.length,
+              subdomainsFound: graphData.entities.filter(e => e.type === 'subdomain').length
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'hunter_email_finder',
+      name: 'Hunter Email Finder',
+      description: 'Find email addresses associated with domain',
+      category: 'Domain Intelligence',
+      inputTypes: ['domain'],
+      outputTypes: ['email_address', 'person'],
+      icon: '🎯',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!hunterService.isConfigured()) {
+            return { success: false, error: 'Hunter.io API key not configured (25 searches/month free)' };
+          }
+
+          const data = await hunterService.searchDomain(input.value);
+          
+          if (!data || !data.emails || data.emails.length === 0) {
+            return { success: true, entities: [], links: [], metadata: { message: 'No emails found for this domain' } };
+          }
+
+          const graphData = hunterService.convertToEntities(data);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              emailsFound: data.emails.length,
+              pattern: data.pattern,
+              organization: data.organization
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    // Security - Website Analysis
+    this.registerTransform({
+      id: 'urlscan_website',
+      name: 'URLScan Website Analysis',
+      description: 'Scan website for security, tech stack, and threats',
+      category: 'Security',
+      inputTypes: ['domain', 'url'],
+      outputTypes: ['ip_address', 'technology', 'threat'],
+      icon: '🔬',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!urlScanService.isConfigured()) {
+            return { success: false, error: 'URLScan.io API key not configured (free tier available)' };
+          }
+
+          const url = input.type === 'url' ? input.value : `https://${input.value}`;
+          const scan = await urlScanService.submitScan(url, 'public');
+          
+          if (!scan || !scan.uuid) {
+            return { success: false, error: 'Failed to submit scan' };
+          }
+
+          // Wait for scan to complete (max 60 seconds)
+          let result = null;
+          for (let i = 0; i < 12; i++) {
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            result = await urlScanService.getResult(scan.uuid);
+            if (result) break;
+          }
+
+          if (!result) {
+            return { success: false, error: 'Scan timeout - try searching for existing results instead' };
+          }
+
+          const graphData = urlScanService.convertToEntities(result);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              screenshot: result.screenshot,
+              malicious: result.verdicts?.overall?.malicious || false,
+              score: result.verdicts?.overall?.score
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    // Advanced Threat Intelligence
+    this.registerTransform({
+      id: 'virustotal_domain',
+      name: 'VirusTotal Domain Scan',
+      description: 'Check domain reputation across 70+ engines',
+      category: 'Threat Intelligence',
+      inputTypes: ['domain'],
+      outputTypes: ['threat', 'category'],
+      icon: '🦠',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!virusTotalService.isConfigured()) {
+            return { success: false, error: 'VirusTotal API key not configured (free tier: 4 req/min, 500/day)' };
+          }
+
+          const report = await virusTotalService.analyzeDomain(input.value);
+          
+          if (!report) {
+            return { success: true, entities: [], links: [], metadata: { message: 'Domain not found in VirusTotal' } };
+          }
+
+          const graphData = virusTotalService.convertDomainToEntities(report, input.value);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              reputation: report.attributes.reputation,
+              malicious: report.attributes.last_analysis_stats.malicious,
+              suspicious: report.attributes.last_analysis_stats.suspicious,
+              harmless: report.attributes.last_analysis_stats.harmless
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'virustotal_ip',
+      name: 'VirusTotal IP Scan',
+      description: 'Check IP reputation across 70+ engines',
+      category: 'Threat Intelligence',
+      inputTypes: ['ip_address'],
+      outputTypes: ['threat', 'organization'],
+      icon: '🦠',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!virusTotalService.isConfigured()) {
+            return { success: false, error: 'VirusTotal API key not configured (free tier: 4 req/min, 500/day)' };
+          }
+
+          const report = await virusTotalService.analyzeIP(input.value);
+          
+          if (!report) {
+            return { success: true, entities: [], links: [], metadata: { message: 'IP not found in VirusTotal' } };
+          }
+
+          const graphData = virusTotalService.convertIPToEntities(report, input.value);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              reputation: report.attributes.reputation,
+              malicious: report.attributes.last_analysis_stats.malicious,
+              country: report.attributes.country,
+              asn: report.attributes.asn
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'virustotal_url',
+      name: 'VirusTotal URL Scan',
+      description: 'Scan URL for malware and phishing',
+      category: 'Security',
+      inputTypes: ['url'],
+      outputTypes: ['threat'],
+      icon: '🦠',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!virusTotalService.isConfigured()) {
+            return { success: false, error: 'VirusTotal API key not configured (free tier: 4 req/min, 500/day)' };
+          }
+
+          const report = await virusTotalService.analyzeURL(input.value);
+          
+          if (!report) {
+            return { success: false, error: 'URL not yet scanned - submitted for analysis, try again in 30 seconds' };
+          }
+
+          const graphData = virusTotalService.convertURLToEntities(report, input.value);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              malicious: report.attributes.last_analysis_stats.malicious,
+              suspicious: report.attributes.last_analysis_stats.suspicious
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'greynoise_ip',
+      name: 'GreyNoise IP Context',
+      description: 'Identify internet noise vs targeted attacks',
+      category: 'Threat Intelligence',
+      inputTypes: ['ip_address'],
+      outputTypes: ['threat_intel', 'service', 'organization'],
+      icon: '🔇',
+      execute: async (input) => {
+        try {
+          const data = await greyNoiseService.getCommunityData(input.value);
+          
+          if (!data) {
+            return { success: true, entities: [], links: [], metadata: { message: 'IP not observed by GreyNoise' } };
+          }
+
+          const graphData = greyNoiseService.convertCommunityToEntities(data, input.value);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              classification: data.classification,
+              noise: data.noise,
+              riot: data.riot,
+              service: data.name
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'abuseipdb_check',
+      name: 'AbuseIPDB Reputation',
+      description: 'Check IP against abuse database',
+      category: 'Threat Intelligence',
+      inputTypes: ['ip_address'],
+      outputTypes: ['threat_intel', 'organization', 'threat'],
+      icon: '🚫',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!abuseIPDBService.isConfigured()) {
+            return { success: false, error: 'AbuseIPDB API key not configured (1000 requests/day free)' };
+          }
+
+          const report = await abuseIPDBService.checkIP(input.value, 90, true);
+          
+          if (!report) {
+            return { success: false, error: 'Failed to check IP' };
+          }
+
+          const graphData = abuseIPDBService.convertToEntities(report, input.value);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              abuseScore: report.abuseConfidenceScore,
+              totalReports: report.totalReports,
+              country: report.countryName,
+              isp: report.isp
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'phishtank_url',
+      name: 'PhishTank URL Check',
+      description: 'Check if URL is a known phishing site',
+      category: 'Security',
+      inputTypes: ['url', 'domain'],
+      outputTypes: ['threat', 'organization', 'ip_address'],
+      icon: '🎣',
+      execute: async (input) => {
+        try {
+          const url = input.type === 'url' ? input.value : `https://${input.value}`;
+          const result = await phishTankService.checkURL(url);
+          
+          if (!result) {
+            return { success: true, entities: [], links: [], metadata: { message: 'Not found in PhishTank database' } };
+          }
+
+          const graphData = phishTankService.convertToEntities(result, url);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              verified: result.verified === 'yes',
+              online: result.online === 'yes',
+              target: result.target,
+              phish_id: result.phish_id
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    // People Intelligence
+    this.registerTransform({
+      id: 'github_user',
+      name: 'GitHub User Lookup',
+      description: 'Find GitHub profile and repositories',
+      category: 'People Intelligence',
+      inputTypes: ['username', 'person'],
+      outputTypes: ['person', 'email_address', 'url', 'organization'],
+      icon: '💻',
+      execute: async (input) => {
+        try {
+          const user = await gitHubService.getUser(input.value);
+          
+          if (!user) {
+            return { success: false, error: 'GitHub user not found' };
+          }
+
+          const graphData = gitHubService.convertUserToEntities(user);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              repos: user.public_repos,
+              followers: user.followers,
+              location: user.location,
+              company: user.company
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'github_code_search',
+      name: 'GitHub Code Leak Search',
+      description: 'Search for leaked credentials or secrets in code',
+      category: 'Security',
+      inputTypes: ['email_address', 'domain', 'api_key'],
+      outputTypes: ['data_leak'],
+      icon: '🔓',
+      execute: async (input) => {
+        try {
+          const results = await gitHubService.searchCode(input.value);
+          
+          if (!results || results.length === 0) {
+            return { success: true, entities: [], links: [], metadata: { message: 'No code leaks found' } };
+          }
+
+          const graphData = gitHubService.convertCodeSearchToEntities(results, input.value);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              leaksFound: results.length
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'clearbit_company',
+      name: 'Clearbit Company Enrichment',
+      description: 'Enrich company data from domain',
+      category: 'People Intelligence',
+      inputTypes: ['domain'],
+      outputTypes: ['organization', 'phone_number', 'email_address', 'technology'],
+      icon: '🏢',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!clearbitService.isConfigured()) {
+            return { success: false, error: 'Clearbit API key not configured' };
+          }
+
+          const company = await clearbitService.enrichCompany(input.value);
+          
+          if (!company) {
+            return { success: true, entities: [], links: [], metadata: { message: 'Company not found' } };
+          }
+
+          const graphData = clearbitService.convertCompanyToEntities(company, input.value);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              name: company.name,
+              employees: company.metrics?.employees,
+              industry: company.category?.industry,
+              founded: company.foundedYear
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'clearbit_person',
+      name: 'Clearbit Person Enrichment',
+      description: 'Enrich person data from email',
+      category: 'People Intelligence',
+      inputTypes: ['email_address'],
+      outputTypes: ['person', 'organization'],
+      icon: '👤',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!clearbitService.isConfigured()) {
+            return { success: false, error: 'Clearbit API key not configured' };
+          }
+
+          const person = await clearbitService.enrichPerson(input.value);
+          
+          if (!person) {
+            return { success: true, entities: [], links: [], metadata: { message: 'Person not found' } };
+          }
+
+          const graphData = clearbitService.convertPersonToEntities(person, input.value);
+          
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              name: person.name.fullName,
+              title: person.employment?.title,
+              company: person.employment?.name
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    // ═══════════════════════════════════════════════════
+    // SecurityTrails Transforms
+    // ═══════════════════════════════════════════════════
+
+    this.registerTransform({
+      id: 'securitytrails_domain',
+      name: 'SecurityTrails Domain Intel',
+      description: 'Get DNS records, subdomains, and domain info',
+      category: 'Domain Intelligence',
+      inputTypes: ['domain'],
+      outputTypes: ['ip_address', 'subdomain', 'domain'],
+      icon: '🔐',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!securityTrailsService.isConfigured()) {
+            return { success: false, error: 'SecurityTrails API key not configured (50 queries/month free)' };
+          }
+
+          const [domainInfo, subdomains] = await Promise.all([
+            securityTrailsService.getDomain(input.value),
+            securityTrailsService.getSubdomains(input.value)
+          ]);
+
+          const allEntities: any[] = [];
+          const allLinks: any[] = [];
+
+          if (domainInfo) {
+            const dnsData = securityTrailsService.convertDomainToEntities(domainInfo, input.value);
+            allEntities.push(...dnsData.entities);
+            allLinks.push(...dnsData.links);
+          }
+
+          if (subdomains) {
+            const subData = securityTrailsService.convertSubdomainsToEntities(subdomains, input.value);
+            allEntities.push(...subData.entities);
+            allLinks.push(...subData.links);
+          }
+
+          return {
+            success: true,
+            entities: allEntities,
+            links: allLinks,
+            metadata: {
+              subdomainCount: subdomains?.subdomain_count || 0,
+              aRecords: domainInfo?.current_dns?.a?.values?.length || 0
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'securitytrails_dns_history',
+      name: 'SecurityTrails DNS History',
+      description: 'Historical DNS records for a domain',
+      category: 'Domain Intelligence',
+      inputTypes: ['domain'],
+      outputTypes: ['ip_address'],
+      icon: '📜',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!securityTrailsService.isConfigured()) {
+            return { success: false, error: 'SecurityTrails API key not configured' };
+          }
+
+          const history = await securityTrailsService.getDNSHistory(input.value, 'a');
+
+          if (!history || !history.records?.length) {
+            return { success: true, entities: [], links: [], metadata: { message: 'No DNS history found' } };
+          }
+
+          const graphData = securityTrailsService.convertDNSHistoryToEntities(history, input.value);
+
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              totalRecords: history.records.length,
+              pages: history.pages
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'securitytrails_associated',
+      name: 'SecurityTrails Associated Domains',
+      description: 'Find domains sharing same IP, NS, or MX',
+      category: 'Domain Intelligence',
+      inputTypes: ['domain'],
+      outputTypes: ['domain'],
+      icon: '🔗',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!securityTrailsService.isConfigured()) {
+            return { success: false, error: 'SecurityTrails API key not configured' };
+          }
+
+          const data = await securityTrailsService.getAssociatedDomains(input.value);
+
+          if (!data || !data.records?.length) {
+            return { success: true, entities: [], links: [], metadata: { message: 'No associated domains found' } };
+          }
+
+          const graphData = securityTrailsService.convertAssociatedToEntities(data, input.value);
+
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: { totalAssociated: data.record_count }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'securitytrails_ip_neighbors',
+      name: 'SecurityTrails IP Neighbors',
+      description: 'Find domains hosted on nearby IP addresses',
+      category: 'Network Intelligence',
+      inputTypes: ['ip_address'],
+      outputTypes: ['domain'],
+      icon: '🏘️',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!securityTrailsService.isConfigured()) {
+            return { success: false, error: 'SecurityTrails API key not configured' };
+          }
+
+          const data = await securityTrailsService.getIPNeighbors(input.value);
+
+          if (!data || !data.blocks || Object.keys(data.blocks).length === 0) {
+            return { success: true, entities: [], links: [], metadata: { message: 'No IP neighbors found' } };
+          }
+
+          const graphData = securityTrailsService.convertIPNeighborsToEntities(data, input.value);
+
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: { blocksFound: Object.keys(data.blocks).length }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    // ═══════════════════════════════════════════════════
+    // Censys Transforms
+    // ═══════════════════════════════════════════════════
+
+    this.registerTransform({
+      id: 'censys_host',
+      name: 'Censys Host Scan',
+      description: 'Get open ports, services, OS and ASN from Censys',
+      category: 'Network Intelligence',
+      inputTypes: ['ip_address'],
+      outputTypes: ['port', 'technology', 'location', 'organization'],
+      icon: '🌐',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!censysService.isConfigured()) {
+            return { success: false, error: 'Censys API not configured (250 queries/month free)' };
+          }
+
+          const host = await censysService.getHost(input.value);
+
+          if (!host) {
+            return { success: true, entities: [], links: [], metadata: { message: 'Host not found in Censys' } };
+          }
+
+          const graphData = censysService.convertHostToEntities(host, input.value);
+
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              servicesFound: host.services?.length || 0,
+              country: host.location?.country,
+              asn: host.autonomous_system?.asn,
+              os: host.operating_system?.product
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'censys_domain_search',
+      name: 'Censys Domain Hosts',
+      description: 'Find hosts associated with a domain via Censys',
+      category: 'Domain Intelligence',
+      inputTypes: ['domain'],
+      outputTypes: ['ip_address'],
+      icon: '🔍',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!censysService.isConfigured()) {
+            return { success: false, error: 'Censys API not configured' };
+          }
+
+          const result = await censysService.searchHosts(input.value);
+
+          if (!result || !result.result?.hits?.length) {
+            return { success: true, entities: [], links: [], metadata: { message: 'No hosts found' } };
+          }
+
+          const graphData = censysService.convertSearchToEntities(result, input.value);
+
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: { totalHosts: result.result.total }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    // ═══════════════════════════════════════════════════
+    // BinaryEdge Transforms
+    // ═══════════════════════════════════════════════════
+
+    this.registerTransform({
+      id: 'binaryedge_host',
+      name: 'BinaryEdge Host Intel',
+      description: 'Get ports, services, CVEs, and risk score',
+      category: 'Network Intelligence',
+      inputTypes: ['ip_address'],
+      outputTypes: ['port', 'vulnerability', 'threat_intel'],
+      icon: '⚡',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!binaryEdgeService.isConfigured()) {
+            return { success: false, error: 'BinaryEdge API key not configured (250 queries/month free)' };
+          }
+
+          const [host, risk] = await Promise.all([
+            binaryEdgeService.getHost(input.value),
+            binaryEdgeService.getRiskScore(input.value)
+          ]);
+
+          if (!host && !risk) {
+            return { success: true, entities: [], links: [], metadata: { message: 'Host not found in BinaryEdge' } };
+          }
+
+          const graphData = binaryEdgeService.convertHostToEntities(host || { total: 0, query: input.value, events: [] }, input.value, risk);
+
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              portsFound: host?.events?.length || 0,
+              riskScore: risk ? (risk.normalized_ip_score * 100).toFixed(0) + '%' : 'N/A',
+              cveCount: risk?.results_detailed?.cve?.length || 0
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'binaryedge_subdomains',
+      name: 'BinaryEdge Subdomains',
+      description: 'Discover subdomains via BinaryEdge scanning data',
+      category: 'Domain Intelligence',
+      inputTypes: ['domain'],
+      outputTypes: ['subdomain'],
+      icon: '🌐',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!binaryEdgeService.isConfigured()) {
+            return { success: false, error: 'BinaryEdge API key not configured' };
+          }
+
+          const data = await binaryEdgeService.getSubdomains(input.value);
+
+          if (!data || !data.events?.length) {
+            return { success: true, entities: [], links: [], metadata: { message: 'No subdomains found' } };
+          }
+
+          const graphData = binaryEdgeService.convertSubdomainsToEntities(data, input.value);
+
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: { subdomainsFound: data.total }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'binaryedge_dns',
+      name: 'BinaryEdge DNS Records',
+      description: 'Get DNS records from BinaryEdge scans',
+      category: 'Domain Intelligence',
+      inputTypes: ['domain'],
+      outputTypes: ['ip_address', 'domain'],
+      icon: '📡',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!binaryEdgeService.isConfigured()) {
+            return { success: false, error: 'BinaryEdge API key not configured' };
+          }
+
+          const data = await binaryEdgeService.getDomainDNS(input.value);
+
+          if (!data || !data.events?.length) {
+            return { success: true, entities: [], links: [], metadata: { message: 'No DNS records found' } };
+          }
+
+          const graphData = binaryEdgeService.convertDNSToEntities(data, input.value);
+
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: { eventsFound: data.events.length }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    // ═══════════════════════════════════════════════════
+    // FullContact Transforms
+    // ═══════════════════════════════════════════════════
+
+    this.registerTransform({
+      id: 'fullcontact_person',
+      name: 'FullContact Person Enrichment',
+      description: 'Find person info, social profiles, and employment from email',
+      category: 'People Intelligence',
+      inputTypes: ['email_address'],
+      outputTypes: ['person', 'organization', 'social_profile', 'location'],
+      icon: '👤',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!fullContactService.isConfigured()) {
+            return { success: false, error: 'FullContact API key not configured (100 matches/month free)' };
+          }
+
+          const person = await fullContactService.enrichPerson(input.value);
+
+          if (!person) {
+            return { success: true, entities: [], links: [], metadata: { message: 'Person not found' } };
+          }
+
+          const graphData = fullContactService.convertPersonToEntities(person, input.value);
+
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              name: person.fullName,
+              organization: person.organization,
+              location: person.location,
+              profiles: person.details?.profiles ? Object.keys(person.details.profiles).length : 0
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'fullcontact_person_phone',
+      name: 'FullContact Person by Phone',
+      description: 'Find person info from phone number',
+      category: 'People Intelligence',
+      inputTypes: ['phone_number'],
+      outputTypes: ['person', 'organization', 'social_profile', 'email_address'],
+      icon: '📱',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!fullContactService.isConfigured()) {
+            return { success: false, error: 'FullContact API key not configured' };
+          }
+
+          const person = await fullContactService.enrichPersonByPhone(input.value);
+
+          if (!person) {
+            return { success: true, entities: [], links: [], metadata: { message: 'Person not found' } };
+          }
+
+          const graphData = fullContactService.convertPersonToEntities(person, input.value);
+
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              name: person.fullName,
+              organization: person.organization
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    this.registerTransform({
+      id: 'fullcontact_company',
+      name: 'FullContact Company Enrichment',
+      description: 'Enrich company data from domain',
+      category: 'People Intelligence',
+      inputTypes: ['domain'],
+      outputTypes: ['organization', 'phone_number', 'social_profile', 'location', 'category'],
+      icon: '🏢',
+      requiresApiKey: true,
+      execute: async (input) => {
+        try {
+          if (!fullContactService.isConfigured()) {
+            return { success: false, error: 'FullContact API key not configured' };
+          }
+
+          const company = await fullContactService.enrichCompany(input.value);
+
+          if (!company) {
+            return { success: true, entities: [], links: [], metadata: { message: 'Company not found' } };
+          }
+
+          const graphData = fullContactService.convertCompanyToEntities(company, input.value);
+
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              name: company.name,
+              employees: company.employees,
+              founded: company.founded,
+              category: company.category
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    // ═══════════════════════════════════════════════════
+    // EmailRep Transforms
+    // ═══════════════════════════════════════════════════
+
+    this.registerTransform({
+      id: 'emailrep_check',
+      name: 'EmailRep Reputation Check',
+      description: 'Check email reputation, breach status, and social profiles',
+      category: 'People Intelligence',
+      inputTypes: ['email_address'],
+      outputTypes: ['threat_intel', 'breach', 'social_profile', 'domain'],
+      icon: '📧',
+      execute: async (input) => {
+        try {
+          const data = await emailRepService.getReputation(input.value);
+
+          if (!data) {
+            return { success: false, error: 'Email not found' };
+          }
+
+          const graphData = emailRepService.convertToEntities(data, input.value);
+
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              reputation: data.reputation,
+              suspicious: data.suspicious,
+              references: data.references,
+              breached: data.details.credentials_leaked || data.details.data_breach,
+              profiles: data.details.profiles,
+              deliverable: data.details.deliverable,
+              disposable: data.details.disposable
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
   }
 
   /**
@@ -682,7 +2036,7 @@ export class TransformManager {
   }
 
   /**
-   * Execute a transform
+   * Execute a transform with rate limiting
    */
   async executeTransform(transformId: string, input: any, params?: any): Promise<TransformResult> {
     const transform = this.getTransform(transformId);
@@ -702,8 +2056,35 @@ export class TransformManager {
       };
     }
 
+    // Rate limit check
+    const provider = rateLimitTracker.getProviderForTransform(transformId);
+    const { allowed, quota } = rateLimitTracker.consume(provider);
+
+    if (!allowed) {
+      const waitSeconds = Math.ceil(quota.waitMs / 1000);
+      const windowInfo = quota.windows.find(w => w.remaining === 0);
+      return {
+        success: false,
+        error: `Лимит запросов ${quota.displayName} исчерпан (${windowInfo?.label || ''}). Подождите ${waitSeconds} сек.`,
+        metadata: { rateLimited: true, quota, waitMs: quota.waitMs }
+      };
+    }
+
     try {
-      return await transform.execute(input, params);
+      const startTime = Date.now();
+      const result = await transform.execute(input, params);
+      const executionTime = Date.now() - startTime;
+      
+      // Attach quota and timing info to result
+      return {
+        ...result,
+        metadata: {
+          ...result.metadata,
+          quota,
+          executionTimeMs: executionTime,
+          provider: quota.displayName,
+        }
+      };
     } catch (error: any) {
       return {
         success: false,

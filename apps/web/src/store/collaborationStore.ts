@@ -405,6 +405,19 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
     const { socket, graphId } = get();
     if (socket && socket.connected && graphId) {
       socket.emit('leave-graph', { graphId });
+      
+      // Call REST API to properly leave and trigger graph cleanup/deletion
+      const token = localStorage.getItem('token');
+      if (token) {
+        fetch(`${API_URL}/api/graphs/${graphId}/leave`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }).catch(err => console.error('[Collab] REST leave failed:', err));
+      }
+      
       set({
         graphId: null,
         collaborators: [],

@@ -23,6 +23,8 @@ interface LocationEntity {
     lon?: number;
     label?: string;
     color?: string;
+    address?: string;
+    country?: string;
     [key: string]: any;
   };
 }

@@ -116,6 +116,7 @@ export default function TerminalConsole({ isOpen, onClose, initialCommand }: Ter
             xtermRef.current = null;
         }
     }
+    return undefined;
   }, [isOpen]);
 
   if (!isOpen) return null;

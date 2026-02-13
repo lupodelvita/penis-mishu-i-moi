@@ -1,28 +1,75 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
-import { Search, Play, Settings2, Loader2 } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Search, Play, Settings2, Loader2, Clock, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import { useGraphStore, useCollaborationStore } from '@/store';
 import { EntityType } from '@nodeweaver/shared-types';
+
+interface QuotaWindow {
+  label: string;
+  remaining: number;
+  total: number;
+  resetAt: number;
+  used: number;
+}
+
+interface TransformQuota {
+  available: boolean;
+  configured: boolean;
+  windows: QuotaWindow[];
+  waitMs: number;
+  freeDescription?: string;
+}
+
+interface APITransform {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  inputTypes: string[];
+  outputTypes: string[];
+  icon?: string;
+  requiresApiKey?: boolean;
+  provider?: string;
+  providerKey?: string;
+  estimatedTime?: string;
+  estimatedMs?: number;
+  quota?: TransformQuota;
+}
+
+interface ProgressInfo {
+  transformId: string;
+  startTime: number;
+  estimatedMs: number;
+  provider: string;
+}
+
 interface TransformPanelProps {
   selectedEntityId: string | null;
 }
-const SAMPLE_TRANSFORMS = [
-  { id: 'dns_resolve', name: 'Domain to IP', category: 'DNS', icon: '🌐', inputTypes: ['domain'] },
-  { id: 'whois_lookup', name: 'WHOIS Lookup', category: 'WHOIS', icon: '🔍', inputTypes: ['domain'] },
-  { id: 'dns.mx_records', name: 'MX Records', category: 'DNS', icon: '📧', inputTypes: ['domain'] },
-  { id: 'oathnet_breach_check', name: 'Breach Check', category: 'Email', icon: '🔒', inputTypes: ['email_address'] },
-  { id: 'email_validate', name: 'Email Validator', category: 'Email', icon: '✅', inputTypes: ['email_address'] },
-  { id: 'username_search', name: 'Username Search', category: 'Social', icon: '👤', inputTypes: ['username', 'person'] },
-  { id: 'geo_ip_location', name: 'IP to Location', category: 'Geo', icon: '📍', inputTypes: ['ip_address'] },
-  { id: 'nmap_quick_scan', name: 'Port Scan (Active)', category: 'Security', icon: '🛡️', inputTypes: ['domain', 'ip_address'] },
-  { id: 'security.xss_scan', name: 'XSS Fuzzer (Active)', category: 'Security', icon: '☣️', inputTypes: ['url', 'domain'] },
-  { id: 'security.sqli_scan', name: 'SQLi Fuzzer (Active)', category: 'Security', icon: '💉', inputTypes: ['url', 'domain'] },
+
+// Hardcoded transforms that use special code paths
+const LOCAL_TRANSFORMS: APITransform[] = [
+  { id: 'dns_resolve', name: 'Domain to IP', description: 'Resolve domain DNS', category: 'DNS', icon: '🌐', inputTypes: ['domain'], outputTypes: ['ip_address'], estimatedTime: '~2 сек', estimatedMs: 2000 },
+  { id: 'whois_lookup', name: 'WHOIS Lookup', description: 'WHOIS domain info', category: 'WHOIS', icon: '🔍', inputTypes: ['domain'], outputTypes: ['domain'], estimatedTime: '~5 сек', estimatedMs: 5000 },
+  { id: 'dns.mx_records', name: 'MX Records', description: 'Mail server records', category: 'DNS', icon: '📧', inputTypes: ['domain'], outputTypes: ['domain'], estimatedTime: '~2 сек', estimatedMs: 2000 },
+  { id: 'oathnet_breach_check', name: 'Breach Check', description: 'OathNet breach DB', category: 'Email', icon: '🔒', inputTypes: ['email_address'], outputTypes: ['breach'], estimatedTime: '~3 сек', estimatedMs: 3000 },
+  { id: 'email_validate', name: 'Email Validator', description: 'Validate email', category: 'Email', icon: '✅', inputTypes: ['email_address'], outputTypes: ['email_address'], estimatedTime: '~3 сек', estimatedMs: 3000 },
+  { id: 'username_search', name: 'Username Search', description: 'Search username across platforms', category: 'Social', icon: '👤', inputTypes: ['username', 'person'], outputTypes: ['social_profile'], estimatedTime: '~5 сек', estimatedMs: 5000 },
+  { id: 'geo_ip_location', name: 'IP to Location', description: 'Geolocate IP', category: 'Geo', icon: '📍', inputTypes: ['ip_address'], outputTypes: ['location'], estimatedTime: '~2 сек', estimatedMs: 2000 },
+  { id: 'nmap_quick_scan', name: 'Port Scan (Active)', description: 'Nmap quick scan', category: 'Security', icon: '🛡️', inputTypes: ['domain', 'ip_address'], outputTypes: ['port'], estimatedTime: '~15 сек', estimatedMs: 15000 },
+  { id: 'security.xss_scan', name: 'XSS Fuzzer (Active)', description: 'XSS vulnerability scan', category: 'Security', icon: '☣️', inputTypes: ['url', 'domain'], outputTypes: ['vulnerability'], estimatedTime: '~20 сек', estimatedMs: 20000 },
+  { id: 'security.sqli_scan', name: 'SQLi Fuzzer (Active)', description: 'SQL injection scan', category: 'Security', icon: '💉', inputTypes: ['url', 'domain'], outputTypes: ['vulnerability'], estimatedTime: '~20 сек', estimatedMs: 20000 },
 ];
+
 export default function TransformPanel({ selectedEntityId }: TransformPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'info' | 'success' | 'error' } | null>(null);
+  const [apiTransforms, setApiTransforms] = useState<APITransform[]>([]);
+  const [progressInfo, setProgressInfo] = useState<ProgressInfo | null>(null);
+  const [progressPercent, setProgressPercent] = useState(0);
+  const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { currentGraph, addEntity, addLink } = useGraphStore();
   const { sendCommand, isConnected } = useCollaborationStore();
   
@@ -32,26 +79,127 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
       const timer = setTimeout(() => setToastMessage(null), 4000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [toastMessage]);
+
+  // Fetch transforms from API (includes quota data)
+  useEffect(() => {
+    const fetchTransforms = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/transforms`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const json = await response.json();
+          if (json.success && json.data?.transforms) {
+            setApiTransforms(json.data.transforms);
+          }
+        }
+      } catch (err) {
+        console.warn('[TransformPanel] Failed to fetch transforms from API');
+      }
+    };
+    fetchTransforms();
+    // Refresh quota every 30 seconds
+    const interval = setInterval(fetchTransforms, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Progress bar animation
+  useEffect(() => {
+    if (progressInfo) {
+      const { startTime, estimatedMs } = progressInfo;
+      setProgressPercent(0);
+      
+      progressTimerRef.current = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const percent = Math.min(95, (elapsed / estimatedMs) * 100); // Cap at 95% until done
+        setProgressPercent(percent);
+      }, 100);
+      
+      return () => {
+        if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+      };
+    } else {
+      setProgressPercent(0);
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+    }
+    return undefined;
+  }, [progressInfo]);
+
+  // Merge local + API transforms (API transforms override by ID)
+  const allTransforms = (() => {
+    const apiIds = new Set(apiTransforms.map(t => t.id));
+    const localOnly = LOCAL_TRANSFORMS.filter(t => !apiIds.has(t.id));
+    return [...localOnly, ...apiTransforms];
+  })();
   
-  const categories = Array.from(new Set(SAMPLE_TRANSFORMS.map((t) => t.category)));
-  const filteredTransforms = SAMPLE_TRANSFORMS.filter((transform) => {
-    const matchesSearch = transform.name.toLowerCase().includes(searchQuery.toLowerCase());
+  const categories = Array.from(new Set(allTransforms.map((t) => t.category)));
+  const filteredTransforms = allTransforms.filter((transform) => {
+    const matchesSearch = transform.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (transform.description || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = !selectedCategory || transform.category === selectedCategory;
     if (selectedEntityId) {
        const entity = currentGraph?.entities.find(e => e.id === selectedEntityId);
        if (entity) {
-           let entityInputType = 'unknown';
-           if (entity.type === EntityType.Domain) entityInputType = 'domain';
-           else if (entity.type === EntityType.IPAddress) entityInputType = 'ip_address';
-           else if (entity.type === EntityType.EmailAddress) entityInputType = 'email_address';
-           else if (entity.type === EntityType.Person) entityInputType = 'username';
-           else if (entity.type === EntityType.URL) entityInputType = 'url';
-           return matchesSearch && matchesCategory && transform.inputTypes.includes(entityInputType);
+           // Map entity type to input type string for matching
+           let entityInputType = entity.type?.toLowerCase() || 'unknown';
+           // Also check originalType and common aliases
+           const aliases: Record<string, string[]> = {
+             [EntityType.Domain]: ['domain'],
+             [EntityType.IPAddress]: ['ip_address'],
+             [EntityType.EmailAddress]: ['email_address'],
+             [EntityType.Person]: ['username', 'person'],
+             [EntityType.URL]: ['url'],
+             [EntityType.Username]: ['username', 'person'],
+             [EntityType.PhoneNumber]: ['phone_number'],
+             [EntityType.SocialProfile]: ['social_profile'],
+             [EntityType.Organization]: ['organization'],
+           };
+           const matchTypes = aliases[entity.type] || [entityInputType];
+           // Also include originalType from data
+           if (entity.data?.originalType) matchTypes.push(entity.data.originalType);
+           return matchesSearch && matchesCategory && transform.inputTypes.some(t => matchTypes.includes(t));
        }
     }
     return matchesSearch && matchesCategory;
   });
+
+  // Helper: get quota badge info for a transform
+  const getQuotaBadge = (transform: APITransform): { text: string; color: string; warning: boolean } | null => {
+    if (!transform.quota || !transform.quota.windows.length) return null;
+    
+    // Find the tightest window
+    const tightest = transform.quota.windows.reduce((min, w) => {
+      const ratio = w.remaining / w.total;
+      const minRatio = min.remaining / min.total;
+      return ratio < minRatio ? w : min;
+    }, transform.quota.windows[0]);
+    
+    if (!transform.quota.configured) {
+      return { text: '🔑', color: 'text-slate-500', warning: true };
+    }
+    
+    const ratio = tightest.remaining / tightest.total;
+    if (tightest.remaining === 0) {
+      return { text: `0/${tightest.total}`, color: 'text-red-400', warning: true };
+    }
+    if (ratio <= 0.2) {
+      return { text: `${tightest.remaining}/${tightest.total}`, color: 'text-yellow-400', warning: true };
+    }
+    return { text: `${tightest.remaining}/${tightest.total}`, color: 'text-slate-500', warning: false };
+  };
+
+  const startProgress = (transformId: string, estimatedMs: number, provider: string) => {
+    setProgressInfo({ transformId, startTime: Date.now(), estimatedMs, provider });
+  };
+
+  const stopProgress = () => {
+    setProgressInfo(null);
+    setProgressPercent(100);
+    setTimeout(() => setProgressPercent(0), 300);
+  };
 
   const handleRunTransform = useCallback(async (transformId: string) => {
     if (!selectedEntityId || !currentGraph) {
@@ -61,9 +209,26 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
     const sourceEntity = currentGraph.entities.find((e) => e.id === selectedEntityId);
     if (!sourceEntity) return;
     
-    // Set loading state
+    // Find transform for estimated time
+    const transformInfo = allTransforms.find(t => t.id === transformId);
+    const estimatedMs = transformInfo?.estimatedMs || 2000;
+    const provider = transformInfo?.provider || '';
+    
+    // Check quota before even trying
+    if (transformInfo?.quota && !transformInfo.quota.available) {
+      if (!transformInfo.quota.configured) {
+        setToastMessage({ text: `API ключ для ${provider} не настроен`, type: 'error' });
+        return;
+      }
+      const waitSec = Math.ceil(transformInfo.quota.waitMs / 1000);
+      setToastMessage({ text: `⏳ Лимит ${provider} исчерпан. Подождите ${waitSec} сек.`, type: 'error' });
+      return;
+    }
+    
+    // Set loading state with progress
     setLoadingId(transformId);
-    setToastMessage({ text: `Запуск трансформа "${transformId}"...`, type: 'info' });
+    startProgress(transformId, estimatedMs, provider);
+    setToastMessage({ text: `Запуск "${transformInfo?.name || transformId}"... (~${Math.ceil(estimatedMs / 1000)} сек)`, type: 'info' });
 
     // --- UNIFIED TERMINAL INTERCEPTOR ---
     // If the transform has a CLI equivalent, run it in terminal instead of API
@@ -310,6 +475,7 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
               alert('Ошибка соединения с API');
           } finally {
               setLoadingId(null);
+              stopProgress();
           }
           return; 
       }
@@ -380,6 +546,7 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
             setToastMessage({ text: 'Email validation error', type: 'error' });
         } finally {
             setLoadingId(null);
+            stopProgress();
         }
         return;
     }
@@ -404,11 +571,13 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
         });
         const json = await response.json();
         if (json.success) {
+            // Build quota suffix for toast
+            const quotaSuffix = json.quota ? ` | Осталось: ${json.quota.windows?.[0]?.remaining ?? '?'}/${json.quota.windows?.[0]?.total ?? '?'}` : '';
+            const execTime = json.executionTimeMs ? ` (${(json.executionTimeMs / 1000).toFixed(1)}с)` : '';
             if (!json.data.entities || json.data.entities.length === 0) {
-                setToastMessage({ text: 'Результатов не найдено', type: 'info' });
-                alert('Трансформ завершен, но результатов не найдено.');
+                setToastMessage({ text: `Результатов не найдено${execTime}${quotaSuffix}`, type: 'info' });
             } else {
-                setToastMessage({ text: `Добавлено ${json.data.entities.length} результатов`, type: 'success' });
+                setToastMessage({ text: `Добавлено ${json.data.entities.length} результатов${execTime}${quotaSuffix}`, type: 'success' });
                 const results = json.data.entities;
                 let addedCount = 0;
                 results.forEach((result: any, index: number) => {
@@ -418,10 +587,16 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
                   }
                   
                   // DEDUPLICATION: Check if entity with same value already exists
-                  const existingEntity = currentGraph.entities.find(e => 
-                      e.value.toLowerCase() === result.value.toLowerCase() && 
-                      e.type === result.type
-                  );
+                  // Compare against both original backend type AND mapped type for maximum coverage
+                  const normalizedType = result.type?.toLowerCase();
+                  const existingEntity = currentGraph.entities.find(e => {
+                      const eVal = e.value?.toLowerCase();
+                      const rVal = result.value?.toLowerCase();
+                      if (eVal !== rVal) return false;
+                      // Match if types are equal, or if either is the mapped version of the other
+                      const eType = (e.data?.originalType || e.type)?.toLowerCase();
+                      return eType === normalizedType || e.type === normalizedType || e.type === result.type;
+                  });
                   
                   if (existingEntity) {
                       // Skip duplicate, but link it if not already linked
@@ -441,24 +616,73 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
                   }
                   
                   const newEntityId = `node-${Date.now()}-${addedCount}`;
-                  let mappedType = EntityType.Custom;
-                  let color = '#cbd5e1';
-                  switch(result.type) {
-                     case 'ip_address': mappedType = EntityType.IPAddress; color = '#f59e0b'; break;
-                     case 'domain': mappedType = EntityType.Domain; color = '#10b981'; break;
-                     case 'social_profile': mappedType = EntityType.SocialProfile; color = '#06b6d4'; break;
-                     case 'email_address': mappedType = EntityType.EmailAddress; color = '#8b5cf6'; break;
-                     default: mappedType = EntityType.Custom;
-                  }
+                  // Extended type mapping for all OSINT entity types
+                  const typeColorMap: Record<string, { type: string; color: string }> = {
+                     'ip_address': { type: EntityType.IPAddress, color: '#f59e0b' },
+                     'domain': { type: EntityType.Domain, color: '#10b981' },
+                     'subdomain': { type: EntityType.Domain, color: '#22d3ee' },
+                     'social_profile': { type: EntityType.SocialProfile, color: '#06b6d4' },
+                     'email_address': { type: EntityType.EmailAddress, color: '#8b5cf6' },
+                     'person': { type: EntityType.Person, color: '#3b82f6' },
+                     'organization': { type: EntityType.Organization, color: '#10b981' },
+                     'phone_number': { type: EntityType.PhoneNumber, color: '#f97316' },
+                     'location': { type: EntityType.Location, color: '#ef4444' },
+                     'url': { type: EntityType.URL, color: '#a855f7' },
+                     'username': { type: EntityType.Username, color: '#ec4899' },
+                     // Threat & Security types
+                     'threat': { type: 'threat', color: '#ef4444' },
+                     'threat_intel': { type: 'threat_intel', color: '#f97316' },
+                     'vulnerability': { type: 'vulnerability', color: '#ef4444' },
+                     'breach': { type: 'breach', color: '#dc2626' },
+                     'data_leak': { type: 'data_leak', color: '#b91c1c' },
+                     'paste': { type: 'paste', color: '#9333ea' },
+                     'credentials': { type: 'credentials', color: '#dc2626' },
+                     'malware': { type: 'malware', color: '#991b1b' },
+                     'file_hash': { type: 'file_hash', color: '#78716c' },
+                     // Infrastructure types
+                     'port': { type: 'port', color: '#0ea5e9' },
+                     'technology': { type: 'technology', color: '#8b5cf6' },
+                     'service': { type: 'service', color: '#14b8a6' },
+                     'certificate_authority': { type: 'certificate_authority', color: '#a3e635' },
+                     'category': { type: 'category', color: '#c084fc' },
+                     'repository': { type: 'repository', color: '#7c3aed' },
+                     'scan_result': { type: 'scan_result', color: '#3b82f6' },
+                  };
+                  const mapped = typeColorMap[result.type] || { type: result.type || EntityType.Custom, color: result.data?.color || '#cbd5e1' };
                   const sourcePos = (sourceEntity as any).position || { x: 400, y: 400 };
+                  
+                  // TREE LAYOUT: Grid below source, centered horizontally
+                  const TREE_COLS = 5;
+                  const TREE_SPACING_X = 200;
+                  const TREE_SPACING_Y = 150;
+                  const totalToAdd = results.filter((r: any) => {
+                      if (r.type === 'social_profile' && !r.properties?.exists) return false;
+                      const nt = r.type?.toLowerCase();
+                      return !currentGraph.entities.find(e => {
+                          const eVal = e.value?.toLowerCase();
+                          return eVal === r.value?.toLowerCase() && ((e.data?.originalType || e.type)?.toLowerCase() === nt || e.type === nt);
+                      });
+                  }).length;
+                  const treeGridWidth = (Math.min(totalToAdd, TREE_COLS) - 1) * TREE_SPACING_X;
+                  const treeStartX = sourcePos.x - (treeGridWidth / 2);
+                  const treeStartY = sourcePos.y + 200;
+                  const treeRow = Math.floor(addedCount / TREE_COLS);
+                  const treeCol = addedCount % TREE_COLS;
+                  
                   const newEntity = {
                       id: newEntityId,
-                      type: mappedType,
+                      type: mapped.type,
                       value: result.value,
-                      data: { label: result.value, type: mappedType, color, ...result.properties },
+                      data: { 
+                          label: result.data?.label || result.value, 
+                          type: mapped.type, 
+                          color: result.data?.color || mapped.color,
+                          originalType: result.type, // Preserve original backend type for dedup
+                          ...result.properties 
+                      },
                       position: { 
-                          x: sourcePos.x + Math.cos(addedCount * (2 * Math.PI) / results.length) * 250, 
-                          y: sourcePos.y + Math.sin(addedCount * (2 * Math.PI) / results.length) * 250 
+                          x: treeStartX + (treeCol * TREE_SPACING_X), 
+                          y: treeStartY + (treeRow * TREE_SPACING_Y) 
                       },
                       created: new Date().toISOString(),
                       updated: new Date().toISOString(),
@@ -475,13 +699,19 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
              });
            }
         } else {
-            setToastMessage({ text: `Ошибка: ${json.error || 'Неизвестная ошибка'}`, type: 'error' });
-            alert(`Ошибка выполнения: ${json.error || 'Неизвестная ошибка'}`);
+            // Handle rate limiting response
+            if (json.rateLimited && json.quota) {
+                const waitSec = Math.ceil((json.quota.waitMs || 0) / 1000);
+                setToastMessage({ text: `⏳ Лимит исчерпан. Подождите ${waitSec} сек.`, type: 'error' });
+            } else {
+                setToastMessage({ text: `Ошибка: ${json.error || 'Неизвестная ошибка'}`, type: 'error' });
+            }
         }
     } catch (err) {
        setToastMessage({ text: 'Ошибка выполнения трансформа', type: 'error' });
     } finally {
        setLoadingId(null);
+       stopProgress();
     }
   }, [selectedEntityId, currentGraph, addEntity, addLink]);
   useEffect(() => {
@@ -497,12 +727,34 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
     <div className="flex-1 border-b border-border flex flex-col">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className={`px-4 py-2 border-b text-sm font-medium ${
+        <div className={`px-4 py-2 border-b text-sm font-medium flex items-center gap-2 ${
           toastMessage.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' :
           toastMessage.type === 'error' ? 'bg-red-50 text-red-800 border-red-200' :
           'bg-blue-50 text-blue-800 border-blue-200'
         }`}>
-          {toastMessage.text}
+          {toastMessage.type === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0" />}
+          {toastMessage.type === 'error' && <XCircle className="w-4 h-4 shrink-0" />}
+          {toastMessage.type === 'info' && <Clock className="w-4 h-4 shrink-0" />}
+          <span className="truncate">{toastMessage.text}</span>
+        </div>
+      )}
+      
+      {/* Progress Bar */}
+      {progressInfo && (
+        <div className="px-4 py-2 border-b border-border bg-accent/30">
+          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+            <span className="flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              {progressInfo.provider || 'Выполнение'}...
+            </span>
+            <span>~{Math.ceil(progressInfo.estimatedMs / 1000)} сек</span>
+          </div>
+          <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-200 ease-linear"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
         </div>
       )}
       <div className="p-4 border-b border-border">
@@ -556,16 +808,41 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
              </div>
           )}
           <div className="space-y-1">
-            {filteredTransforms.map((transform) => (
+            {filteredTransforms.map((transform) => {
+              const quotaBadge = getQuotaBadge(transform);
+              const isExhausted = quotaBadge && transform.quota && !transform.quota.available;
+              
+              return (
               <div
                 key={transform.id}
-                className={`flex items-center gap-2 p-2 rounded-md hover:bg-accent group transition-colors cursor-pointer ${!selectedEntityId ? 'opacity-60 grayscale' : ''}`}
+                className={`flex items-center gap-2 p-2 rounded-md hover:bg-accent group transition-colors cursor-pointer ${!selectedEntityId ? 'opacity-60 grayscale' : ''} ${isExhausted ? 'opacity-50' : ''}`}
                 onClick={() => handleRunTransform(transform.id)}
               >
                 <span className="text-lg">{transform.icon}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{transform.name}</div>
-                  <div className="text-xs text-muted-foreground">{transform.category}</div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-medium truncate">{transform.name}</span>
+                    {quotaBadge && (
+                      <span className={`text-[10px] font-mono ${quotaBadge.color} shrink-0`} title="Остаток квоты">
+                        {quotaBadge.text}
+                      </span>
+                    )}
+                    {isExhausted && (
+                      <AlertTriangle className="w-3 h-3 text-yellow-500 shrink-0" />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{transform.category}</span>
+                    {transform.estimatedTime && (
+                      <span className="flex items-center gap-0.5">
+                        <Clock className="w-3 h-3" />
+                        {transform.estimatedTime}
+                      </span>
+                    )}
+                    {transform.provider && (
+                      <span className="text-[10px] opacity-60">{transform.provider}</span>
+                    )}
+                  </div>
                 </div>
                 <button
                   onClick={(e) => {
@@ -583,7 +860,8 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
                   )}
                 </button>
               </div>
-            ))}
+              );
+            })}
             {filteredTransforms.length === 0 && (
               <div className="text-center py-8 text-muted-foreground text-sm">
                 Трансформы не найдены

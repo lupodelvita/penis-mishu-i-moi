@@ -21,6 +21,7 @@ interface GraphCanvasProps {
 export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const nodeHtmlEnabledRef = useRef(false);
+  const prevNodeCountRef = useRef(0); // Track node count to detect additions
   const NODE_HTML_THRESHOLD = 40;
 
   // Helper to (re)initialize nodeHtmlLabel when needed
@@ -180,27 +181,25 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
             },
           },
         ],
-        // User requested Tree layout (like Nmap topology)
+        // Use 'preset' layout - positions are managed by TransformPanel and stored in entities
         layout: { 
-          name: 'breadthfirst', 
-          directed: true, 
-          padding: 50, 
-          spacingFactor: 1.5,
-          animate: true 
+          name: 'preset',
+          padding: 50
         } as any,
         // Limit zoom to reasonable range to avoid huge zooms on first node creation
-        minZoom: 0.3,
-        maxZoom: 2.0,
+        minZoom: 0.1,
+        maxZoom: 3.0,
       });
       cyRef.current = cy;
       setTimeout(() => {
         cy.resize();
-        // cy.fit(undefined, 50); // AUTO-ZOOM DISABLED
-        // Ensure zoom isn't extreme after initial resize
-        try {
-          const clamped = Math.min(Math.max(cy.zoom(), 0.8), 1.2);
+        // After initial load, fit to content with reasonable zoom
+        if (cy.nodes().length > 0) {
+          cy.fit(undefined, 60);
+          const clamped = Math.min(Math.max(cy.zoom(), 0.4), 0.85);
           cy.zoom(clamped);
-        } catch (e) { /* ignore */ }
+          cy.center();
+        }
       }, 100);
 
 // Safe extension initialization for nodeHtmlLabel (only for small initial graphs)
@@ -381,49 +380,40 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
             }
         });
     });
-    // Re-run tree (breadthfirst) layout after sync to preserve hierarchy (Nmap-like topology)
+    // Smart auto-fit: Only fit view when NEW nodes are added, not on every sync
+    // DO NOT re-run breadthfirst layout — positions are managed by TransformPanel
     try {
-      const layout = cy.layout({ name: 'breadthfirst', directed: true, padding: 50, spacingFactor: 1.5, animate: true } as any);
-      layout.run();
-
-      // After layout, apply a leveled vertical stacking with slight jitter so large WHOIS trees
-      // don't collapse into a single horizontal line. Compute BFS levels from root nodes
-      try {
-        const roots = cy.nodes().filter((n: any) => cy.edges(`[target = "${n.id()}"]`).length === 0);
-        const levels: Record<string, number> = {};
-        if (roots.length > 0) {
-          roots.forEach((root: any) => {
-            cy.elements().bfs({ roots: root, visit: (v: any, e: any, u: any, i: any, depth: number) => {
-              const id = v.id();
-              if (levels[id] === undefined || depth < levels[id]) levels[id] = depth;
-            }});
-          });
-
-          cy.batch(() => {
-            Object.entries(levels).forEach(([id, depth]) => {
-              const node = cy.$id(id);
-              if (!node || node.length === 0) return;
-              const pos = node.position();
-              const targetY = depth * 120 + (Math.random() - 0.5) * 40;
-              const targetX = pos.x + (Math.random() - 0.5) * 80;
-              node.position({ x: targetX, y: targetY });
-            });
-          });
+      const nodeCount = cy.nodes().length;
+      const prevCount = prevNodeCountRef.current;
+      const newNodesAdded = nodeCount > prevCount;
+      prevNodeCountRef.current = nodeCount;
+      
+      if (newNodesAdded && nodeCount > 0) {
+        // Fit all nodes into view with generous padding
+        cy.fit(undefined, 80);
+        
+        // Clamp zoom to avoid extremes:
+        // - Too zoomed in (single node fills screen) → cap at 0.85
+        // - Too zoomed out (tiny dots) → floor at 0.3
+        const curZoom = cy.zoom();
+        let targetZoom = curZoom;
+        
+        if (nodeCount <= 2) {
+          // Very few nodes: don't zoom in too much, show context
+          targetZoom = Math.min(curZoom, 0.7);
+        } else if (nodeCount <= 10) {
+          targetZoom = Math.min(curZoom, 0.85);
+        } else {
+          // Many nodes: let fit decide but cap at 1.0
+          targetZoom = Math.min(curZoom, 1.0);
         }
-      } catch (e) {
-        console.warn('[GraphCanvas] post-layout leveling failed:', e);
+        targetZoom = Math.max(targetZoom, 0.3);
+        
+        if (Math.abs(targetZoom - curZoom) > 0.01) {
+          cy.animate({ zoom: { level: targetZoom, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } }, duration: 400 });
+        }
       }
-
-      // Clamp zoom to avoid extreme automatic zooming; animate to mild zoom for UX
-      try {
-        const cur = cy.zoom();
-        const clamped = Math.min(Math.max(cur, 0.7), 1.3);
-        // Only animate zoom level, do not change pan/center to avoid viewport 'drift'
-        cy.animate({ zoom: clamped, duration: 400 });
-      } catch (e) { /* ignore */ }
-    } catch (e) {
-      console.warn('[GraphCanvas] layout run failed:', e);
-    }
+    } catch (e) { /* ignore */ }
 
     // If graph has shrunk below threshold and nodeHtml isn't enabled yet, initialize it
     try {

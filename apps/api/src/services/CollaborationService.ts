@@ -3,7 +3,8 @@ import { Server as SocketIOServer, Socket } from 'socket.io';
 import { prisma } from '../lib/prisma';
 
 interface Collaborator {
-  id: string;
+  id: string;       // socket.id
+  dbUserId: string; // database user ID for membership operations
   name: string;
   color: string;
   cursor?: { x: number; y: number };
@@ -73,7 +74,7 @@ class CollaborationService {
             return;
           }
 
-          const collaborator: Collaborator = { ...user, graphId, id: socket.id };
+          const collaborator: Collaborator = { ...user, graphId, id: socket.id, dbUserId: user.id };
           
           socket.join(graphId);
           this.collaborators.set(socket.id, collaborator);
@@ -244,7 +245,7 @@ class CollaborationService {
       });
 
       // Leave graph
-      socket.on('leave-graph', ({ graphId }: any) => {
+      socket.on('leave-graph', async ({ graphId }: any) => {
         const collaborator = this.collaborators.get(socket.id);
         if (collaborator && collaborator.graphId === graphId) {
           socket.leave(graphId);
@@ -255,6 +256,7 @@ class CollaborationService {
             if (room.size === 0) {
               this.graphRooms.delete(graphId);
               this.graphLeaders.delete(graphId);
+              this.commandHistory.delete(graphId);
             } else {
               // Notify remaining users
               const remainingCollaborators = this.getGraphCollaborators(graphId);
@@ -262,6 +264,9 @@ class CollaborationService {
               this.io!.to(graphId).emit('user-left', { userId: socket.id });
             }
           }
+
+          // DB cleanup: remove membership and delete graph if last member
+          await this.cleanupMembership(collaborator.dbUserId, graphId);
 
           collaborator.graphId = ''; // Clear graph association
           console.log(`[Collab] ${collaborator.name} left graph ${graphId}`);
@@ -280,9 +285,9 @@ class CollaborationService {
             select: { leaderId: true },
           });
 
-          if (graph?.leaderId !== requester.id) {
+          if (graph?.leaderId !== requester.dbUserId) {
             socket.emit('error', { message: 'Only leaders can kick members' });
-            console.log(`[Collab] Kick-user failed: ${requester.id} is not leader of ${graphId}`);
+            console.log(`[Collab] Kick-user failed: ${requester.dbUserId} is not leader of ${graphId}`);
             return;
           }
 
@@ -320,11 +325,11 @@ class CollaborationService {
       });
 
       // Disconnect
-      socket.on('disconnect', () => {
+      socket.on('disconnect', async () => {
         const collaborator = this.collaborators.get(socket.id);
         
         if (collaborator) {
-          const { graphId, name } = collaborator;
+          const { graphId, name, dbUserId } = collaborator;
           
           // Remove from data structures
           this.collaborators.delete(socket.id);
@@ -334,6 +339,7 @@ class CollaborationService {
             if (room.size === 0) {
               this.graphRooms.delete(graphId);
               this.graphLeaders.delete(graphId);
+              this.commandHistory.delete(graphId);
             } else {
               // Notify remaining users
               const remainingCollaborators = this.getGraphCollaborators(graphId);
@@ -351,11 +357,69 @@ class CollaborationService {
               }
             }
           }
+
+          // DB cleanup: remove membership and delete graph if last member
+          if (dbUserId && graphId) {
+            await this.cleanupMembership(dbUserId, graphId);
+          }
           
           console.log(`[Collab] ${name} disconnected from graph ${graphId}. Remaining: ${this.getGraphCollaborators(graphId).length}`);
         }
       });
     });
+  }
+
+  /**
+   * Remove user from graph membership and delete graph if no members left
+   */
+  private async cleanupMembership(userId: string, graphId: string): Promise<void> {
+    try {
+      // Check membership exists
+      const member = await prisma.graphMember.findUnique({
+        where: { graphId_userId: { graphId, userId } },
+      });
+
+      if (!member) return;
+
+      // Remove membership
+      await prisma.graphMember.delete({
+        where: { graphId_userId: { graphId, userId } },
+      });
+
+      // Check remaining members
+      const remaining = await prisma.graphMember.count({
+        where: { graphId },
+      });
+
+      if (remaining === 0) {
+        // No members left — delete the graph
+        await prisma.graph.delete({ where: { id: graphId } });
+        console.log(`[Collab] Graph ${graphId} deleted (no members remaining)`);
+      } else {
+        // If leaving user was leader, promote next member
+        const graph = await prisma.graph.findUnique({
+          where: { id: graphId },
+          select: { leaderId: true },
+        });
+
+        if (graph?.leaderId === userId) {
+          const nextMember = await prisma.graphMember.findFirst({
+            where: { graphId },
+            select: { userId: true },
+          });
+
+          if (nextMember) {
+            await prisma.graph.update({
+              where: { id: graphId },
+              data: { leaderId: nextMember.userId },
+            });
+            console.log(`[Collab] Leadership transferred to ${nextMember.userId} in graph ${graphId}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[Collab] Membership cleanup error:', error);
+    }
   }
 
   /**

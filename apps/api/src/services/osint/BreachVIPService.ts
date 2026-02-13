@@ -211,6 +211,48 @@ export class BreachVIPService {
   }
 
   /**
+   * Convert BreachVIP search results to graph entities
+   */
+  convertToEntities(response: BreachVIPSearchResponse, searchTerm: string): {
+    entities: any[];
+    links: any[];
+  } {
+    const entities: any[] = [];
+    const links: any[] = [];
+
+    response.results.forEach((result, index) => {
+      const breachEntity = {
+        id: `breachvip-${result.source}-${index}`,
+        type: 'breach',
+        value: result.source,
+        properties: {
+          source: result.source,
+          categories: Array.isArray(result.categories) ? result.categories : [result.categories],
+          searchTerm,
+          ...Object.fromEntries(
+            Object.entries(result).filter(([k]) => k !== 'source' && k !== 'categories')
+          ),
+        },
+        metadata: {
+          source: 'BreachVIP',
+          created: new Date().toISOString(),
+        },
+      };
+
+      entities.push(breachEntity);
+
+      links.push({
+        id: `link-${searchTerm}-${breachEntity.id}`,
+        source: searchTerm,
+        target: breachEntity.id,
+        label: 'found_in_breach',
+      });
+    });
+
+    return { entities, links };
+  }
+
+  /**
    * Get rate limit status
    */
   getRateLimitStatus(): { used: number; limit: number; remaining: number } {
