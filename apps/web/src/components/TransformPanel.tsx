@@ -406,6 +406,8 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
                        
                        if (existingEntity) {
                            // Skip duplicate, but link it if not already linked
+                           // Don't create self-loop links
+                           if (existingEntity.id === selectedEntityId) return;
                            const existingLink = currentGraph.links?.find(l => 
                                (l.source === selectedEntityId && l.target === existingEntity.id) ||
                                (l.source === existingEntity.id && l.target === selectedEntityId)
@@ -581,9 +583,9 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
                 const results = json.data.entities;
                 let addedCount = 0;
                 results.forEach((result: any, index: number) => {
-                  // For social profiles, only add if profile exists (has status/data indicating real account)
-                  if (result.type === 'social_profile' && !result.properties?.exists) {
-                      return; // Skip non-existent profiles
+                  // For social profiles, only add if profile exists (skip explicitly non-existent)
+                  if (result.type === 'social_profile' && result.properties?.exists === false) {
+                      return; // Skip profiles explicitly marked as non-existent
                   }
                   
                   // DEDUPLICATION: Check if entity with same value already exists
@@ -600,6 +602,8 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
                   
                   if (existingEntity) {
                       // Skip duplicate, but link it if not already linked
+                      // Don't create self-loop links (source === target)
+                      if (existingEntity.id === selectedEntityId) return;
                       const existingLink = currentGraph.links?.find(l => 
                           (l.source === selectedEntityId && l.target === existingEntity.id) ||
                           (l.source === existingEntity.id && l.target === selectedEntityId)
@@ -656,7 +660,7 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
                   const TREE_SPACING_X = 200;
                   const TREE_SPACING_Y = 150;
                   const totalToAdd = results.filter((r: any) => {
-                      if (r.type === 'social_profile' && !r.properties?.exists) return false;
+                      if (r.type === 'social_profile' && r.properties?.exists === false) return false;
                       const nt = r.type?.toLowerCase();
                       return !currentGraph.entities.find(e => {
                           const eVal = e.value?.toLowerCase();
@@ -724,7 +728,7 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
     return () => window.removeEventListener('node-weaver:run-transform', handleAutoRun);
   }, [handleRunTransform]);
   return (
-    <div className="flex-1 border-b border-border flex flex-col">
+    <div className="flex-1 border-b border-border flex flex-col min-h-0 overflow-hidden">
       {/* Toast Notification */}
       {toastMessage && (
         <div className={`px-4 py-2 border-b text-sm font-medium flex items-center gap-2 ${
@@ -801,7 +805,7 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
         </div>
       </div>
       {}
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex-1 overflow-y-auto p-2 min-h-0">
           {!selectedEntityId && (
              <div className="bg-primary/10 text-primary text-xs p-2 rounded mb-2 text-center">
                  Выберите ноду на графе для запуска

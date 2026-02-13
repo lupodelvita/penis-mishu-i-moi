@@ -451,7 +451,11 @@ class RateLimitTracker {
    * Get estimated execution time for a transform (based on type)
    */
   getEstimatedTime(transformId: string): { estimatedMs: number; label: string } {
-    // Nmap scans are slow
+    // Nmap full scan is very slow
+    if (transformId === 'nmap_full_scan') {
+      return { estimatedMs: 120000, label: '~2 мин' };
+    }
+    // Nmap quick scans
     if (transformId.includes('nmap')) {
       return { estimatedMs: 15000, label: '~15 сек' };
     }
@@ -471,6 +475,14 @@ class RateLimitTracker {
     if (transformId.includes('dns') || transformId.includes('cert')) {
       return { estimatedMs: 3000, label: '~3 сек' };
     }
+    // Security checks (headers, SSL)
+    if (transformId.includes('security')) {
+      return { estimatedMs: 10000, label: '~10 сек' };
+    }
+    // Maigret username search
+    if (transformId.includes('maigret')) {
+      return { estimatedMs: 30000, label: '~30 сек' };
+    }
     // Most API transforms
     return { estimatedMs: 2000, label: '~2 сек' };
   }
@@ -482,14 +494,25 @@ class RateLimitTracker {
     const mapping: Record<string, string> = {
       // Nmap
       'nmap_quick_scan': 'nmap',
+      'nmap_full_scan': 'nmap',
       'nmap_detailed_scan': 'nmap',
       'nmap_vuln_scan': 'nmap',
       // DNS
       'dns_resolve': 'dns',
       'dns.mx_records': 'dns',
+      'dns_txt_records': 'dns',
       'dns_recon': 'dns',
+      'subdomain_enum': 'dns',
       // WHOIS
       'whois_lookup': 'whois',
+      'whois_ip_lookup': 'whois',
+      // Security
+      'security_headers_check': 'security',
+      'security_ssl_check': 'security',
+      // Maigret
+      'maigret_lite': 'maigret',
+      // Email
+      'email_validate': 'email',
       // Tech Stack
       'techstack_analyze': 'techstack',
       // Shodan

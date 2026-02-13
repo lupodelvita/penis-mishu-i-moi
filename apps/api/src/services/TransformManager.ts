@@ -426,7 +426,7 @@ export class TransformManager {
       name: 'Discord User Lookup',
       description: 'Get Discord profile info from User ID',
       category: 'OSINT',
-      inputTypes: ['discord_id', 'username'],
+      inputTypes: ['discord_id', 'username', 'person'],
       outputTypes: ['social_profile'],
       icon: '🎮',
       requiresApiKey: true,
@@ -522,11 +522,59 @@ export class TransformManager {
       outputTypes: ['text'],
       icon: '📝',
       execute: async (input) => {
-        return { success: false, error: 'Not yet implemented - coming soon' };
+        try {
+          const domain = input.value;
+          const txtRecords = await dns.resolveTxt(domain);
+          
+          if (!txtRecords || txtRecords.length === 0) {
+            return { success: true, entities: [], links: [], metadata: { message: 'No TXT records found' } };
+          }
+
+          const entities: any[] = [];
+          const links: any[] = [];
+
+          txtRecords.forEach((record, index) => {
+            const value = record.join('');
+            let recordType = 'TXT';
+            let color = '#64748b';
+            
+            if (value.startsWith('v=spf1')) { recordType = 'SPF'; color = '#22c55e'; }
+            else if (value.startsWith('v=DMARC1')) { recordType = 'DMARC'; color = '#3b82f6'; }
+            else if (value.startsWith('v=DKIM1')) { recordType = 'DKIM'; color = '#8b5cf6'; }
+            else if (value.includes('google-site-verification')) { recordType = 'Google Verification'; color = '#f59e0b'; }
+            else if (value.includes('MS=')) { recordType = 'Microsoft Verification'; color = '#0ea5e9'; }
+            else if (value.includes('docusign')) { recordType = 'DocuSign'; color = '#ec4899'; }
+
+            const entityId = `txt-${domain}-${index}-${Date.now()}`;
+            entities.push({
+              id: entityId,
+              type: 'text',
+              value: value.length > 80 ? value.substring(0, 77) + '...' : value,
+              data: {
+                label: `${recordType}: ${value.substring(0, 50)}${value.length > 50 ? '...' : ''}`,
+                type: 'text',
+                color,
+                recordType,
+                fullValue: value,
+              },
+              properties: { recordType, domain, fullValue: value }
+            });
+
+            links.push({
+              id: `link-${input.id}-${entityId}`,
+              source: input.id,
+              target: entityId,
+              label: recordType
+            });
+          });
+
+          return { success: true, entities, links, metadata: { count: txtRecords.length } };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
       }
     });
 
-    // Security Transforms (placeholders from original file)
     this.registerTransform({
       id: 'security_headers_check',
       name: 'Security Headers Analysis',
@@ -537,35 +585,72 @@ export class TransformManager {
       icon: '🛡️',
       execute: async (input) => {
         try {
-            const url = input.type === 'url' ? input.value : `https://${input.value}`;
-            const response = await fetch(url, { method: 'HEAD' });
-            const headers = response.headers;
+            let url = input.type === 'url' ? input.value : `https://${input.value}`;
+            if (!url.startsWith('http')) url = `https://${url}`;
             
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 10000);
+            
+            const response = await fetch(url, { 
+              method: 'GET',
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+              },
+              redirect: 'follow',
+              signal: controller.signal
+            });
+            clearTimeout(timeout);
+            
+            const headers = response.headers;
             const vulnerabilities: any[] = [];
             
             const criticalHeaders = [
-                { name: 'Strict-Transport-Security', missingSeverity: 'Medium' },
-                { name: 'Content-Security-Policy', missingSeverity: 'High' },
-                { name: 'X-Frame-Options', missingSeverity: 'Medium' },
-                { name: 'X-Content-Type-Options', missingSeverity: 'Low' },
-                { name: 'Referrer-Policy', missingSeverity: 'Low' }
+                { name: 'Strict-Transport-Security', missingSeverity: 'Medium', description: 'HSTS not enabled. Allows downgrade attacks to HTTP.' },
+                { name: 'Content-Security-Policy', missingSeverity: 'High', description: 'No CSP. Site vulnerable to XSS and data injection attacks.' },
+                { name: 'X-Frame-Options', missingSeverity: 'Medium', description: 'Clickjacking possible. Site can be embedded in iframes.' },
+                { name: 'X-Content-Type-Options', missingSeverity: 'Low', description: 'MIME sniffing possible. Server should send nosniff.' },
+                { name: 'Referrer-Policy', missingSeverity: 'Low', description: 'No referrer policy. May leak sensitive URL data.' },
+                { name: 'Permissions-Policy', missingSeverity: 'Low', description: 'No permissions policy. Browser features unrestricted.' }
             ];
 
+            const presentHeaders: string[] = [];
+
             criticalHeaders.forEach(check => {
-                if (!headers.has(check.name.toLowerCase())) {
+                const headerValue = headers.get(check.name.toLowerCase());
+                if (!headerValue) {
                     vulnerabilities.push({
                         id: `vuln-${check.name}-${Date.now()}`,
                         type: 'vulnerability',
                         value: `Missing ${check.name}`,
                         data: {
-                            label: `Missing ${check.name}`,
+                            label: `⚠ Missing: ${check.name}`,
                             severity: check.missingSeverity,
-                            description: `The ${check.name} header is missing, which could expose the site to attacks.`,
-                            color: check.missingSeverity === 'High' ? '#ef4444' : '#f59e0b'
-                        }
+                            description: check.description,
+                            color: check.missingSeverity === 'High' ? '#ef4444' : check.missingSeverity === 'Medium' ? '#f59e0b' : '#64748b'
+                        },
+                        properties: { headerName: check.name, severity: check.missingSeverity, description: check.description }
                     });
+                } else {
+                    presentHeaders.push(`${check.name}: ${headerValue.substring(0, 60)}`);
                 }
             });
+
+            // Also check server header (info leak)
+            const serverHeader = headers.get('server');
+            if (serverHeader) {
+                vulnerabilities.push({
+                    id: `vuln-server-info-${Date.now()}`,
+                    type: 'vulnerability',
+                    value: `Server: ${serverHeader}`,
+                    data: {
+                        label: `ℹ Server Disclosure: ${serverHeader}`,
+                        severity: 'Info',
+                        description: `Server header reveals: ${serverHeader}. May help attackers fingerprint the server.`,
+                        color: '#64748b'
+                    },
+                    properties: { headerName: 'Server', value: serverHeader, severity: 'Info' }
+                });
+            }
 
             const links = vulnerabilities.map(v => ({
                 id: `link-${input.id}-${v.id}`,
@@ -574,14 +659,18 @@ export class TransformManager {
                 label: 'vulnerability'
             }));
 
+            const score = Math.max(0, 100 - (vulnerabilities.filter(v => v.data.severity !== 'Info').length * 15));
             return { 
                 success: true, 
                 entities: vulnerabilities, 
                 links, 
-                metadata: { score: 100 - (vulnerabilities.length * 20) } 
+                metadata: { score, presentHeaders, missingCount: vulnerabilities.length } 
             };
         } catch (e: any) {
-            return { success: false, error: 'Failed to access site headers: ' + e.message };
+            if (e.name === 'AbortError') {
+                return { success: false, error: 'Таймаут подключения к сайту (10 сек)' };
+            }
+            return { success: false, error: 'Не удалось подключиться: ' + (e.cause?.code || e.message) };
         }
       }
     });
@@ -595,7 +684,96 @@ export class TransformManager {
       outputTypes: ['vulnerability', 'organization'],
       icon: '🔐',
       execute: async (input) => {
-        return { success: false, error: 'Not yet implemented - SSL analysis coming soon' };
+        try {
+          const tls = require('tls');
+          const domain = input.value.replace(/^https?:\/\//, '').split('/')[0];
+          
+          const certData = await new Promise<any>((resolve, reject) => {
+            const socket = tls.connect(443, domain, { servername: domain, rejectUnauthorized: false }, () => {
+              const cert = socket.getPeerCertificate(true);
+              socket.end();
+              resolve(cert);
+            });
+            socket.setTimeout(10000, () => { socket.destroy(); reject(new Error('Connection timeout')); });
+            socket.on('error', (err: Error) => reject(err));
+          });
+
+          if (!certData || !certData.subject) {
+            return { success: false, error: 'Could not retrieve SSL certificate' };
+          }
+
+          const entities: any[] = [];
+          const links: any[] = [];
+          const now = new Date();
+          const validFrom = new Date(certData.valid_from);
+          const validTo = new Date(certData.valid_to);
+          const daysLeft = Math.floor((validTo.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          const isExpired = daysLeft < 0;
+          const isExpiringSoon = daysLeft >= 0 && daysLeft <= 30;
+
+          // Certificate entity
+          const certId = `ssl-cert-${domain}-${Date.now()}`;
+          entities.push({
+            id: certId,
+            type: 'scan_result',
+            value: `SSL: ${domain}`,
+            data: {
+              label: `🔐 SSL Certificate`,
+              type: 'scan_result',
+              color: isExpired ? '#ef4444' : isExpiringSoon ? '#f59e0b' : '#22c55e',
+            },
+            properties: {
+              subject: certData.subject?.CN || domain,
+              issuer: certData.issuer?.O || certData.issuer?.CN || 'Unknown',
+              validFrom: validFrom.toISOString(),
+              validTo: validTo.toISOString(),
+              daysRemaining: daysLeft,
+              serialNumber: certData.serialNumber,
+              fingerprint: certData.fingerprint256?.substring(0, 30),
+              protocol: 'TLS',
+              status: isExpired ? 'EXPIRED' : isExpiringSoon ? 'EXPIRING SOON' : 'VALID',
+              altNames: (certData.subjectaltname || '').split(', ').filter((s: string) => s.startsWith('DNS:')).map((s: string) => s.replace('DNS:', '')).join(', '),
+            }
+          });
+          links.push({ id: `link-${input.id}-${certId}`, source: input.id, target: certId, label: 'ssl certificate' });
+
+          // Issuer organization
+          const issuerName = certData.issuer?.O || certData.issuer?.CN;
+          if (issuerName) {
+            const issuerId = `ca-${issuerName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}`;
+            entities.push({
+              id: issuerId,
+              type: 'certificate_authority',
+              value: issuerName,
+              data: { label: `🏛 ${issuerName}`, type: 'certificate_authority', color: '#a3e635' },
+              properties: { role: 'Certificate Authority', country: certData.issuer?.C }
+            });
+            links.push({ id: `link-${certId}-${issuerId}`, source: certId, target: issuerId, label: 'issued by' });
+          }
+
+          // Warnings
+          if (isExpired) {
+            const warnId = `vuln-ssl-expired-${Date.now()}`;
+            entities.push({
+              id: warnId, type: 'vulnerability', value: `SSL EXPIRED (${Math.abs(daysLeft)} days ago)`,
+              data: { label: `🚨 SSL Expired`, severity: 'Critical', color: '#ef4444' },
+              properties: { severity: 'Critical', expiredDays: Math.abs(daysLeft) }
+            });
+            links.push({ id: `link-${certId}-${warnId}`, source: certId, target: warnId, label: 'issue' });
+          } else if (isExpiringSoon) {
+            const warnId = `vuln-ssl-expiring-${Date.now()}`;
+            entities.push({
+              id: warnId, type: 'vulnerability', value: `SSL expires in ${daysLeft} days`,
+              data: { label: `⚠ Expires in ${daysLeft}d`, severity: 'Medium', color: '#f59e0b' },
+              properties: { severity: 'Medium', daysRemaining: daysLeft }
+            });
+            links.push({ id: `link-${certId}-${warnId}`, source: certId, target: warnId, label: 'warning' });
+          }
+
+          return { success: true, entities, links, metadata: { daysRemaining: daysLeft, issuer: issuerName, expired: isExpired } };
+        } catch (error: any) {
+          return { success: false, error: 'SSL analysis failed: ' + (error.code || error.message) };
+        }
       }
     });
 
@@ -658,6 +836,113 @@ export class TransformManager {
           };
         } catch (error: any) {
           return { success: false, error: error.message };
+        }
+      }
+    });
+
+    // WHOIS IP Lookup — reverse lookup info for IP addresses
+    this.registerTransform({
+      id: 'whois_ip_lookup',
+      name: 'WHOIS IP Lookup',
+      description: 'Get WHOIS information for an IP address (owner, ASN, network)',
+      category: 'Network Intelligence',
+      inputTypes: ['ip_address'],
+      outputTypes: ['organization', 'domain'],
+      icon: '📋',
+      execute: async (input) => {
+        try {
+          const ip = input.value;
+          
+          // Use ip-api.com (free, no key required, 45 req/min)
+          const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,asname,reverse,query`, {
+            signal: AbortSignal.timeout(8000)
+          });
+          
+          if (!response.ok) {
+            return { success: false, error: 'WHOIS IP lookup failed: API error' };
+          }
+          
+          const data = await response.json();
+          
+          if (data.status !== 'success') {
+            return { success: false, error: data.message || 'IP not found in WHOIS database' };
+          }
+
+          const entities: any[] = [];
+          const links: any[] = [];
+
+          // ISP/Organization entity
+          if (data.isp || data.org) {
+            const orgId = `org-isp-${(data.isp || data.org).replace(/[\s.]/g, '-').toLowerCase()}-${Date.now()}`;
+            entities.push({
+              id: orgId,
+              type: 'organization',
+              value: data.isp || data.org,
+              data: {
+                label: data.isp || data.org,
+                type: 'organization',
+                color: '#8b5cf6',
+              },
+              properties: {
+                role: 'ISP',
+                organization: data.org,
+                isp: data.isp,
+                asn: data.as,
+                asnName: data.asname,
+              }
+            });
+            links.push({ id: `link-${input.id}-${orgId}`, source: input.id, target: orgId, label: 'owned by' });
+          }
+
+          // Reverse DNS entity
+          if (data.reverse) {
+            const reverseId = `domain-reverse-${data.reverse}-${Date.now()}`;
+            entities.push({
+              id: reverseId,
+              type: 'domain',
+              value: data.reverse,
+              data: {
+                label: data.reverse,
+                type: 'domain',
+                color: '#10b981',
+              },
+              properties: { source: 'Reverse DNS', ip }
+            });
+            links.push({ id: `link-${input.id}-${reverseId}`, source: input.id, target: reverseId, label: 'reverse DNS' });
+          }
+
+          // ASN entity
+          if (data.as) {
+            const asnId = `asn-${data.as.split(' ')[0]}-${Date.now()}`;
+            entities.push({
+              id: asnId,
+              type: 'organization',
+              value: data.as,
+              data: {
+                label: `🌐 ${data.as}`,
+                type: 'organization',
+                color: '#06b6d4',
+              },
+              properties: { asn: data.as, asnName: data.asname }
+            });
+            links.push({ id: `link-${input.id}-${asnId}`, source: input.id, target: asnId, label: 'ASN' });
+          }
+
+          return {
+            success: true,
+            entities,
+            links,
+            metadata: {
+              isp: data.isp,
+              org: data.org,
+              asn: data.as,
+              reverse: data.reverse,
+              country: data.country,
+              city: data.city
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: 'WHOIS IP lookup failed: ' + error.message };
         }
       }
     });
@@ -733,7 +1018,7 @@ export class TransformManager {
       name: 'BreachVIP Username Search',
       description: 'Search BreachVIP database by username',
       category: 'Breach Intelligence',
-      inputTypes: ['username'],
+      inputTypes: ['username', 'person'],
       outputTypes: ['breach', 'credentials'],
       icon: '🔍',
       execute: async (input) => {
