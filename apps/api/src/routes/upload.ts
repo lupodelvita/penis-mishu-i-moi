@@ -8,7 +8,8 @@ import { v4 as uuidv4 } from 'uuid';
 const router = Router();
 
 // Ensure upload directory exists
-const uploadDir = path.join(process.cwd(), 'uploads');
+// On Vercel, use /tmp; locally use process.cwd()/uploads
+const uploadDir = process.env.VERCEL ? path.join('/tmp', 'uploads') : path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
