@@ -37,13 +37,20 @@ const PORT = process.env.PORT || 4000;
 
 // Middleware
 app.use(helmet());
+
+// Dynamic CORS for Vercel deployments
+const corsOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:3000',
+  'http://localhost:3001',
+  'https://core-phi-mocha.vercel.app',
+  /\.vercel\.app$/, // Allow any vercel.app subdomain
+];
+
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:3000',
-    'http://localhost:3001',
-    'https://core-phi-mocha.vercel.app'
-  ],
-  credentials: true
+  origin: corsOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(morgan('dev'));
 app.use(express.json());
