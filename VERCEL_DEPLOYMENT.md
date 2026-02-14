@@ -259,7 +259,55 @@ vercel rollback
 
 ---
 
-## Важные файлы
+## Генерирование CEO ключей на Vercel
+
+После деплоя на Vercel у тебя нет терминала для выполнения команд. Но есть **встроенный endpoint для генерирования ключей**:
+
+### Способ 1: cURL (рекомендуется)
+
+Выполни в командной строке:
+```bash
+curl "https://core-phi-mocha.vercel.app/api/setup-keys?count=1"
+```
+
+Ответ:
+```json
+{
+  "success": true,
+  "keys": ["NW-CEO-XXXXX-YYYYY-MASTER"],
+  "message": "These keys are valid ONE-TIME use for registration."
+}
+```
+
+Скопируй ключ из массива `keys` и используй для регистрации.
+
+### Способ 2: Postman
+
+1. Открой [postman.com](https://postman.com)
+2. **New** → **HTTP Request**
+3. Метод: `GET`
+4. URL: `https://core-phi-mocha.vercel.app/api/setup-keys?count=1`
+5. Send
+
+### Способ 3: Browser
+
+Просто открой в браузере:
+```
+https://core-phi-mocha.vercel.app/api/setup-keys?count=5
+```
+(count=5 сгенерирует 5 ключей сразу)
+
+### Параметры
+- `?count=1` — количество ключей (по умолчанию 1)
+
+Пример:
+```
+https://core-phi-mocha.vercel.app/api/setup-keys?count=10
+```
+
+Каждый ключ **одноразовый** — используется только при первой регистрации CEO.
+
+---
 
 ```
 NodeWeaver/
