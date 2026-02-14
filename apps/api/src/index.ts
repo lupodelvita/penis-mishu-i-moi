@@ -38,15 +38,30 @@ const PORT = process.env.PORT || 4000;
 app.use(helmet());
 
 // Dynamic CORS for Vercel deployments
-const corsOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:3000',
-  'http://localhost:3001',
-  'https://core-phi-mocha.vercel.app',
-  /\.vercel\.app$/, // Allow any vercel.app subdomain
-];
-
 app.use(cors({
-  origin: corsOrigins,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      process.env.FRONTEND_URL || 'http://localhost:3000',
+      'http://localhost:3001',
+      'https://core-phi-mocha.vercel.app',
+      'https://penis-mishu-i-moi-web.vercel.app',
+    ];
+    
+    // Check static origins
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Check if origin matches *.vercel.app pattern
+    if (/\.vercel\.app$/.test(origin)) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
