@@ -41,7 +41,7 @@ app.use(cors({
   origin: [
     process.env.FRONTEND_URL || 'http://localhost:3000',
     'http://localhost:3001',
-    'https://penis-mishu-i-moi-2.onrender.com'
+    'https://core-phi-mocha.vercel.app'
   ],
   credentials: true
 }));
@@ -102,20 +102,24 @@ app.use('/uploads', express.static('uploads'));
 // Error handling
 app.use(errorHandler);
 
-// Start server
-httpServer.listen(PORT, () => {
-  console.log(`
-  ╔════════════════════════════════════════════╗
-  ║     NodeWeaver API Server Started          ║
-  ╠════════════════════════════════════════════╣
-  ║  🌐 REST API: http://localhost:${PORT}        ║
-  ║  🔌 WebSocket: ws://localhost:${PORT}         ║
-  ║  📊 Health:   http://localhost:${PORT}/health ║
-  ╚════════════════════════════════════════════╝
-  `);
-  
-  // Initialize Multi-Bot Manager
-  botManager.initialize().catch(e => console.error('BotManager init failed', e));
-});
+// Start server (only locally, not on Vercel)
+if (!process.env.VERCEL) {
+  httpServer.listen(PORT, () => {
+    console.log(`
+    ╔════════════════════════════════════════════╗
+    ║     NodeWeaver API Server Started          ║
+    ╠════════════════════════════════════════════╣
+    ║  🌐 REST API: http://localhost:${PORT}        ║
+    ║  🔌 WebSocket: ws://localhost:${PORT}         ║
+    ║  📊 Health:   http://localhost:${PORT}/health ║
+    ╚════════════════════════════════════════════╝
+    `);
+    
+    // Initialize Multi-Bot Manager
+    botManager.initialize().catch(e => console.error('BotManager init failed', e));
+  });
+}
 
+// Export for Vercel Serverless
+export default app;
 export { collaborationService };

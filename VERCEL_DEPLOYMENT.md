@@ -29,59 +29,45 @@ NodeWeaver — это монорепо с двумя приложениями:
 
 ### Шаг 3: Environment Variables
 
-**ОБЯЗАТЕЛЬНЫЕ переменные:**
+Добавь в **Environment Variables**:
 
 ```
-# База данных
 DATABASE_URL=postgresql://user:password@host:5432/nodeweaver
-
-# Секреты (криптографические ключи)
-JWT_SECRET=sk_live_4b8d9c2e1f7a3b6c9e2d1a4f7c3b8d9e1a2f4c6b9d2e5f7a3c1b8d9e2f4a7c3
+JWT_SECRET=your-super-secret-jwt-key-here
 JWT_EXPIRES_IN=7d
-SESSION_SECRET=sess_live_9c2e1f7a3b6c9e2d1a4f7c3b8d9e1a2f4c6b9d2e5f7a3c1b8d9e2f4a7c3b
-```
 
-**Как сгенерировать секреты:**
-
-Выполни в терминале (Node.js):
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-Скопируй результат и добавь префикс `sk_live_` или `sess_live_`.
-
-### Что такое каждая переменная
-
-| Переменная | Для чего | Пример |
-|-----------|---------|--------|
-| `DATABASE_URL` | PostgreSQL подключение | `postgresql://admin:pass@db.example.com:5432/nodeweaver` |
-| `JWT_SECRET` | Подпись токенов аутентификации | Любой длинный random строка (32+ символа) |
-| `JWT_EXPIRES_IN` | Когда истекает токен | `7d` (7 дней) или `24h` |
-| `SESSION_SECRET` | Шифрование сесси cookies | Любой длинный random строка (32+ символа) |
-
-### ОПЦИОНАЛЬНЫЕ переменные (только если используешь)
-
-```
-# Email (SMTP) - для отправки email уведомлений, восстановления пароля
-SMTP_HOST=smtp.gmail.com          # хост почтовника
-SMTP_PORT=587                     # порт (обычно 587 для TLS)
-SMTP_USER=noreply@yourdomain.com  # email от которого отправлять
-SMTP_PASS=app_specific_password   # пароль приложения (НЕ основной пароль!)
-
-# API Keys для OSINT функций (только если их используешь)
+# API Keys (опционально, если нужны для OSINT)
 SHODAN_API_KEY=
 HUNTER_API_KEY=
 VIRUSTOTAL_API_KEY=
-# ... остальные как надо
+GREYNOISE_API_KEY=
+ABUSEIPDB_API_KEY=
+SECURITYTRAILS_API_KEY=
+CENSYS_API_ID=
+BINARYEDGE_API_KEY=
+FULLCONTACT_API_KEY=
+CLEARBIT_API_KEY=
+HIBP_API_KEY=
+OATHNET_API_KEY=
+ALIENVAULT_API_KEY=
+IPGEOLOCATION_API_KEY=
+EMAILREP_API_KEY=
+PHISHTANK_API_KEY=
+URLSCAN_API_KEY=
+
+# Discord Bot (если используешь)
+DISCORD_BOT_TOKEN=
+DISCORD_WEBHOOK_URL=
+
+# Email (если нужно)
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASS=
+
+# Session
+SESSION_SECRET=your-session-secret-key
 ```
-
-**Зачем SMTP?**
-- Отправка email уведомлений пользователям
-- Подтверждение email при регистрации
-- Восстановление пароля
-- Приглашения в команду/collaboration
-
-Если не используешь email функции — не добавляй SMTP переменные.
 
 ### Шаг 4: Команды после деплоя
 
@@ -158,10 +144,10 @@ export default {
 ### Вариант 1: Разные Vercel проекты (РЕКОМЕНДУЕТСЯ)
 
 1. **Деплой API первым** (`apps/api`)
-   - Получи его URL: `https://your-api.vercel.app`
+   - Получи его URL: `https://core-phi-mocha.vercel.app`
 
 2. **Деплой Web вторым** (`apps/web`)
-   - Установи `NEXT_PUBLIC_API_URL=https://your-api.vercel.app/api`
+   - Установи `NEXT_PUBLIC_API_URL=https://core-phi-mocha.vercel.app/api`
 
 3. Тестируй все API вызовы с корректным URL
 
