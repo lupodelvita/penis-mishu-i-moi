@@ -34,13 +34,10 @@ collaborationService.initialize(httpServer);
 
 const PORT = process.env.PORT || 4000;
 
-// Middleware
-app.use(helmet());
-
-// Dynamic CORS for Vercel deployments
-app.use(cors({
+// Middleware — CORS must be FIRST (before helmet)
+const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl)
+    // Allow requests with no origin (mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
     
     const allowedOrigins = [
@@ -50,13 +47,7 @@ app.use(cors({
       'https://penis-mishu-i-moi-web.vercel.app',
     ];
     
-    // Check static origins
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    // Check if origin matches *.vercel.app pattern
-    if (/\.vercel\.app$/.test(origin)) {
+    if (allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin)) {
       return callback(null, true);
     }
     
@@ -65,7 +56,13 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+};
+
+// Handle preflight OPTIONS explicitly for Vercel Serverless
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
+
+app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(morgan('dev'));
 app.use(express.json());
 
