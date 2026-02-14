@@ -35,32 +35,24 @@ collaborationService.initialize(httpServer);
 const PORT = process.env.PORT || 4000;
 
 // Middleware — CORS must be FIRST (before helmet)
-const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, server-to-server)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      process.env.FRONTEND_URL || 'http://localhost:3000',
-      'http://localhost:3001',
-      'https://core-phi-mocha.vercel.app',
-      'https://penis-mishu-i-moi-web.vercel.app',
-    ];
-    
-    if (allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin)) {
-      return callback(null, true);
-    }
-    
-    callback(new Error('Not allowed by CORS'));
-  },
+// Simplified CORS: accept all *.vercel.app + localhost
+app.use(cors({
+  origin: true, // Allow all origins temporarily for debugging
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-};
+  exposedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400, // 24 hours preflight cache
+}));
 
-// Handle preflight OPTIONS explicitly for Vercel Serverless
-app.options('*', cors(corsOptions));
-app.use(cors(corsOptions));
+// Explicit preflight handler
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(204);
+});
 
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(morgan('dev'));
