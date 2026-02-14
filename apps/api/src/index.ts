@@ -35,24 +35,12 @@ collaborationService.initialize(httpServer);
 const PORT = process.env.PORT || 4000;
 
 // Middleware — CORS must be FIRST (before helmet)
-// Simplified CORS: accept all *.vercel.app + localhost
 app.use(cors({
-  origin: true, // Allow all origins temporarily for debugging
-  credentials: true,
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Content-Type', 'Authorization'],
-  maxAge: 86400, // 24 hours preflight cache
+  maxAge: 86400,
 }));
-
-// Explicit preflight handler
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.sendStatus(204);
-});
 
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(morgan('dev'));
