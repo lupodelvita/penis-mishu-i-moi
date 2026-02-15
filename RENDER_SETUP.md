@@ -18,23 +18,31 @@
 - **Автосоздание**: База данных создастся первой
 - **Connection String**: автоматически подтянется в API через `DATABASE_URL`
 
-### 2. API Service (`nodeweaver-api`)
-- **Type**: Web Service (Docker)
+### 2. API Service (`nodeweaver-api`) — Docker
+- **Type**: Web Service (**Docker**)
 - **Dockerfile**: `apps/api/Dockerfile`
+- **Root Directory**: `apps/api`
 - **Port**: 4000
 - **Health Check**: `/health`
 - **Auto Deploy**: да (при push в main)
+- **Build Command**: Docker build (из Dockerfile)
+- **Start Command**: `npx prisma migrate deploy && npm start` (из Dockerfile CMD)
 - **Features**:
-  - ✅ Docker: nmap, whois, dnsutils
-  - ✅ WebSocket: real-time collaboration
-  - ✅ Prisma migrations: автоматически при деплое
+  - ✅ Docker: nmap, whois, dnsutils установлены
+  - ✅ WebSocket: real-time collaboration работает
+  - ✅ Prisma migrations: автоматически при старте контейнера
   - ✅ OSINT tooling: все сервисы работают
+  - ✅ Python + build tools: для native модулей
 
-### 3. Web Service (`nodeweaver-web`)
-- **Type**: Web Service (Node.js)
-- **Build**: Next.js production build
+### 3. Web Service (`nodeweaver-web`) — Node.js
+- **Type**: Web Service (**Node.js**)
+- **Root Directory**: `apps/web`
+- **Build Command**: `npm install && npx prisma generate && npm run build`
+- **Start Command**: `npm start`
 - **Auto Deploy**: да (при push в main)
-- **NEXT_PUBLIC_API_URL**: автоматически указывает на API
+- **Environment**:
+  - `NEXT_PUBLIC_API_URL`: автоматически указывает на `https://nodeweaver-api.onrender.com`
+  - `NODE_ENV`: production
 
 ## ⚙️ Environment Variables (автогенерация)
 
