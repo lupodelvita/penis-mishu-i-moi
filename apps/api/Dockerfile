@@ -1,6 +1,6 @@
 FROM node:22-bullseye-slim
 
-# Install OSINT system dependencies and OpenSSL for Prisma
+# Install OSINT system dependencies, OpenSSL for Prisma, and Python for node-gyp
 RUN apt-get update && apt-get install -y \
     nmap \
     whois \
@@ -9,6 +9,9 @@ RUN apt-get update && apt-get install -y \
     git \
     openssl \
     libssl-dev \
+    python3 \
+    make \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
