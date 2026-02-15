@@ -1,92 +1,339 @@
-# Render Deployment Guide — NodeWeaver
+# Render Deployment Guide — NodeWeaver (Ручной деплой)
 
-Полный деплой NodeWeaver на Render с Docker, PostgreSQL, и всеми OSINT инструментами.
+Полный деплой NodeWeaver на Render с Docker и Node.js.
 
-## 🚀 Быстрый старт (Blueprint автоматический деплой)
+## 🎯 Обзор сервисов
 
-1. **Зайди на [render.com](https://render.com)**
-2. **Логинься через GitHub**
-3. **New** → **Blueprint**
-4. **Выбери репозиторий**: `lupodelvita/penis-mishu-i-moi`
-5. **Render автоматически**:
-   - Прочитает `render.yaml` из корня репо
-   - Создаст PostgreSQL базу (`nodeweaver-db`)
-   - Создаст API сервис с Docker (`nodeweaver-api`)
-   - Создаст Web сервис на Node.js (`nodeweaver-web`)
-   - Сгенерирует секреты (JWT_SECRET, SESSION_SECRET, MASTER_KEY)
-   - Подключит DATABASE_URL к базе автоматически
-
-**Примерное время деплоя**: 5-8 минут (Docker build API может занять до 5 минут)
+1. **PostgreSQL Database** (`nodeweaver-db`) — база данных
+2. **API Service** (`nodeweaver-api`) — Docker (nmap, whois, WebSocket)
+3. **Web Service** (`nodeweaver-web`) — Node.js (Next.js frontend)
 
 ---
 
-## 🛠️ Ручной деплой (если Blueprint не работает)
+## 📋 Шаг 1: PostgreSQL Database
 
-Если по какой-то причине Blueprint провалился, можно создать сервисы вручную:
-
-### Шаг 1: Создай PostgreSQL базу
-
-1. Render Dashboard → **New** → **PostgreSQL**
-2. Name: `nodeweaver-db`
-3. Database: `nodeweaver`
-4. User: `nodeweaver`
-5. Region: **Frankfurt** (или ближайший)
-6. Plan: **Free**
-7. **Create Database**
-8. После создания скопируй **Internal Connection String**: `postgresql://nodeweaver:...@...`
-
-### Шаг 2: Создай API сервис (Docker)
-
-1. Render Dashboard → **New** → **Web Service**
-2. Connect repository: `lupodelvita/penis-mishu-i-moi`
-3. **Настройки**:
-   - **Name**: `nodeweaver-api`
-   - **Region**: Frankfurt
-   - **Branch**: main
-   - **Root Directory**: `apps/api`
-   - **Environment**: **Docker**
-   - **Dockerfile Path**: `Dockerfile` (относительно Root Directory)
-   - **Plan**: Free
-4. **Advanced Settings**:
-   - **Health Check Path**: `/health`
-   - **Auto-Deploy**: Yes
-5. **Environment Variables** → Add:
-   ```bash
-   PORT=4000
-   NODE_ENV=production
-   DATABASE_URL=<вставь Internal Connection String из Шага 1>
-   JWT_SECRET=<сгенерируй 32+ символов случайной строки>
-   SESSION_SECRET=<сгенерируй 32+ символов случайной строки>
-   MASTER_KEY=<сгенерируй 32+ символов случайной строки>
+1. [Render Dashboard](https://dashboard.render.com) → **New** → **PostgreSQL**
+2. **Настройки**:
    ```
-6. **Create Web Service**
+   Name: nodeweaver-db
+   Database: nodeweaver
+   User: nodeweaver
+   Region: Frankfurt (или ближайший)
+   Plan: Free
+   ```
+3. **Create Database**
+4. ✅ После создания скопируй **Internal Connection String**:
+   ```
+   postgresql://nodeweaver:password@dpg-xxxxx-a.frankfurt-postgres.render.com/nodeweaver
+   ```
+   ⚠️ Сохрани этот URL — понадобится для API сервиса!
 
-**Генерация секретов (в PowerShell)**:
+---
+
+## 📋 Шаг 2: API Service (Docker)
+
+1. [Render Dashboard](https://dashboard.render.com) → **New** → **Web Service**
+2. **Connect Repository**: `lupodelvita/penis-mishu-i-moi`
+3. **Настройки**:
+
+### Basic Settings:
+```
+Name: nodeweaver-api
+Region: Frankfurt (тот же что и база)
+Branch: main
+```
+
+### Build Settings:
+```
+Root Directory: apps/api
+Runtime: Docker
+```
+
+⚠️ **ВАЖНО**: Render автоматически найдет `apps/api/Dockerfile` и использует команды из него:
+- **Build**: `RUN npm install && npm run build` (из Dockerfile)
+- **Start**: `CMD npx prisma migrate deploy && npm start` (из Dockerfile)
+
+**НЕ НУЖНО** вводить Build Command или Start Command — Docker все делает сам!
+
+### Advanced Settings:
+```
+Docker Build Context Directory: apps/api
+Dockerfile Path: Dockerfile
+Health Check Path: /health
+Auto-Deploy: Yes
+Plan: Free
+```
+
+### Environment Variables:
+
+Добавь следующие переменные (**Environment** → **Add Environment Variable**):
+
+```bash
+# Database (скопируй из Шага 1)
+DATABASE_URL=postgresql://nodeweaver:password@dpg-xxxxx.frankfurt-postgres.render.com/nodeweaver
+
+# Server
+PORT=4000
+NODE_ENV=production
+
+# Security (сгенерируй случайные строки 32+ символов)
+JWT_SECRET=<генерируй ниже>
+SESSION_SECRET=<генерируй ниже>
+MASTER_KEY=<генерируй ниже>
+```
+
+**Генерация секретов в PowerShell**:
 ```powershell
-# Генерируй 3 разных ключа для JWT_SECRET, SESSION_SECRET, MASTER_KEY
+# Запусти 3 раза для каждого ключа
 -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | % {[char]$_})
 ```
 
-### Шаг 3: Создай Web сервис (Node.js)
+**Опциональные OSINT API ключи** (добавь если есть):
+```bash
+SHODAN_API_KEY=your_shodan_key
+VIRUSTOTAL_API_KEY=your_virustotal_key
+HUNTER_API_KEY=your_hunter_key
+HIBP_API_KEY=your_hibp_key
+SECURITYTRAILS_API_KEY=your_securitytrails_key
+```
 
-1. Render Dashboard → **New** → **Web Service**
-2. Connect repository: `lupodelvita/penis-mishu-i-moi`
-3. **Настройки**:
-   - **Name**: `nodeweaver-web`
-   - **Region**: Frankfurt
-   - **Branch**: main
-   - **Root Directory**: `apps/web`
-   - **Environment**: **Node**
-   - **Build Command**: `npm install && npx prisma generate && npm run build`
-   - **Start Command**: `npm start`
-   - **Plan**: Free
-4. **Environment Variables** → Add:
-   ```bash
-   NEXT_PUBLIC_API_URL=https://nodeweaver-api.onrender.com
-   NODE_ENV=production
+4. **Create Web Service**
+5. ⏳ Ожидай 5-8 минут пока Docker билдится
+6. ✅ После деплоя скопируй URL сервиса:
    ```
-   ⚠️ **ВАЖНО**: замени `nodeweaver-api` на фактическое имя твоего API сервиса из Шага 2
-5. **Create Web Service**
+   https://nodeweaver-api.onrender.com
+   ```
+
+---
+
+## 📋 Шаг 3: Web Service (Node.js)
+
+1. [Render Dashboard](https://dashboard.render.com) → **New** → **Web Service**
+2. **Connect Repository**: `lupodelvita/penis-mishu-i-moi`
+3. **Настройки**:
+
+### Basic Settings:
+```
+Name: nodeweaver-web
+Region: Frankfurt (тот же что и API)
+Branch: main
+```
+
+### Build Settings:
+```
+Root Directory: (оставь пустым)
+Runtime: Node
+```
+
+### Build & Start Commands:
+
+**Build Command**:
+```bash
+cd apps/web && npm install && npx prisma generate && npm run build
+```
+
+**Start Command**:
+```bash
+cd apps/web && npm start
+```
+
+⚠️ **ВАЖНО**: `cd apps/web` нужен потому что Root Directory пустой (монорепо)
+
+### Advanced Settings:
+```
+Auto-Deploy: Yes
+Plan: Free
+```
+
+### Environment Variables:
+
+Добавь переменные (**Environment** → **Add Environment Variable**):
+
+```bash
+# API URL (вставь URL из Шага 2)
+NEXT_PUBLIC_API_URL=https://nodeweaver-api.onrender.com
+
+# Environment
+NODE_ENV=production
+```
+
+⚠️ **БЕЗ** trailing slash в `NEXT_PUBLIC_API_URL`!
+
+4. **Create Web Service**
+5. ⏳ Ожидай 3-5 минут (Next.js build)
+6. ✅ После деплоя получишь URL:
+   ```
+   https://nodeweaver-web.onrender.com
+   ```
+
+---
+
+## ✅ Проверка работы
+
+### 1. API Health Check
+```bash
+curl https://nodeweaver-api.onrender.com/health
+# Ответ: {"status":"ok","timestamp":"..."}
+```
+
+### 2. API Auth Status
+```bash
+curl https://nodeweaver-api.onrender.com/api/auth/status
+# Ответ: {"authenticated":false}
+```
+
+### 3. Frontend
+Открой в браузере: `https://nodeweaver-web.onrender.com`
+
+### 4. Тест Docker (Nmap)
+1. Зайди на frontend
+2. Создай граф
+3. Создай IP entity: `8.8.8.8`
+4. Правый клик → **Security** → **Nmap Quick Scan**
+5. ✅ Должно работать (Docker с nmap установлен)
+
+### 5. Тест WebSocket (Collaboration)
+1. Открой два окна браузера
+2. Зайди на один граф в обоих
+3. CollaborationPanel (справа) → должно показать **Онлайн** (зеленая точка)
+4. Добавь entity в одном окне → второе видит real-time
+5. ✅ WebSocket работает!
+
+---
+
+## 📝 Итоговая конфигурация
+
+### API Service (nodeweaver-api):
+```
+Runtime: Docker
+Root Directory: apps/api
+Dockerfile: apps/api/Dockerfile (auto-detected)
+Build: Docker RUN commands
+Start: npx prisma migrate deploy && npm start
+Health Check: /health
+URL: https://nodeweaver-api.onrender.com
+```
+
+### Web Service (nodeweaver-web):
+```
+Runtime: Node
+Root Directory: (empty - monorepo)
+Build: cd apps/web && npm install && npx prisma generate && npm run build
+Start: cd apps/web && npm start
+URL: https://nodeweaver-web.onrender.com
+```
+
+### Database (nodeweaver-db):
+```
+Type: PostgreSQL
+Database: nodeweaver
+Plan: Free (1GB)
+Connection: Internal (auto-secure)
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Проблема: API "Build failed"
+**Причина**: Docker build упал
+
+**Решение**:
+1. Render Dashboard → nodeweaver-api → **Manual Deploy** → **Clear build cache & deploy**
+2. Проверь логи билда — должны быть строки:
+   ```
+   ✓ Installing nmap, whois, dnsutils
+   ✓ npm install
+   ✓ npm run build
+   ✓ Server running on port 4000
+   ```
+
+### Проблема: Web "Module not found: @prisma/client"
+**Причина**: Забыл `npx prisma generate` в Build Command
+
+**Решение**:
+1. Settings → Build Command → исправь на:
+   ```bash
+   cd apps/web && npm install && npx prisma generate && npm run build
+   ```
+2. Redeploy
+
+### Проблема: "Database connection refused"
+**Причина**: Неправильный `DATABASE_URL`
+
+**Решение**:
+1. Render Dashboard → nodeweaver-db → **Info** → скопируй **Internal Connection String**
+2. Render Dashboard → nodeweaver-api → **Environment** → обнови `DATABASE_URL`
+3. **Save Changes** → redeploy
+
+### Проблема: Web не подключается к API (CORS)
+**Причина**: Неправильный `NEXT_PUBLIC_API_URL`
+
+**Решение**:
+1. Скопируй точный URL API: `https://nodeweaver-api.onrender.com`
+2. Render Dashboard → nodeweaver-web → **Environment** → `NEXT_PUBLIC_API_URL`
+3. Убедись что **БЕЗ** trailing slash
+4. **Save Changes** → redeploy
+
+### Проблема: "Service spun down" (Free tier)
+**Причина**: Render Free засыпает после 15 минут неактивности
+
+**Решение**:
+- Первый запрос после сна: ~30 секунд холодного старта
+- Для production: апгрейд на **Starter plan** ($7/месяц) — всегда активен
+- Для бесплатного keep-alive: используй [UptimeRobot](https://uptimerobot.com) для пинга каждые 5 минут
+
+---
+
+## 🔄 Auto Deployments
+
+После первой настройки Render автоматически деплоит при push:
+
+```bash
+git add .
+git commit -m "feature: new OSINT transform"
+git push origin main
+```
+
+→ Render автоматически:
+1. Билдит Docker image (API)
+2. Билдит Next.js production (Web)
+3. Запускает migrations
+4. Zero-downtime deploy
+
+---
+
+## 💰 Pricing
+
+**Free Tier (текущий)**:
+- ✅ 750 часов/месяц на все сервисы
+- ✅ PostgreSQL 1GB
+- ⚠️ Спит после 15 минут неактивности
+- ⚠️ Холодный старт ~30 секунд
+
+**Starter Plan ($7/месяц на сервис)**:
+- ✅ Всегда активен (no sleep)
+- ✅ Больше CPU/RAM
+- ✅ Приоритетный билд
+
+**Рекомендация**:
+- API: **Starter** ($7) — критично для WebSocket
+- Web: **Free** — статика быстрая и на Free tier
+- DB: **Free** — 1GB достаточно
+
+---
+
+## 🎯 Готово!
+
+Теперь у тебя:
+- ✅ Docker API с nmap, whois, всеми OSINT инструментами
+- ✅ WebSocket collaboration работает
+- ✅ PostgreSQL база
+- ✅ Next.js frontend
+- ✅ Автоматические деплои
+- ✅ HTTPS из коробки
+
+**Production ready! 🚀**
 
 ## 📋 Что создастся автоматически:
 
