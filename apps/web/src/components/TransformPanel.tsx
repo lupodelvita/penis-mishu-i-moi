@@ -569,14 +569,18 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
         const json = await response.json();
         if (json.success) {
             // Build quota suffix for toast
-            const quotaSuffix = json.quota ? ` | Осталось: ${json.quota.windows?.[0]?.remaining ?? '?'}/${json.quota.windows?.[0]?.total ?? '?'}` : '';
+            const quotaSuffix = json.quota ? ` | Лимит: ${json.quota.windows?.[0]?.remaining ?? '?'}/${json.quota.windows?.[0]?.total ?? '?'}` : '';
             const execTime = json.executionTimeMs ? ` (${(json.executionTimeMs / 1000).toFixed(1)}с)` : '';
-            if (!json.data.entities || json.data.entities.length === 0) {
+            
+            // Support both 'entities' and 'results' field names from API
+            const apiEntities = json.data.entities || json.data.results || [];
+            
+            if (!apiEntities || apiEntities.length === 0) {
                 setToastMessage({ text: `Результатов не найдено${execTime}${quotaSuffix}`, type: 'info' });
             } else {
-                setToastMessage({ text: `Добавлено ${json.data.entities.length} результатов${execTime}${quotaSuffix}`, type: 'success' });
-                const results = json.data.entities;
+                const results = apiEntities;
                 let addedCount = 0;
+                let duplicateCount = 0;
                 results.forEach((result: any, index: number) => {
                   // For social profiles, only add if profile exists (skip explicitly non-existent)
                   if (result.type === 'social_profile' && result.properties?.exists === false) {
@@ -598,6 +602,7 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
                   if (existingEntity) {
                       // Skip duplicate, but link it if not already linked
                       // Don't create self-loop links (source === target)
+                      duplicateCount++;
                       if (existingEntity.id === selectedEntityId) return;
                       const existingLink = currentGraph.links?.find(l => 
                           (l.source === selectedEntityId && l.target === existingEntity.id) ||
@@ -696,6 +701,16 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
                   });
                   addedCount++;
              });
+             
+             // Show accurate count AFTER deduplication
+             const duplicateMsg = duplicateCount > 0 ? ` | Дубл: ${duplicateCount}` : '';
+             if (addedCount === 0 && duplicateCount > 0) {
+                 setToastMessage({ text: `Все ${duplicateCount} результатов уже на графе${execTime}${quotaSuffix}`, type: 'info' });
+             } else if (addedCount > 0) {
+                 setToastMessage({ text: `Новых: ${addedCount}${duplicateMsg}${execTime}${quotaSuffix}`, type: 'success' });
+             } else {
+                 setToastMessage({ text: `Результатов не найдено${execTime}${quotaSuffix}`, type: 'info' });
+             }
            }
         } else {
             // Handle rate limiting response
