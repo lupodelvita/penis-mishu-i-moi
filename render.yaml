@@ -1,0 +1,45 @@
+services:
+  # API Service (Backend with Docker)
+  - type: web
+    name: nodeweaver-api
+    env: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: ./apps/api
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nodeweaver-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: MASTER_KEY
+        generateValue: true
+
+  # Web Service (Frontend - Next.js)
+  - type: web
+    name: nodeweaver-web
+    env: node
+    buildCommand: cd apps/web && npm install && npm run build
+    startCommand: cd apps/web && npm start
+    plan: free
+    region: frankfurt
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://nodeweaver-api.onrender.com
+
+# PostgreSQL Database
+databases:
+  - name: nodeweaver-db
+    plan: free
+    region: frankfurt
+    databaseName: nodeweaver
+    user: nodeweaver
