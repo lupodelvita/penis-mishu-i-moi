@@ -210,6 +210,19 @@ export class NmapService {
   async scan(options: NmapScanOptions): Promise<NmapScanResult> {
     const startTime = new Date();
 
+    // Check if running on Vercel Serverless (no Docker support)
+    if (process.env.VERCEL) {
+      return {
+        success: false,
+        target: options.target,
+        scanType: options.scanType,
+        startTime,
+        endTime: new Date(),
+        duration: 0,
+        error: 'Nmap сканирование не поддерживается на Vercel Serverless. Для полного функционала (Nmap, SQLMap, XSS Fuzzer) задеплойте API на Railway или Render с Docker поддержкой.'
+      };
+    }
+
     // Validate nmap is installed
     const nmapInstalled = await this.isNmapInstalled();
     if (!nmapInstalled) {

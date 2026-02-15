@@ -87,6 +87,16 @@ router.post('/xss-scan', async (req, res, next) => {
     const targetUrl = new URL(url);
     const params = Array.from(targetUrl.searchParams.keys());
 
+    if (params.length === 0) {
+      return res.json({ 
+        success: true, 
+        data: { 
+          results: [],
+          message: 'URL не содержит GET параметров для тестирования. Пример: http://example.com/page?param=value' 
+        } 
+      });
+    }
+
     const payload = "<script>alert('NODEWEAVER_XSS')</script>";
     const checkString = "alert('NODEWEAVER_XSS')"; 
 
@@ -123,6 +133,16 @@ router.post('/sqli-scan', async (req, res, next) => {
     const results: any[] = [];
     const params = Array.from(new URL(url).searchParams.keys());
     const sqlErrors = ["SQL syntax", "MySQL Error", "quoted string not properly terminated", "Unclosed quotation mark", "SQLSTATE"];
+
+    if (params.length === 0) {
+      return res.json({ 
+        success: true, 
+        data: { 
+          results: [],
+          message: 'URL не содержит GET параметров для тестирования. Пример: http://example.com/page?id=1' 
+        } 
+      });
+    }
 
     for (const param of params) {
         const fuzzUrl = new URL(url);

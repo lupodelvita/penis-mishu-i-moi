@@ -285,12 +285,7 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
                setToastMessage({ text: `Найдено ${data.data.results.length} результатов`, type: 'success' });
 
                if (data.data.results.length === 0) {
-                   // Suggest IP extraction for NMAP if running on domain
-                   if (transformId === 'nmap_quick_scan' && sourceEntity.type === EntityType.Domain) {
-                       alert('Сканирование завершено но результатов не найдено.\n\nПодсказка: Сначала извлеките IP адрес сайта используя "Domain to IP", затем запустите "Port Scan (Active)" на IP адресе.');
-                   } else {
-                       alert('Сканирование завершено: Результатов не найдено.');
-                   }
+                   // No alert - let the loading indicator continue or show subtle toast
                    setLoadingId(null);
                    return; // Exit early if no results
                }
