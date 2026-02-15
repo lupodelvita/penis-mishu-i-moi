@@ -17,14 +17,22 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copy all source files
-COPY . .
+# Copy package files
+COPY package*.json ./
 
 # Install dependencies
 RUN npm install
 
-# Build TypeScript
-RUN npm run build
+# Copy source code and Prisma schema
+COPY src ./src
+COPY prisma ./prisma
+COPY tsconfig.json ./
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# Build TypeScript (only API, not monorepo)
+RUN npx tsc --project ./tsconfig.json
 
 # Remove devDependencies after build
 RUN npm prune --production
