@@ -2,11 +2,11 @@ services:
   # API Service (Backend with Docker)
   - type: web
     name: nodeweaver-api
-    env: docker
+    runtime: docker
+    repo: https://github.com/lupodelvita/penis-mishu-i-moi
     dockerfilePath: ./apps/api/Dockerfile
     dockerContext: ./apps/api
     plan: free
-    region: frankfurt
     healthCheckPath: /health
     envVars:
       - key: PORT
@@ -27,12 +27,11 @@ services:
   # Web Service (Frontend - Next.js via Node.js)
   - type: web
     name: nodeweaver-web
-    env: node
-    rootDir: ./apps/web
-    buildCommand: npm install && npx prisma generate && npm run build
-    startCommand: npm start
+    runtime: node
+    repo: https://github.com/lupodelvita/penis-mishu-i-moi
+    buildCommand: cd apps/web && npm install && npx prisma generate && npm run build
+    startCommand: cd apps/web && npm start
     plan: free
-    region: frankfurt
     envVars:
       - key: NEXT_PUBLIC_API_URL
         value: https://nodeweaver-api.onrender.com
@@ -43,6 +42,5 @@ services:
 databases:
   - name: nodeweaver-db
     plan: free
-    region: frankfurt
     databaseName: nodeweaver
     user: nodeweaver
