@@ -2,13 +2,91 @@
 
 Полный деплой NodeWeaver на Render с Docker, PostgreSQL, и всеми OSINT инструментами.
 
-## 🚀 Быстрый старт
+## 🚀 Быстрый старт (Blueprint автоматический деплой)
 
-1. Зайди на [render.com](https://render.com)
-2. Логинься через GitHub
+1. **Зайди на [render.com](https://render.com)**
+2. **Логинься через GitHub**
 3. **New** → **Blueprint**
-4. Выбери репозиторий: `lupodelvita/penis-mishu-i-moi`
-5. Render автоматически определит `render.yaml` и создаст все сервисы
+4. **Выбери репозиторий**: `lupodelvita/penis-mishu-i-moi`
+5. **Render автоматически**:
+   - Прочитает `render.yaml` из корня репо
+   - Создаст PostgreSQL базу (`nodeweaver-db`)
+   - Создаст API сервис с Docker (`nodeweaver-api`)
+   - Создаст Web сервис на Node.js (`nodeweaver-web`)
+   - Сгенерирует секреты (JWT_SECRET, SESSION_SECRET, MASTER_KEY)
+   - Подключит DATABASE_URL к базе автоматически
+
+**Примерное время деплоя**: 5-8 минут (Docker build API может занять до 5 минут)
+
+---
+
+## 🛠️ Ручной деплой (если Blueprint не работает)
+
+Если по какой-то причине Blueprint провалился, можно создать сервисы вручную:
+
+### Шаг 1: Создай PostgreSQL базу
+
+1. Render Dashboard → **New** → **PostgreSQL**
+2. Name: `nodeweaver-db`
+3. Database: `nodeweaver`
+4. User: `nodeweaver`
+5. Region: **Frankfurt** (или ближайший)
+6. Plan: **Free**
+7. **Create Database**
+8. После создания скопируй **Internal Connection String**: `postgresql://nodeweaver:...@...`
+
+### Шаг 2: Создай API сервис (Docker)
+
+1. Render Dashboard → **New** → **Web Service**
+2. Connect repository: `lupodelvita/penis-mishu-i-moi`
+3. **Настройки**:
+   - **Name**: `nodeweaver-api`
+   - **Region**: Frankfurt
+   - **Branch**: main
+   - **Root Directory**: `apps/api`
+   - **Environment**: **Docker**
+   - **Dockerfile Path**: `Dockerfile` (относительно Root Directory)
+   - **Plan**: Free
+4. **Advanced Settings**:
+   - **Health Check Path**: `/health`
+   - **Auto-Deploy**: Yes
+5. **Environment Variables** → Add:
+   ```bash
+   PORT=4000
+   NODE_ENV=production
+   DATABASE_URL=<вставь Internal Connection String из Шага 1>
+   JWT_SECRET=<сгенерируй 32+ символов случайной строки>
+   SESSION_SECRET=<сгенерируй 32+ символов случайной строки>
+   MASTER_KEY=<сгенерируй 32+ символов случайной строки>
+   ```
+6. **Create Web Service**
+
+**Генерация секретов (в PowerShell)**:
+```powershell
+# Генерируй 3 разных ключа для JWT_SECRET, SESSION_SECRET, MASTER_KEY
+-join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | % {[char]$_})
+```
+
+### Шаг 3: Создай Web сервис (Node.js)
+
+1. Render Dashboard → **New** → **Web Service**
+2. Connect repository: `lupodelvita/penis-mishu-i-moi`
+3. **Настройки**:
+   - **Name**: `nodeweaver-web`
+   - **Region**: Frankfurt
+   - **Branch**: main
+   - **Root Directory**: `apps/web`
+   - **Environment**: **Node**
+   - **Build Command**: `npm install && npx prisma generate && npm run build`
+   - **Start Command**: `npm start`
+   - **Plan**: Free
+4. **Environment Variables** → Add:
+   ```bash
+   NEXT_PUBLIC_API_URL=https://nodeweaver-api.onrender.com
+   NODE_ENV=production
+   ```
+   ⚠️ **ВАЖНО**: замени `nodeweaver-api` на фактическое имя твоего API сервиса из Шага 2
+5. **Create Web Service**
 
 ## 📋 Что создастся автоматически:
 
