@@ -42,3 +42,5 @@ docker-compose.override.yml
 # Misc
 *.tsbuildinfo
 .turbo/
+.vercel
+.env*.local
