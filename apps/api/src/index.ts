@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { createServer } from 'http';
@@ -33,19 +34,8 @@ collaborationService.initialize(httpServer);
 
 const PORT = process.env.PORT || 4000;
 
-// RAW CORS — must be the VERY FIRST middleware, before helmet/cors/everything
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Max-Age', '86400');
-  
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-  next();
-});
-
+// Middleware
+app.use(cors());
 app.use(helmet({
   crossOriginResourcePolicy: false,
   crossOriginOpenerPolicy: false,
@@ -79,24 +69,20 @@ app.use('/uploads', express.static('uploads'));
 // Error handling
 app.use(errorHandler);
 
-// Start server (only locally, not on Vercel)
-if (!process.env.VERCEL) {
-  httpServer.listen(PORT, () => {
-    console.log(`
-    ╔════════════════════════════════════════════╗
-    ║     NodeWeaver API Server Started          ║
-    ╠════════════════════════════════════════════╣
-    ║  🌐 REST API: http://localhost:${PORT}        ║
-    ║  🔌 WebSocket: ws://localhost:${PORT}         ║
-    ║  📊 Health:   http://localhost:${PORT}/health ║
-    ╚════════════════════════════════════════════╝
-    `);
-    
-    // Initialize Multi-Bot Manager
-    botManager.initialize().catch(e => console.error('BotManager init failed', e));
-  });
-}
+// Start server
+httpServer.listen(PORT, () => {
+  console.log(`
+  ╔════════════════════════════════════════════╗
+  ║     NodeWeaver API Server Started          ║
+  ╠════════════════════════════════════════════╣
+  ║  🌐 REST API: http://localhost:${PORT}        ║
+  ║  🔌 WebSocket: ws://localhost:${PORT}         ║
+  ║  📊 Health:   http://localhost:${PORT}/health ║
+  ╚════════════════════════════════════════════╝
+  `);
+  
+  // Initialize Multi-Bot Manager
+  botManager.initialize().catch(e => console.error('BotManager init failed', e));
+});
 
-// Export for Vercel Serverless
 export default app;
-export { collaborationService };
