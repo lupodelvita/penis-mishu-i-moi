@@ -6,8 +6,8 @@ import * as log from 'electron-log';
 autoUpdater.logger = log;
 (autoUpdater.logger as any).transports.file.level = 'info';
 
-// Don't auto-download — let user decide
-autoUpdater.autoDownload = false;
+// Auto-download and auto-install updates silently
+autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 
 let mainWindow: BrowserWindow | null = null;
@@ -28,22 +28,10 @@ export function initAutoUpdater(window: BrowserWindow) {
   // ---- Events ----
 
   autoUpdater.on('update-available', (info) => {
-    log.info('Update available:', info.version);
-    
-    dialog.showMessageBox(mainWindow!, {
-      type: 'info',
-      title: 'Доступно обновление',
-      message: `Доступна новая версия NodeWeaver: v${info.version}`,
-      detail: `Текущая версия: v${app.getVersion()}\nНовая версия: v${info.version}\n\nСкачать обновление?`,
-      buttons: ['Скачать', 'Позже'],
-      defaultId: 0,
-      cancelId: 1,
-    }).then((result) => {
-      if (result.response === 0) {
-        autoUpdater.downloadUpdate();
-        mainWindow?.webContents.send('updater:downloading');
-      }
-    });
+    log.info('Update available:', info.version, '- Auto-downloading...');
+    // Автоматически скачиваем обновление (autoDownload = true)
+    // Уведомление отправляется в renderer process для индикации
+    mainWindow?.webContents.send('updater:downloading', { version: info.version });
   });
 
   autoUpdater.on('update-not-available', (info) => {
@@ -61,21 +49,15 @@ export function initAutoUpdater(window: BrowserWindow) {
   });
 
   autoUpdater.on('update-downloaded', (info) => {
-    log.info('Update downloaded:', info.version);
-
-    dialog.showMessageBox(mainWindow!, {
-      type: 'info',
-      title: 'Обновление готово',
-      message: `NodeWeaver v${info.version} скачан и готов к установке.`,
-      detail: 'Приложение перезапустится для установки обновления.',
-      buttons: ['Установить сейчас', 'Установить при закрытии'],
-      defaultId: 0,
-      cancelId: 1,
-    }).then((result) => {
-      if (result.response === 0) {
-        autoUpdater.quitAndInstall(false, true);
-      }
-    });
+    log.info('Update downloaded:', info.version, '- Installing and restarting...');
+    
+    // Автоматически устанавливаем и перезапускаем приложение
+    // Параметры: quitAndInstall(isSilent, isForceRunAfter)
+    // isSilent = false: закрыть окна перед установкой
+    // isForceRunAfter = true: запустить приложение после установки
+    setTimeout(() => {
+      autoUpdater.quitAndInstall(false, true);
+    }, 1000); // Задержка 1 сек для завершения текущих операций
   });
 
   autoUpdater.on('error', (error) => {
