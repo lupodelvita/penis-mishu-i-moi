@@ -1,0 +1,99 @@
+name: Build & Release Desktop App
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install shared-types dependencies
+        run: cd packages/shared-types && npm ci
+
+      - name: Build shared-types
+        run: cd packages/shared-types && npm run build
+        continue-on-error: true
+
+      - name: Install web dependencies
+        run: cd apps/web && npm ci
+
+      - name: Build web (Next.js export)
+        run: cd apps/web && npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000
+
+      - name: Export web for Electron
+        run: |
+          cd apps/web
+          npx next export -o ../desktop/renderer
+        continue-on-error: true
+
+      - name: Install desktop dependencies
+        run: cd apps/desktop && npm ci
+
+      - name: Build desktop main process
+        run: cd apps/desktop && npm run build:main
+
+      - name: Package Windows .exe
+        run: cd apps/desktop && npx electron-builder --win --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.exe.blockmap
+
+  create-release:
+    needs: build-windows
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-build
+          path: release-files
+
+      - name: List release files
+        run: find release-files -type f
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: NodeWeaver ${{ github.ref_name }}
+          body: |
+            ## NodeWeaver ${{ github.ref_name }}
+            
+            ### 📥 Скачать
+            Скачайте `.exe` файл ниже для установки на Windows.
+            
+            ### 📋 Изменения
+            Смотрите коммиты для деталей.
+          draft: false
+          prerelease: false
+          files: release-files/**/*.exe
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

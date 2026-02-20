@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Menu, shell, ipcMain, dialog, nativeTheme } from 'electron';
 import path from 'path';
 import Store from 'electron-store';
+import { initAutoUpdater, checkForUpdates } from './services/AutoUpdater';
 
 // Check if running in development
 const isDev = !app.isPackaged;
@@ -94,6 +95,11 @@ function createWindow() {
   // Show window when ready
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
+
+    // Initialize auto-updater in production
+    if (!isDev && mainWindow) {
+      initAutoUpdater(mainWindow);
+    }
   });
 
   // Save window size on resize
@@ -321,6 +327,11 @@ function createMenu() {
     {
       label: 'Help',
       submenu: [
+        {
+          label: 'Check for Updates...',
+          click: () => checkForUpdates(true),
+        },
+        { type: 'separator' },
         {
           label: 'Documentation',
           click: () => shell.openExternal('https://github.com/nodeweaver/docs'),

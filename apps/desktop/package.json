@@ -19,8 +19,10 @@
   },
   "dependencies": {
     "electron-is-dev": "^2.0.0",
+    "electron-log": "^5.1.1",
     "electron-reload": "^2.0.0-alpha.1",
     "electron-store": "^8.1.0",
+    "electron-updater": "^6.1.7",
     "node-pty": "^1.1.0"
   },
   "devDependencies": {
@@ -76,6 +78,11 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "lupodelvita",
+      "repo": "penis-mishu-i-moi"
     }
   }
 }

@@ -10,6 +10,13 @@ export const registerCytoscapeExtensions = async () => {
 
   try {
     if (typeof cytoscape.use === 'function') {
+      // Check if extension is already registered on Cytoscape itself
+      const coreProto = (cytoscape as any).Core?.prototype;
+      if (coreProto && coreProto.nodeHtmlLabel) {
+        extensionsRegistered = true;
+        return;
+      }
+
       // Lazy/dynamic import to avoid SSR/SES issues and to defer execution until client
       const mod = await import('cytoscape-node-html-label');
       const nodeHtmlLabel = (mod && (mod as any).default) ? (mod as any).default : mod;
