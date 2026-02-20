@@ -465,17 +465,12 @@
             opacity: 1;
         }
 
-        .btn-platform .platform-icon {
-            font-size: 1.3em;
-            margin-right: 8px;
-            display: inline-block;
-        }
-
         .btn-platform.recommended {
             background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(99, 102, 241, 0.12));
             border-color: var(--accent);
             box-shadow: 0 4px 20px rgba(99, 102, 241, 0.25),
                         0 0 0 1px rgba(99, 102, 241, 0.3) inset;
+            padding-right: 120px; /* Space for badge */
         }
 
         .btn-platform.recommended:hover {
@@ -488,15 +483,15 @@
         .btn-platform.recommended::after {
             content: '✓ Рекомендовано';
             position: absolute;
-            top: -12px;
-            right: -12px;
+            top: 6px;
+            right: 8px;
             background: linear-gradient(135deg, var(--emerald), #10b981);
             color: white;
-            font-size: 0.7rem;
-            padding: 5px 12px;
-            border-radius: 12px;
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 8px;
             font-weight: 700;
-            box-shadow: 0 4px 15px rgba(52, 211, 153, 0.4);
+            box-shadow: 0 2px 10px rgba(52, 211, 153, 0.4);
             animation: badge-glow 2s ease-in-out infinite;
             letter-spacing: 0.02em;
         }
@@ -933,15 +928,12 @@
 
             <div class="platform-buttons reveal-blur" style="transition-delay: 0.65s" id="download">
                 <a href="#" class="btn btn-platform" id="download-windows" onclick="downloadApp(event, 'windows')">
-                    <span class="platform-icon">💻</span>
                     Windows
                 </a>
                 <a href="#" class="btn btn-platform" id="download-mac" onclick="downloadApp(event, 'mac')">
-                    <span class="platform-icon">🍎</span>
                     macOS
                 </a>
                 <a href="#" class="btn btn-platform" id="download-linux" onclick="downloadApp(event, 'linux')">
-                    <span class="platform-icon">🐧</span>
                     Linux
                 </a>
             </div>
@@ -1076,15 +1068,12 @@
                 <p class="reveal-blur" style="transition-delay: 0.15s">Скачай NodeWeaver бесплатно и начни OSINT исследование прямо сейчас.</p>
                 <div class="platform-buttons reveal-blur" style="transition-delay: 0.3s">
                     <a href="#" class="btn btn-platform" onclick="downloadApp(event, 'windows')">
-                        <span class="platform-icon">💻</span>
                         Windows
                     </a>
                     <a href="#" class="btn btn-platform" onclick="downloadApp(event, 'mac')">
-                        <span class="platform-icon">🍎</span>
                         macOS
                     </a>
                     <a href="#" class="btn btn-platform" onclick="downloadApp(event, 'linux')">
-                        <span class="platform-icon">🐧</span>
                         Linux
                     </a>
                 </div>
