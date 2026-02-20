@@ -421,55 +421,93 @@
         /* Platform buttons */
         .platform-buttons {
             display: flex;
-            gap: 12px;
+            gap: 16px;
             justify-content: center;
             flex-wrap: wrap;
+            margin-top: 8px;
         }
 
         .btn-platform {
-            padding: 12px 24px;
-            font-size: 0.9rem;
-            min-width: 140px;
+            position: relative;
+            padding: 20px 32px;
+            font-size: 1rem;
+            min-width: 160px;
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            color: var(--text-primary);
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-platform::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(34, 211, 238, 0.05));
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            border-radius: var(--radius-md);
+        }
+
+        .btn-platform:hover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15),
+                        0 0 0 1px var(--accent) inset;
+        }
+
+        .btn-platform:hover::before {
+            opacity: 1;
         }
 
         .btn-platform .platform-icon {
-            font-size: 1.1em;
+            font-size: 1.3em;
+            margin-right: 8px;
+            display: inline-block;
         }
 
         .btn-platform.recommended {
-            position: relative;
-            background: linear-gradient(135deg, var(--accent), var(--accent-light));
-            box-shadow: 0 6px 30px rgba(99, 102, 241, 0.4),
-                        0 0 0 1px rgba(99, 102, 241, 0.2) inset;
-        }
-
-        .btn-platform.recommended:hover {
-            box-shadow: 0 10px 45px rgba(99, 102, 241, 0.5),
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(99, 102, 241, 0.12));
+            border-color: var(--accent);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.25),
                         0 0 0 1px rgba(99, 102, 241, 0.3) inset;
         }
 
+        .btn-platform.recommended:hover {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(99, 102, 241, 0.16));
+            border-color: var(--accent-light);
+            box-shadow: 0 12px 40px rgba(99, 102, 241, 0.35),
+                        0 0 0 2px rgba(99, 102, 241, 0.4) inset;
+        }
+
         .btn-platform.recommended::after {
-            content: 'Рекомендовано';
+            content: '✓ Рекомендовано';
             position: absolute;
-            top: -10px;
-            right: -10px;
-            background: var(--emerald);
+            top: -12px;
+            right: -12px;
+            background: linear-gradient(135deg, var(--emerald), #10b981);
             color: white;
-            font-size: 0.65rem;
-            padding: 4px 10px;
-            border-radius: 10px;
+            font-size: 0.7rem;
+            padding: 5px 12px;
+            border-radius: 12px;
             font-weight: 700;
-            box-shadow: 0 3px 12px rgba(52, 211, 153, 0.4);
+            box-shadow: 0 4px 15px rgba(52, 211, 153, 0.4);
             animation: badge-glow 2s ease-in-out infinite;
+            letter-spacing: 0.02em;
         }
 
         @keyframes badge-glow {
             0%, 100% { 
-                box-shadow: 0 3px 12px rgba(52, 211, 153, 0.4);
+                box-shadow: 0 4px 15px rgba(52, 211, 153, 0.4);
                 transform: scale(1);
             }
             50% { 
-                box-shadow: 0 3px 20px rgba(52, 211, 153, 0.6);
+                box-shadow: 0 4px 25px rgba(52, 211, 153, 0.6);
                 transform: scale(1.05);
             }
         }
@@ -880,13 +918,16 @@
             </div>
 
             <div class="platform-buttons reveal-blur" style="transition-delay: 0.65s" id="download">
-                <a href="#" class="btn btn-primary btn-platform" id="download-windows" onclick="downloadApp(event, 'windows')">
+                <a href="#" class="btn btn-platform" id="download-windows" onclick="downloadApp(event, 'windows')">
+                    <span class="platform-icon">💻</span>
                     Windows
                 </a>
-                <a href="#" class="btn btn-primary btn-platform" id="download-mac" onclick="downloadApp(event, 'mac')">
+                <a href="#" class="btn btn-platform" id="download-mac" onclick="downloadApp(event, 'mac')">
+                    <span class="platform-icon">🍎</span>
                     macOS
                 </a>
-                <a href="#" class="btn btn-primary btn-platform" id="download-linux" onclick="downloadApp(event, 'linux')">
+                <a href="#" class="btn btn-platform" id="download-linux" onclick="downloadApp(event, 'linux')">
+                    <span class="platform-icon">🐧</span>
                     Linux
                 </a>
             </div>
@@ -1020,13 +1061,16 @@
                 <h2 class="reveal-blur">Готов начать?</h2>
                 <p class="reveal-blur" style="transition-delay: 0.15s">Скачай NodeWeaver бесплатно и начни OSINT исследование прямо сейчас.</p>
                 <div class="platform-buttons reveal-blur" style="transition-delay: 0.3s">
-                    <a href="#" class="btn btn-primary btn-platform" onclick="downloadApp(event, 'windows')">
+                    <a href="#" class="btn btn-platform" onclick="downloadApp(event, 'windows')">
+                        <span class="platform-icon">💻</span>
                         Windows
                     </a>
-                    <a href="#" class="btn btn-primary btn-platform" onclick="downloadApp(event, 'mac')">
+                    <a href="#" class="btn btn-platform" onclick="downloadApp(event, 'mac')">
+                        <span class="platform-icon">🍎</span>
                         macOS
                     </a>
-                    <a href="#" class="btn btn-primary btn-platform" onclick="downloadApp(event, 'linux')">
+                    <a href="#" class="btn btn-platform" onclick="downloadApp(event, 'linux')">
+                        <span class="platform-icon">🐧</span>
                         Linux
                     </a>
                 </div>
