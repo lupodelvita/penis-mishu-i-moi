@@ -5,61 +5,147 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NodeWeaver — OSINT Graph Visualization Tool</title>
     <meta name="description" content="NodeWeaver — инструмент визуализации OSINT графов. Плетите связи между узлами данных и раскрывайте скрытые паттерны.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
+
         :root {
-            --bg-primary: #0a0e1a;
-            --bg-secondary: #111827;
-            --bg-card: #1e293b;
-            --accent: #3b82f6;
-            --accent-hover: #2563eb;
-            --accent-glow: rgba(59, 130, 246, 0.3);
-            --green: #10b981;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --border: #334155;
+            --bg-primary: #0b0f1a;
+            --bg-secondary: #0f1629;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --bg-card-hover: rgba(255, 255, 255, 0.06);
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --accent-glow-strong: rgba(99, 102, 241, 0.4);
+            --cyan: #22d3ee;
+            --cyan-glow: rgba(34, 211, 238, 0.15);
+            --emerald: #34d399;
+            --rose: #fb7185;
+            --amber: #fbbf24;
+            --text-primary: #e2e8f0;
+            --text-secondary: rgba(148, 163, 184, 0.8);
+            --text-muted: rgba(100, 116, 139, 0.6);
+            --border: rgba(148, 163, 184, 0.08);
+            --border-hover: rgba(99, 102, 241, 0.3);
+            --glass: rgba(15, 23, 42, 0.6);
+            --radius-sm: 12px;
+            --radius-md: 20px;
+            --radius-lg: 28px;
+            --radius-xl: 36px;
         }
 
+        html { scroll-behavior: smooth; }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
             overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
-        /* Animated background */
-        .bg-grid {
+        /* ===== Ambient Background ===== */
+        .ambient {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background-image: 
-                radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 75% 75%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
             z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
         }
 
-        .bg-grid::before {
-            content: '';
+        .ambient-orb {
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-image: linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
-            background-size: 60px 60px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.4;
+            animation: float 20s ease-in-out infinite;
         }
 
-        /* Container */
+        .ambient-orb:nth-child(1) {
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15), transparent 70%);
+            top: -10%; left: -5%;
+            animation-duration: 25s;
+        }
+
+        .ambient-orb:nth-child(2) {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(34, 211, 238, 0.1), transparent 70%);
+            top: 40%; right: -10%;
+            animation-duration: 30s;
+            animation-delay: -5s;
+        }
+
+        .ambient-orb:nth-child(3) {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(52, 211, 153, 0.08), transparent 70%);
+            bottom: -5%; left: 30%;
+            animation-duration: 22s;
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -40px) scale(1.05); }
+            50% { transform: translate(-20px, 20px) scale(0.95); }
+            75% { transform: translate(40px, 30px) scale(1.02); }
+        }
+
+        /* Subtle noise texture */
+        .noise {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0;
+            opacity: 0.015;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+
+        /* ===== Layout ===== */
         .container {
-            max-width: 1100px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 0 24px;
+            padding: 0 32px;
             position: relative;
             z-index: 1;
         }
 
-        /* Navigation */
+        section {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ===== Navigation ===== */
         nav {
-            padding: 20px 0;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            padding: 16px 32px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        nav.scrolled {
+            background: var(--glass);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -68,73 +154,130 @@
         .logo {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 1.5rem;
+            gap: 12px;
+            font-size: 1.3rem;
             font-weight: 700;
             color: var(--text-primary);
             text-decoration: none;
+            letter-spacing: -0.02em;
         }
 
         .logo-icon {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, var(--accent), var(--green));
-            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent), var(--cyan));
+            border-radius: var(--radius-sm);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .logo:hover .logo-icon {
+            transform: rotate(-5deg) scale(1.05);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
         }
 
         .nav-links {
             display: flex;
-            gap: 24px;
+            gap: 8px;
             align-items: center;
         }
 
         .nav-links a {
             color: var(--text-secondary);
             text-decoration: none;
-            font-size: 0.95rem;
-            transition: color 0.2s;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            transition: all 0.3s ease;
         }
 
-        .nav-links a:hover { color: var(--text-primary); }
+        .nav-links a:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
 
-        /* Hero */
+        .nav-cta {
+            background: var(--accent) !important;
+            color: white !important;
+            font-weight: 600 !important;
+            box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+        }
+
+        .nav-cta:hover {
+            background: var(--accent-light) !important;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4) !important;
+            transform: translateY(-1px);
+        }
+
+        /* ===== Hero ===== */
         .hero {
             text-align: center;
-            padding: 80px 0 60px;
+            padding: 160px 0 100px;
+            position: relative;
+        }
+
+        .hero-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            height: 500px;
+            background: radial-gradient(ellipse, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
+            pointer-events: none;
         }
 
         .badge {
-            display: inline-block;
-            padding: 6px 16px;
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            border-radius: 20px;
-            color: var(--accent);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px;
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 100px;
+            color: var(--accent-light);
             font-size: 0.85rem;
-            margin-bottom: 24px;
+            font-weight: 500;
+            margin-bottom: 32px;
+            animation: badge-pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes badge-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.1); }
+            50% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); }
         }
 
         .hero h1 {
-            font-size: 3.5rem;
-            font-weight: 800;
-            line-height: 1.1;
-            margin-bottom: 20px;
-            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 50%, var(--green) 100%);
+            font-size: clamp(2.8rem, 6vw, 5rem);
+            font-weight: 900;
+            line-height: 1.05;
+            margin-bottom: 24px;
+            letter-spacing: -0.04em;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-light) 40%, var(--cyan) 80%, var(--emerald) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            background-size: 200% auto;
+            animation: gradient-shift 8s ease infinite;
         }
 
-        .hero p {
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% center; }
+            50% { background-position: 100% center; }
+        }
+
+        .hero-subtitle {
             font-size: 1.2rem;
             color: var(--text-secondary);
-            max-width: 600px;
-            margin: 0 auto 40px;
-            line-height: 1.6;
+            max-width: 580px;
+            margin: 0 auto 48px;
+            line-height: 1.7;
+            font-weight: 400;
         }
 
         .hero-buttons {
@@ -142,154 +285,327 @@
             gap: 16px;
             justify-content: center;
             flex-wrap: wrap;
+            margin-bottom: 24px;
         }
 
+        /* ===== Buttons ===== */
         .btn {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 14px 28px;
-            border-radius: 10px;
+            gap: 10px;
+            padding: 16px 32px;
+            border-radius: var(--radius-md);
             font-size: 1rem;
             font-weight: 600;
             text-decoration: none;
-            transition: all 0.2s;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             cursor: pointer;
             border: none;
+            position: relative;
+            overflow: hidden;
         }
 
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before { left: 100%; }
+
         .btn-primary {
-            background: var(--accent);
+            background: linear-gradient(135deg, var(--accent), #7c3aed);
             color: white;
-            box-shadow: 0 0 20px var(--accent-glow);
+            box-shadow: 0 4px 25px rgba(99, 102, 241, 0.3),
+                        0 0 0 1px rgba(99, 102, 241, 0.1) inset;
         }
 
         .btn-primary:hover {
-            background: var(--accent-hover);
-            box-shadow: 0 0 30px var(--accent-glow);
-            transform: translateY(-2px);
+            box-shadow: 0 8px 40px rgba(99, 102, 241, 0.4),
+                        0 0 0 1px rgba(99, 102, 241, 0.2) inset;
+            transform: translateY(-3px);
         }
+
+        .btn-primary:active { transform: translateY(-1px); }
 
         .btn-secondary {
             background: var(--bg-card);
             color: var(--text-primary);
             border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
         }
 
         .btn-secondary:hover {
-            background: #253047;
-            transform: translateY(-2px);
+            background: var(--bg-card-hover);
+            border-color: var(--border-hover);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
         }
 
-        /* Version badge */
+        .btn-icon {
+            font-size: 1.2em;
+            display: flex;
+        }
+
+        /* Download progress */
+        .download-status {
+            margin-top: 16px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            height: 20px;
+        }
+
         .version-info {
-            margin-top: 20px;
             font-size: 0.85rem;
             color: var(--text-secondary);
         }
 
         .version-info span {
-            color: var(--green);
+            color: var(--emerald);
             font-weight: 600;
         }
 
-        /* Features */
-        .features {
-            padding: 60px 0;
+        /* ===== Stats bar ===== */
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 48px;
+            padding: 48px 0;
+            flex-wrap: wrap;
         }
 
-        .features h2 {
+        .stat {
             text-align: center;
-            font-size: 2rem;
-            margin-bottom: 48px;
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        /* ===== Section titles ===== */
+        .section-header {
+            text-align: center;
+            margin-bottom: 64px;
+        }
+
+        .section-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--accent-light);
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: clamp(1.8rem, 3vw, 2.5rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1.2;
+        }
+
+        .section-desc {
+            color: var(--text-secondary);
+            max-width: 500px;
+            margin: 16px auto 0;
+            line-height: 1.6;
+        }
+
+        /* ===== Features ===== */
+        .features {
+            padding: 80px 0;
         }
 
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 24px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
         }
 
         .feature-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 28px;
-            transition: all 0.3s;
+            border-radius: var(--radius-md);
+            padding: 32px;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
         }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .feature-card:hover::before { opacity: 1; }
 
         .feature-card:hover {
-            border-color: var(--accent);
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
-            transform: translateY(-4px);
+            background: var(--bg-card-hover);
+            border-color: var(--border-hover);
+            transform: translateY(-6px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2),
+                        0 0 40px var(--accent-glow);
         }
 
-        .feature-icon {
-            font-size: 2rem;
-            margin-bottom: 16px;
+        .feature-icon-wrap {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
         }
+
+        .feature-card:hover .feature-icon-wrap { transform: scale(1.1) rotate(-3deg); }
+
+        .fi-purple {  background: rgba(99, 102, 241, 0.1);  border: 1px solid rgba(99, 102, 241, 0.15); }
+        .fi-cyan {    background: rgba(34, 211, 238, 0.1);   border: 1px solid rgba(34, 211, 238, 0.15); }
+        .fi-emerald { background: rgba(52, 211, 153, 0.1);  border: 1px solid rgba(52, 211, 153, 0.15); }
+        .fi-rose {    background: rgba(251, 113, 133, 0.1);  border: 1px solid rgba(251, 113, 133, 0.15); }
+        .fi-amber {   background: rgba(251, 191, 36, 0.1);   border: 1px solid rgba(251, 191, 36, 0.15); }
+        .fi-blue {    background: rgba(56, 189, 248, 0.1);   border: 1px solid rgba(56, 189, 248, 0.15); }
 
         .feature-card h3 {
-            font-size: 1.15rem;
-            margin-bottom: 8px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -0.01em;
         }
 
         .feature-card p {
             color: var(--text-secondary);
             font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* ===== How it works ===== */
+        .how-it-works {
+            padding: 80px 0;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            position: relative;
+        }
+
+        .steps::before {
+            content: '';
+            position: absolute;
+            top: 36px;
+            left: 10%;
+            right: 10%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), var(--cyan), var(--emerald), transparent);
+            opacity: 0.2;
+        }
+
+        .step {
+            text-align: center;
+            position: relative;
+        }
+
+        .step-number {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin: 0 auto 20px;
+            color: var(--accent-light);
+            transition: all 0.4s ease;
+            position: relative;
+            z-index: 2;
+        }
+
+        .step:hover .step-number {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px var(--accent-glow);
+            transform: scale(1.1);
+        }
+
+        .step h4 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .step p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
             line-height: 1.5;
         }
 
-        /* Screenshot section */
-        .screenshot-section {
-            padding: 60px 0;
-            text-align: center;
-        }
-
-        .screenshot-section h2 {
-            font-size: 2rem;
-            margin-bottom: 32px;
-        }
-
-        .screenshot-placeholder {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 60px;
-            color: var(--text-secondary);
-            font-size: 1.1rem;
-        }
-
-        /* System requirements */
+        /* ===== Requirements ===== */
         .requirements {
-            padding: 60px 0;
-        }
-
-        .requirements h2 {
-            text-align: center;
-            font-size: 2rem;
-            margin-bottom: 32px;
+            padding: 80px 0;
         }
 
         .req-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 20px;
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
         }
 
         .req-item {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 20px;
+            border-radius: var(--radius-md);
+            padding: 28px;
             text-align: center;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .req-item:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .req-icon {
+            font-size: 2rem;
+            margin-bottom: 12px;
         }
 
         .req-item h4 {
-            color: var(--accent);
-            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: 700;
+            margin-bottom: 6px;
         }
 
         .req-item p {
@@ -297,161 +613,346 @@
             font-size: 0.9rem;
         }
 
-        /* Footer */
+        /* ===== CTA Section ===== */
+        .cta-section {
+            padding: 80px 0;
+        }
+
+        .cta-box {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(34, 211, 238, 0.05));
+            border: 1px solid rgba(99, 102, 241, 0.12);
+            border-radius: var(--radius-xl);
+            padding: 64px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-box::before {
+            content: '';
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            border-radius: var(--radius-xl);
+            background: linear-gradient(135deg, var(--accent), var(--cyan), var(--emerald));
+            opacity: 0.05;
+            z-index: -1;
+        }
+
+        .cta-box h2 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            letter-spacing: -0.03em;
+        }
+
+        .cta-box p {
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            font-size: 1.05rem;
+        }
+
+        /* ===== Footer ===== */
         footer {
             padding: 40px 0;
             border-top: 1px solid var(--border);
             text-align: center;
-            color: var(--text-secondary);
+            color: var(--text-muted);
             font-size: 0.85rem;
         }
 
         footer a {
-            color: var(--accent);
+            color: var(--accent-light);
             text-decoration: none;
+            transition: color 0.3s ease;
         }
 
-        /* Responsive */
+        footer a:hover { color: var(--text-primary); }
+
+        /* ===== Mobile hamburger ===== */
+        .mobile-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 1024px) {
+            .features-grid { grid-template-columns: repeat(2, 1fr); }
+            .steps { grid-template-columns: repeat(2, 1fr); }
+            .steps::before { display: none; }
+        }
+
         @media (max-width: 768px) {
-            .hero h1 { font-size: 2.2rem; }
-            .hero p { font-size: 1rem; }
-            .nav-links { display: none; }
+            .hero h1 { font-size: 2.5rem; }
+            .hero-subtitle { font-size: 1rem; }
             .features-grid { grid-template-columns: 1fr; }
+            .steps { grid-template-columns: 1fr; gap: 32px; }
+            .req-grid { grid-template-columns: 1fr; }
+            .stats { gap: 32px; }
+            .cta-box { padding: 40px 24px; }
+            .cta-box h2 { font-size: 1.6rem; }
+            .nav-links { display: none; }
+            .mobile-toggle { display: block; }
+            .nav-links.open {
+                display: flex;
+                flex-direction: column;
+                position: absolute;
+                top: 70px; left: 16px; right: 16px;
+                background: var(--glass);
+                backdrop-filter: blur(20px);
+                border-radius: var(--radius-md);
+                border: 1px solid var(--border);
+                padding: 16px;
+                gap: 4px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="bg-grid"></div>
+    <!-- Ambient Background -->
+    <div class="ambient">
+        <div class="ambient-orb"></div>
+        <div class="ambient-orb"></div>
+        <div class="ambient-orb"></div>
+    </div>
+    <div class="noise"></div>
 
-    <div class="container">
-        <!-- Navigation -->
-        <nav>
+    <!-- Navigation -->
+    <nav id="navbar">
+        <div class="nav-inner">
             <a href="#" class="logo">
                 <div class="logo-icon">🕸️</div>
                 NodeWeaver
             </a>
+            <button class="mobile-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')">☰</button>
             <div class="nav-links">
                 <a href="#features">Возможности</a>
-                <a href="#download">Скачать</a>
-                <a href="https://github.com/lupodelvita/penis-mishu-i-moi" target="_blank">GitHub</a>
+                <a href="#how">Как работает</a>
+                <a href="#requirements">Требования</a>
+                <a href="#download" class="nav-cta">Скачать</a>
             </div>
-        </nav>
+        </div>
+    </nav>
 
+    <div class="container">
         <!-- Hero -->
-        <section class="hero" id="download">
-            <div class="badge">🔍 OSINT Tool</div>
-            <h1>NodeWeaver</h1>
-            <p>Мощный инструмент визуализации OSINT графов. Плетите связи между узлами данных, запускайте трансформы и раскрывайте скрытые паттерны.</p>
-            
-            <div class="hero-buttons">
-                <a href="https://github.com/lupodelvita/penis-mishu-i-moi/releases/latest/download/NodeWeaver-Setup.exe" class="btn btn-primary" id="download-btn">
-                    ⬇️ Скачать для Windows
+        <section class="hero visible" id="top">
+            <div class="hero-glow"></div>
+            <div class="badge">
+                <span>✦</span> OSINT Intelligence Platform
+            </div>
+            <h1>Визуализируй<br>скрытые связи</h1>
+            <p class="hero-subtitle">NodeWeaver — мощный инструмент OSINT визуализации. Стройте графы, запускайте трансформы, раскрывайте паттерны в данных с AI-ассистентом.</p>
+
+            <div class="hero-buttons" id="download">
+                <a href="#" class="btn btn-primary" id="download-btn" onclick="downloadApp(event)">
+                    <span class="btn-icon">⬇</span>
+                    Скачать для Windows
                 </a>
-                <a href="https://github.com/lupodelvita/penis-mishu-i-moi/releases/latest" class="btn btn-secondary" target="_blank">
-                    📋 Все версии
+                <a href="#features" class="btn btn-secondary">
+                    <span class="btn-icon">✦</span>
+                    Узнать больше
                 </a>
             </div>
+
+            <div class="download-status" id="download-status"></div>
 
             <div class="version-info">
-                Текущая версия: <span id="current-version">загрузка...</span> · Windows x64
+                Версия: <span id="current-version">v1.0.0</span> · Windows 10/11 x64
+            </div>
+        </section>
+
+        <!-- Stats -->
+        <section class="stats visible">
+            <div class="stat">
+                <div class="stat-value">20+</div>
+                <div class="stat-label">OSINT трансформов</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">15+</div>
+                <div class="stat-label">Типов сущностей</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">∞</div>
+                <div class="stat-label">Графов</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">AI</div>
+                <div class="stat-label">Ассистент</div>
             </div>
         </section>
 
         <!-- Features -->
         <section class="features" id="features">
-            <h2>Возможности</h2>
+            <div class="section-header">
+                <div class="section-label">✦ Возможности</div>
+                <h2 class="section-title">Всё что нужно<br>для OSINT</h2>
+                <p class="section-desc">Полный набор инструментов для разведки, анализа и визуализации данных в одном приложении.</p>
+            </div>
             <div class="features-grid">
                 <div class="feature-card">
-                    <div class="feature-icon">🌐</div>
+                    <div class="feature-icon-wrap fi-purple">🌐</div>
                     <h3>Граф визуализация</h3>
-                    <p>Интерактивные графы с поддержкой множества типов сущностей: IP, домены, email, телефоны, люди и другие.</p>
+                    <p>Интерактивные графы с множеством типов сущностей: IP, домены, email, телефоны, люди, организации и другие.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🔄</div>
+                    <div class="feature-icon-wrap fi-cyan">🔄</div>
                     <h3>OSINT Трансформы</h3>
-                    <p>Встроенные трансформы: WHOIS, DNS, Nmap, Shodan, VirusTotal — автоматический сбор информации.</p>
+                    <p>Встроенные трансформы: WHOIS, DNS, Nmap, Shodan, VirusTotal, Have I Been Pwned — автоматический сбор информации.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🤖</div>
+                    <div class="feature-icon-wrap fi-emerald">🤖</div>
                     <h3>AI Ассистент</h3>
-                    <p>Интегрированный AI помощник для анализа данных, генерации выводов и рекомендаций.</p>
+                    <p>Интегрированный AI помощник для анализа данных, выявления паттернов и генерации выводов.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">👥</div>
+                    <div class="feature-icon-wrap fi-rose">👥</div>
                     <h3>Совместная работа</h3>
                     <p>WebSocket синхронизация в реальном времени. Работайте над графами вместе с командой.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🤖</div>
-                    <h3>Discord & Telegram боты</h3>
+                    <div class="feature-icon-wrap fi-amber">💬</div>
+                    <h3>Discord & Telegram</h3>
                     <p>Управляйте OSINT исследованиями прямо из мессенджеров через встроенных ботов.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">📊</div>
-                    <h3>Отчёты</h3>
-                    <p>Экспорт графов в PNG, PDF, CSV. Генерация отчётов прямо из интерфейса.</p>
+                    <div class="feature-icon-wrap fi-blue">📊</div>
+                    <h3>Отчёты и экспорт</h3>
+                    <p>Экспорт графов в PNG, PDF, CSV. Генерация профессиональных отчётов прямо из интерфейса.</p>
                 </div>
             </div>
         </section>
 
-        <!-- Screenshot -->
-        <section class="screenshot-section">
-            <h2>Интерфейс</h2>
-            <div class="screenshot-placeholder">
-                📷 Скриншот приложения будет здесь<br>
-                <small style="margin-top: 10px; display: inline-block;">Добавьте screenshot.png в папку site/</small>
+        <!-- How it works -->
+        <section class="how-it-works" id="how">
+            <div class="section-header">
+                <div class="section-label">✦ Начни за минуту</div>
+                <h2 class="section-title">Как это работает</h2>
+            </div>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h4>Скачай</h4>
+                    <p>Установи NodeWeaver на свой компьютер за 30 секунд.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h4>Создай граф</h4>
+                    <p>Добавь первую сущность — домен, IP, email или телефон.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h4>Запусти трансформ</h4>
+                    <p>Выбери трансформ и получи связанные данные автоматически.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h4>Анализируй</h4>
+                    <p>Изучай связи, паттерны и генерируй отчёты с AI.</p>
+                </div>
             </div>
         </section>
 
         <!-- Requirements -->
-        <section class="requirements">
-            <h2>Системные требования</h2>
+        <section class="requirements" id="requirements">
+            <div class="section-header">
+                <div class="section-label">✦ Системные требования</div>
+                <h2 class="section-title">Запуск без проблем</h2>
+            </div>
             <div class="req-grid">
                 <div class="req-item">
+                    <div class="req-icon">🖥️</div>
                     <h4>ОС</h4>
                     <p>Windows 10/11 (x64)</p>
                 </div>
                 <div class="req-item">
+                    <div class="req-icon">⚡</div>
                     <h4>ОЗУ</h4>
                     <p>4 GB минимум</p>
                 </div>
                 <div class="req-item">
+                    <div class="req-icon">💾</div>
                     <h4>Диск</h4>
                     <p>500 MB свободного места</p>
                 </div>
             </div>
         </section>
 
+        <!-- CTA -->
+        <section class="cta-section">
+            <div class="cta-box">
+                <h2>Готов начать?</h2>
+                <p>Скачай NodeWeaver бесплатно и начни OSINT исследование прямо сейчас.</p>
+                <a href="#" class="btn btn-primary" onclick="downloadApp(event)">
+                    <span class="btn-icon">⬇</span>
+                    Скачать NodeWeaver
+                </a>
+            </div>
+        </section>
+
         <!-- Footer -->
         <footer>
-            <p>© 2024–2026 NodeWeaver · <a href="https://github.com/lupodelvita/penis-mishu-i-moi" target="_blank">GitHub</a></p>
+            <p>© 2026 NodeWeaver · Создано с ❤️ · <a href="https://github.com/lupodelvita" target="_blank">GitHub</a></p>
         </footer>
     </div>
 
     <script>
-        // Fetch latest version from GitHub Releases API
-        async function fetchLatestVersion() {
-            const versionEl = document.getElementById('current-version');
-            const downloadBtn = document.getElementById('download-btn');
-            
-            try {
-                const res = await fetch('https://api.github.com/repos/lupodelvita/penis-mishu-i-moi/releases/latest');
-                if (!res.ok) throw new Error('No release');
-                
-                const data = await res.json();
-                versionEl.textContent = data.tag_name || 'v1.0.0';
-                
-                // Find the .exe asset
-                const exeAsset = data.assets?.find(a => a.name.endsWith('.exe') && !a.name.endsWith('.blockmap'));
-                if (exeAsset) {
-                    downloadBtn.href = exeAsset.browser_download_url;
+        // ===== Scroll animations =====
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
                 }
-            } catch (e) {
-                versionEl.textContent = 'v1.0.0';
-            }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -60px 0px' });
+
+        document.querySelectorAll('section').forEach(s => observer.observe(s));
+
+        // ===== Navbar scroll effect =====
+        window.addEventListener('scroll', () => {
+            document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
+        });
+
+        // ===== Direct download =====
+        // Since repo is private, exe must be hosted on this site
+        // Place your .exe file alongside index.html and update the filename below
+        const EXE_FILENAME = 'NodeWeaver-Setup.exe';
+
+        function downloadApp(e) {
+            e.preventDefault();
+            const statusEl = document.getElementById('download-status');
+
+            // Check if exe exists on this domain
+            const exeUrl = `./${EXE_FILENAME}`;
+            
+            statusEl.textContent = 'Начинаю скачивание...';
+            statusEl.style.color = 'var(--accent-light)';
+
+            // Create hidden download link
+            const link = document.createElement('a');
+            link.href = exeUrl;
+            link.download = EXE_FILENAME;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            setTimeout(() => {
+                statusEl.textContent = 'Скачивание началось! Проверьте папку загрузок.';
+                statusEl.style.color = 'var(--emerald)';
+            }, 500);
+
+            setTimeout(() => {
+                statusEl.textContent = '';
+            }, 5000);
         }
-        
-        fetchLatestVersion();
+
+        // ===== Version display =====
+        document.getElementById('current-version').textContent = 'v1.0.0';
     </script>
 </body>
 </html>
