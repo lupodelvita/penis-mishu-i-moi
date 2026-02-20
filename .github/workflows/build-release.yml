@@ -40,11 +40,12 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: http://localhost:4000
 
-      - name: Export web for Electron
+      - name: Prepare exported web for Electron
         run: |
           cd apps/web
-          npx next export -o ../desktop/renderer
-        continue-on-error: true
+          Remove-Item ../desktop/renderer -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory ../desktop/renderer -Force | Out-Null
+          Copy-Item out\* ../desktop/renderer -Recurse -Force
 
       - name: Install desktop dependencies
         run: cd apps/desktop && npm ci
