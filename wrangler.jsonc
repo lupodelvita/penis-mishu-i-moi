@@ -1,16 +1,5 @@
 {
   "name": "nodeweaver",
-  "type": "javascript",
-  "main": "_worker.js",
-  "compatibility_date": "2026-02-20",
-  "env": {
-    "production": {
-      "routes": [
-        {
-          "pattern": "nodeweaver.pages.dev",
-          "zone_name": "pages.dev"
-        }
-      ]
-    }
-  }
+  "compatibility_date": "2026-02-20"
 }
+
