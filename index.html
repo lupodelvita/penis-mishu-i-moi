@@ -1199,11 +1199,11 @@
                 const name = asset?.name || '';
                 const url = asset?.browser_download_url || '';
                 if (!url) return;
-                if (/\.exe$/i.test(name) && /setup|portable/i.test(name) && !/blockmap|yml/i.test(name)) {
+                if (/\.exe$/i.test(name) && !/blockmap|yml/i.test(name)) {
                     acc.windows.push(url);
                     return;
                 }
-                if ((/\.dmg$/i.test(name) || /\.zip$/i.test(name)) && /mac|osx|darwin|arm64/i.test(name)) {
+                if ((/\.dmg$/i.test(name) || /\.zip$/i.test(name)) && /mac|osx|darwin|arm64|universal/i.test(name)) {
                     acc.mac.push(url);
                     return;
                 }
@@ -1216,7 +1216,6 @@
 
         const addReleaseUrls = (filesMap, version) => {
             const tag = version || 'latest';
-            const plain = (version || '').replace(/^v/, '') || 'latest';
             const baseTag = `https://github.com/lupodelvita/penis-mishu-i-moi/releases/download/${tag}/`;
             const baseLatest = 'https://github.com/lupodelvita/penis-mishu-i-moi/releases/latest/download/';
             const out = {};
@@ -1225,9 +1224,10 @@
                 out[key] = [];
                 items.forEach((name) => {
                     const encoded = encodeURIComponent(name);
-                    out[key].push(name);
+                    // Prefer direct release URLs; keep plain name last for potential local hosting
                     out[key].push(`${baseTag}${encoded}`);
                     out[key].push(`${baseLatest}${encoded}`);
+                    out[key].push(name);
                 });
             });
             return out;
@@ -1250,36 +1250,12 @@
             return 'windows'; // default
         }
 
-        async function resolveExistingFile(platform) {
+        const selectDownloadCandidate = (platform) => {
             const candidates = platformFiles[platform] || [];
-
-            for (const fileName of candidates) {
-                try {
-                    const url = (fileName.startsWith('http://') || fileName.startsWith('https://'))
-                        ? fileName
-                        : `./${encodeURIComponent(fileName)}`;
-                    const response = await fetch(url, {
-                        method: 'HEAD',
-                        cache: 'no-store',
-                    });
-
-                    if (!response.ok) {
-                        continue;
-                    }
-
-                    const contentType = (response.headers.get('content-type') || '').toLowerCase();
-                    if (contentType.includes('text/html')) {
-                        continue;
-                    }
-
-                    return fileName;
-                } catch {
-                    // try next candidate
-                }
-            }
-
-            return null;
-        }
+            const urls = candidates.filter((c) => /^https?:\/\//i.test(c));
+            const locals = candidates.filter((c) => !/^https?:\/\//i.test(c));
+            return urls[0] || locals[0] || null;
+        };
 
         async function downloadApp(e, platform) {
             e.preventDefault();
@@ -1288,18 +1264,20 @@
             statusEl.textContent = 'Начинаю скачивание...';
             statusEl.style.color = 'var(--accent-light)';
 
-            const fileName = await resolveExistingFile(platform);
-            if (!fileName) {
+            const candidate = selectDownloadCandidate(platform);
+            if (!candidate) {
                 statusEl.textContent = 'Файл для этой платформы пока недоступен. Сборка ещё не загружена на сайт.';
                 statusEl.style.color = '#f87171';
                 return;
             }
 
-            const fileUrl = `./${encodeURIComponent(fileName)}`;
+            const fileUrl = /^https?:\/\//i.test(candidate)
+                ? candidate
+                : `./${encodeURIComponent(candidate)}`;
 
             const link = document.createElement('a');
             link.href = fileUrl;
-            link.download = fileName;
+            link.download = candidate;
             link.style.display = 'none';
             document.body.appendChild(link);
             link.click();
@@ -1349,10 +1327,14 @@
                     const rel = await gh.json();
                     if (rel?.tag_name) appVersion = rel.tag_name.trim();
                     const assets = filesFromGitHubAssets(rel?.assets);
+                    const defaults = fallbackBuild();
+                    platformFiles = defaults;
                     if (assets) {
-                        platformFiles = assets;
-                    } else {
-                        platformFiles = fallbackBuild();
+                        ['windows', 'mac', 'linux'].forEach((key) => {
+                            if (assets[key]?.length) {
+                                platformFiles[key] = assets[key];
+                            }
+                        });
                     }
                 } else {
                     platformFiles = fallbackBuild();
