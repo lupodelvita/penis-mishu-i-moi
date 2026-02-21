@@ -1192,6 +1192,28 @@
             return Object.keys(out).length ? out : null;
         };
 
+        const filesFromGitHubAssets = (assets) => {
+            if (!Array.isArray(assets)) return null;
+            const acc = { windows: [], mac: [], linux: [] };
+            assets.forEach((asset) => {
+                const name = asset?.name || '';
+                const url = asset?.browser_download_url || '';
+                if (!url) return;
+                if (/\.exe$/i.test(name) && /setup|portable/i.test(name) && !/blockmap|yml/i.test(name)) {
+                    acc.windows.push(url);
+                    return;
+                }
+                if ((/\.dmg$/i.test(name) || /\.zip$/i.test(name)) && /mac|osx|darwin|arm64/i.test(name)) {
+                    acc.mac.push(url);
+                    return;
+                }
+                if (/\.appimage$/i.test(name)) {
+                    acc.linux.push(url);
+                }
+            });
+            return acc;
+        };
+
         const addReleaseUrls = (filesMap, version) => {
             const tag = version || 'latest';
             const plain = (version || '').replace(/^v/, '') || 'latest';
@@ -1233,7 +1255,10 @@
 
             for (const fileName of candidates) {
                 try {
-                    const response = await fetch(`./${encodeURIComponent(fileName)}`, {
+                    const url = (fileName.startsWith('http://') || fileName.startsWith('https://'))
+                        ? fileName
+                        : `./${encodeURIComponent(fileName)}`;
+                    const response = await fetch(url, {
                         method: 'HEAD',
                         cache: 'no-store',
                     });
@@ -1315,24 +1340,47 @@
         window.addEventListener('DOMContentLoaded', async () => {
             const detectedPlatform = detectPlatform();
 
-            // Try to pull latest.json to update version and file names
+            const fallbackBuild = () => addReleaseUrls(buildPlatformFiles(appVersion), appVersion);
+
+            // 1) Try GitHub Releases API (no token)
             try {
-                const res = await fetch('./latest.json', { cache: 'no-store' });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.version && typeof data.version === 'string') {
-                        appVersion = data.version.trim();
-                        const remoteFiles = normalizeFiles(data.files);
-                        const baseFiles = remoteFiles ? remoteFiles : buildPlatformFiles(appVersion);
-                        platformFiles = addReleaseUrls(baseFiles, appVersion);
+                const gh = await fetch('https://api.github.com/repos/lupodelvita/penis-mishu-i-moi/releases/latest', { cache: 'no-store' });
+                if (gh.ok) {
+                    const rel = await gh.json();
+                    if (rel?.tag_name) appVersion = rel.tag_name.trim();
+                    const assets = filesFromGitHubAssets(rel?.assets);
+                    if (assets) {
+                        platformFiles = assets;
                     } else {
-                        platformFiles = addReleaseUrls(buildPlatformFiles(appVersion), appVersion);
+                        platformFiles = fallbackBuild();
                     }
                 } else {
-                    platformFiles = addReleaseUrls(buildPlatformFiles(appVersion), appVersion);
+                    platformFiles = fallbackBuild();
                 }
             } catch {
-                platformFiles = addReleaseUrls(buildPlatformFiles(appVersion), appVersion);
+                platformFiles = fallbackBuild();
+            }
+
+            // 2) Optional: local latest.json as secondary fallback
+            if (!platformFiles?.windows?.length && !platformFiles?.mac?.length && !platformFiles?.linux?.length) {
+                try {
+                    const res = await fetch('./latest.json', { cache: 'no-store' });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.version && typeof data.version === 'string') {
+                            appVersion = data.version.trim();
+                        }
+                        const remoteFiles = normalizeFiles(data.files);
+                        platformFiles = remoteFiles ? remoteFiles : fallbackBuild();
+                    }
+                } catch {
+                    // ignore
+                }
+            }
+
+            // 3) If still empty, use defaults with release URLs
+            if (!platformFiles?.windows?.length && !platformFiles?.mac?.length && !platformFiles?.linux?.length) {
+                platformFiles = fallbackBuild();
             }
 
             renderDownloadUI(detectedPlatform);
