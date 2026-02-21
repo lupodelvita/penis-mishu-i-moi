@@ -5,7 +5,7 @@
   "description": "NodeWeaver Desktop - OSINT Graph Visualization Application",
   "homepage": "https://nodeweaver-site.pages.dev",
   "author": {
-    "name": "NodeWeaver Team",
+    "name": "DEVLOCKER",
     "email": "support@nodeweaver.app"
   },
   "main": "dist/main.js",
@@ -50,6 +50,7 @@
       "renderer/**/*"
     ],
     "win": {
+      "publisherName": "DEVLOCKER",
       "target": [
         {
           "target": "nsis",
