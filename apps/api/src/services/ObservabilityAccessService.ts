@@ -18,6 +18,13 @@ export type ObservabilityScopeValue =
   | 'RECEIVE_TELEGRAM_ALERTS'
   | 'MANAGE_INTEGRATIONS';
 
+export interface TelegramScopeRecipient {
+  userId: string;
+  username: string;
+  chatId: string;
+  scopes: ObservabilityScope[];
+}
+
 export class ObservabilityAccessService {
   private async assertEligibleTier(userId: string): Promise<void> {
     const user = await prisma.user.findUnique({
@@ -258,7 +265,9 @@ export class ObservabilityAccessService {
     return access;
   }
 
-  public async getTelegramRecipients(scope: ObservabilityScopeValue = 'RECEIVE_TELEGRAM_ALERTS') {
+  public async getTelegramRecipients(
+    scope: ObservabilityScopeValue = 'RECEIVE_TELEGRAM_ALERTS',
+  ): Promise<TelegramScopeRecipient[]> {
     const accesses = await prisma.observabilityAccess.findMany({
       where: {
         isActive: true,

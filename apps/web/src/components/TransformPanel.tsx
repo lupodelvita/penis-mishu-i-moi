@@ -136,6 +136,9 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
   })();
   
   const categories = Array.from(new Set(allTransforms.map((t) => t.category)));
+  const sortedCategories = categories
+    .map((c) => ({ name: c, count: allTransforms.filter((t) => t.category === c).length }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   const filteredTransforms = allTransforms.filter((transform) => {
     const matchesSearch = transform.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (transform.description || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -738,7 +741,7 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
     return () => window.removeEventListener('node-weaver:run-transform', handleAutoRun);
   }, [handleRunTransform]);
   return (
-    <div className="flex-1 border-b border-border flex flex-col min-h-0 overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* Toast Notification */}
       {toastMessage && (
         <div className={`px-4 py-2 border-b text-sm font-medium flex items-center gap-2 ${
@@ -771,47 +774,56 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
           </div>
         </div>
       )}
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold">Трансформы</h2>
-          <button className="p-1 hover:bg-accent rounded-md transition-colors text-muted-foreground" title="Настройки">
-            <Settings2 className="w-4 h-4" />
-          </button>
-        </div>
-        {}
-        <div className="relative mb-3">
+      <div className="p-3 border-b border-border space-y-2">
+        <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
             placeholder="Поиск трансформов..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full pl-8 pr-8 py-1.5 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
+          {(searchQuery || selectedCategory) && (
+            <button
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-accent rounded transition-colors text-muted-foreground"
+              title="Сбросить фильтры"
+              onClick={() => { setSearchQuery(''); setSelectedCategory(null); }}
+            >
+              <Settings2 className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
-        {}
-        <div className="flex flex-wrap gap-1">
+        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 pr-1">
           <button
             onClick={() => setSelectedCategory(null)}
-            className={`px-2 py-1 text-xs rounded-md transition-colors ${
-              !selectedCategory ? 'bg-primary text-primary-foreground' : 'bg-secondary hover:bg-secondary/80'
+            className={`flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border transition-colors whitespace-nowrap ${
+              !selectedCategory
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-secondary/60 text-foreground border-border hover:border-primary/50'
             }`}
           >
             Все
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/20 border border-white/10">{allTransforms.length}</span>
           </button>
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                selectedCategory === category
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary hover:bg-secondary/80'
-              }`}
-            >
-              {category}
-            </button>
-          ))}
+
+          {sortedCategories.map((cat) => {
+            const isActive = selectedCategory === cat.name;
+            return (
+              <button
+                key={cat.name}
+                onClick={() => setSelectedCategory(cat.name)}
+                className={`flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border transition-colors whitespace-nowrap ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-secondary/60 text-foreground border-border hover:border-primary/50'
+                }`}
+              >
+                {cat.name}
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/20 border border-white/10">{cat.count}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
       {}

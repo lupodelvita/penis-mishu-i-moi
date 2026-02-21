@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
     "dev:web": "cd apps/web && npm run dev",
-    "dev:api": "cd apps/api && npm run dev",
+    "dev:api:clean": "node ./scripts/free-port.js 4000",
+    "dev:api": "npm run dev:api:clean && cd apps/api && npm run dev",
     "dev:desktop": "cd apps/desktop && npm run dev",
     "dev:all": "concurrently -n \"API,WEB,DESKTOP\" -c \"bgBlue,bgGreen,bgMagenta\" \"npm run dev:api\" \"npm run dev:web\" \"npm run dev:desktop\"",
     "build": "npm run build:packages && npm run build:apps",
@@ -30,7 +31,8 @@
     "setup:desktop": "cd apps/desktop && npm install",
     "db:migrate": "cd apps/api && npm run db:migrate",
     "db:seed": "cd apps/api && npm run db:seed",
-    "validate:transform-ids": "node ./scripts/transform-id-check.js"
+    "validate:transform-ids": "node ./scripts/transform-id-check.js",
+    "validate:alert-dispatch": "node ./scripts/alert-dispatch-guard.js"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

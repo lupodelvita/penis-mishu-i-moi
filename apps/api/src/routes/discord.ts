@@ -2,6 +2,7 @@ import { Router } from 'express';
 import https from 'https';
 import { botManager } from '../services/BotManager';
 import { DiscordBot } from '../services/DiscordBot';
+import { alertDispatchService } from '../services/AlertDispatchService';
 import { prisma } from '../lib/prisma';
 
 const router = Router();
@@ -76,18 +77,40 @@ router.post('/export-graph', async (req, res) => {
              return;
         }
         
-        if (!channelId) {
-             res.status(400).json({ success: false, error: 'Channel ID required when using Bot' });
+           if (bot instanceof DiscordBot && !channelId) {
+             res.status(400).json({ success: false, error: 'Channel ID required when using Discord Bot' });
              return;
-        }
+           }
 
         if ('sendReport' in bot) {
             if (bot instanceof DiscordBot) {
                 await bot.sendReport(channelId, embed);
             } else {
-                // For Telegram, convert embed to text or just send summary
                 const text = `📊 *${graph.name}*\n${graph.description}\n\n🔍 Entities: ${graph.entities?.length}\n🔗 Links: ${graph.links?.length}`;
-                await (bot as any).sendReport(channelId, text);
+                const dispatchResult = await alertDispatchService.dispatchTelegramToScope({
+                  bot: bot as { sendReport(chatId: string | null, message: string): Promise<boolean> },
+                  message: text,
+                  scope: 'RECEIVE_TELEGRAM_ALERTS',
+                });
+
+                if (!dispatchResult.totalRecipients) {
+                  res.status(403).json({
+                    success: false,
+                    error: 'No approved Telegram recipients with RECEIVE_TELEGRAM_ALERTS scope',
+                  });
+                  return;
+                }
+
+                res.json({
+                  success: true,
+                  message: `Exported to Telegram approved recipients: ${dispatchResult.deliveredRecipients}/${dispatchResult.totalRecipients}`,
+                  data: {
+                    delivered: dispatchResult.deliveredRecipients,
+                    totalRecipients: dispatchResult.totalRecipients,
+                    failedRecipients: dispatchResult.failedRecipients,
+                  },
+                });
+                return;
             }
         }
     } else {

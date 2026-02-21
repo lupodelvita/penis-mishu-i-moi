@@ -19,6 +19,13 @@ export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeo
   const { currentGraph, exportGraph, importGraph } = useGraphStore();
   const { user, logout } = useAuth();
   const [graphName, setGraphName] = useState('Untitled Graph');
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isLoadingBots, setIsLoadingBots] = useState(false);
+  const [isSendingToBot, setIsSendingToBot] = useState(false);
+  const [botExportStatus, setBotExportStatus] = useState('');
+  const [exportBots, setExportBots] = useState<any[]>([]);
+  const [selectedBotId, setSelectedBotId] = useState('');
+  const [discordChannelId, setDiscordChannelId] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleNew = () => {
@@ -86,23 +93,104 @@ export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeo
     }
   };
 
-  const handleExport = () => {
-    const menu = document.createElement('div');
-    menu.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1000;background:rgba(15,23,42,0.95);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,0.5)';
-    menu.innerHTML = `
-      <div style="color:white;font-size:16px;font-weight:600;margin-bottom:12px">Export Graph</div>
-      <button style="width:100%;padding:10px;margin:4px 0;background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.3);border-radius:8px;color:#60a5fa;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='rgba(59,130,246,0.3)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">Export as JSON</button>
-      <button style="width:100%;padding:10px;margin:4px 0;background:rgba(236,72,153,0.2);border:1px solid rgba(236,72,153,0.3);border-radius:8px;color:#f472b6;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='rgba(236,72,153,0.3)'" onmouseout="this.style.background='rgba(236,72,153,0.2)'">Generate PDF Report</button>
-      <button style="width:100%;padding:10px;margin:8px 0 0 0;background:rgba(71,85,105,0.2);border:1px solid rgba(71,85,105,0.3);border-radius:8px;color:#94a3b8;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='rgba(71,85,105,0.3)'" onmouseout="this.style.background='rgba(71,85,105,0.2)'">Cancel</button>
-    `;
-    document.body.appendChild(menu);
-    
-    menu.children[1].addEventListener('click', () => { handleSave(); document.body.removeChild(menu); });
-    menu.children[2].addEventListener('click', () => { handleDownloadReport(); document.body.removeChild(menu); });
-    menu.children[3].addEventListener('click', () => document.body.removeChild(menu));
+  const buildGraphExportPayload = () => {
+    const parsed = JSON.parse(exportGraph() || '{}');
+    const graph = currentGraph || parsed;
+
+    return {
+      id: graph?.id || 'local-graph',
+      name: graphName || graph?.name || 'Untitled Graph',
+      description: graph?.description || 'OSINT Investigation Results',
+      created: graph?.metadata?.created || new Date().toISOString(),
+      entities: graph?.entities || [],
+      links: graph?.links || [],
+    };
   };
 
+  const openExportModal = async () => {
+    setIsExportModalOpen(true);
+    setIsLoadingBots(true);
+    setBotExportStatus('Загрузка активных ботов...');
+
+    try {
+      const botsRes = await api.get('/bots');
+      const bots = Array.isArray(botsRes.data?.data) ? botsRes.data.data : [];
+      const activeBots = bots.filter((bot: any) => bot?.isActive);
+
+      setExportBots(activeBots);
+
+      if (activeBots.length) {
+        const firstBot = activeBots[0];
+        setSelectedBotId(firstBot.id);
+        setDiscordChannelId(firstBot.settings?.channelId || '');
+        setBotExportStatus(`Найдено активных ботов: ${activeBots.length}`);
+      } else {
+        setSelectedBotId('');
+        setDiscordChannelId('');
+        setBotExportStatus('Нет активных ботов. Добавь и запусти бота в разделе Bots.');
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch bots for export:', error);
+      setExportBots([]);
+      setSelectedBotId('');
+      setDiscordChannelId('');
+      setBotExportStatus(error?.response?.data?.error || 'Не удалось загрузить список ботов');
+    } finally {
+      setIsLoadingBots(false);
+    }
+  };
+
+  const handleExportToBot = async () => {
+    try {
+      if (!currentGraph) {
+        setBotExportStatus('Нет активного графа для экспорта.');
+        return;
+      }
+
+      if (!selectedBotId) {
+        setBotExportStatus('Выбери бота для отправки.');
+        return;
+      }
+
+      const selectedBot = exportBots.find((bot: any) => bot.id === selectedBotId);
+      if (!selectedBot) {
+        setBotExportStatus('Выбранный бот не найден. Обнови список.');
+        return;
+      }
+
+      setIsSendingToBot(true);
+      setBotExportStatus(`Отправка графа в ${selectedBot.name}...`);
+
+      const payload: any = {
+        botId: selectedBot.id,
+        graph: buildGraphExportPayload(),
+      };
+
+      if (selectedBot.type === 'DISCORD') {
+        const resolvedChannel = discordChannelId.trim() || selectedBot.settings?.channelId || '';
+        if (!resolvedChannel.trim()) {
+          setBotExportStatus('Для Discord нужен Channel ID. Укажи его ниже.');
+          return;
+        }
+
+        payload.channelId = resolvedChannel.trim();
+      }
+
+      const response = await api.post('/discord/export-graph', payload);
+      const message = response.data?.message || 'Граф успешно отправлен в бота';
+      setBotExportStatus(`✅ ${message}`);
+    } catch (error: any) {
+      console.error('Failed to export graph to bot:', error);
+      setBotExportStatus(`❌ ${error?.response?.data?.error || 'Не удалось отправить граф в бота'}`);
+    } finally {
+      setIsSendingToBot(false);
+    }
+  };
+
+  const handleExport = openExportModal;
+
   return (
+    <>
     <div className="h-14 border-b border-border glass flex items-center justify-between px-4">
       <input
         ref={fileInputRef}
@@ -268,5 +356,95 @@ export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeo
         )}
       </div>
     </div>
+
+    {isExportModalOpen && (
+      <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-white">Export Graph</h3>
+            <button
+              onClick={() => setIsExportModalOpen(false)}
+              className="text-slate-400 hover:text-white transition"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={handleSave}
+              className="px-3 py-2 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-300 hover:bg-blue-500/30 transition"
+            >
+              JSON
+            </button>
+            <button
+              onClick={handleDownloadReport}
+              className="px-3 py-2 rounded-lg bg-pink-500/20 border border-pink-500/30 text-pink-300 hover:bg-pink-500/30 transition"
+            >
+              PDF
+            </button>
+          </div>
+
+          <div className="border-t border-slate-800 pt-4 space-y-3">
+            <div className="text-sm font-semibold text-slate-200">Send to Bot (Discord/Telegram)</div>
+
+            <button
+              onClick={openExportModal}
+              disabled={isLoadingBots}
+              className="w-full px-3 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 transition disabled:opacity-60"
+            >
+              {isLoadingBots ? 'Loading bots...' : 'Refresh bots'}
+            </button>
+
+            <select
+              value={selectedBotId}
+              onChange={(e) => {
+                const nextId = e.target.value;
+                setSelectedBotId(nextId);
+                const bot = exportBots.find((item: any) => item.id === nextId);
+                setDiscordChannelId(bot?.settings?.channelId || '');
+              }}
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+            >
+              {!exportBots.length && <option value="">No active bots</option>}
+              {exportBots.map((bot: any) => (
+                <option key={bot.id} value={bot.id}>
+                  {bot.name} [{bot.type}]
+                </option>
+              ))}
+            </select>
+
+            {(() => {
+              const bot = exportBots.find((item: any) => item.id === selectedBotId);
+              if (bot?.type !== 'DISCORD') return null;
+
+              return (
+                <input
+                  value={discordChannelId}
+                  onChange={(e) => setDiscordChannelId(e.target.value)}
+                  placeholder="Discord Channel ID"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+                />
+              );
+            })()}
+
+            <button
+              onClick={handleExportToBot}
+              disabled={isSendingToBot || !exportBots.length}
+              className="w-full px-3 py-2 rounded-lg bg-green-600 hover:bg-green-500 transition font-semibold disabled:opacity-60"
+            >
+              {isSendingToBot ? 'Sending...' : 'Send graph to bot'}
+            </button>
+
+            {!!botExportStatus && (
+              <div className="text-xs rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-300 whitespace-pre-wrap">
+                {botExportStatus}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

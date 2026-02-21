@@ -34,7 +34,7 @@ export function initAutoUpdater(window: BrowserWindow) {
     mainWindow?.webContents.send('updater:downloading', { version: info.version });
   });
 
-  autoUpdater.on('update-not-available', (info) => {
+  autoUpdater.on('update-not-available', () => {
     log.info('No updates available. Current version:', app.getVersion());
   });
 

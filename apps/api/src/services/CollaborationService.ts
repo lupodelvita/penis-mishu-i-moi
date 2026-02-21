@@ -46,7 +46,10 @@ class CollaborationService {
     });
 
     this.io.on('connection', (socket: Socket) => {
-      console.log(`[Collab] Client connected: ${socket.id}`);
+      const ip = socket.handshake.address || 'unknown';
+      const transport = socket.conn.transport.name;
+      const userAgent = socket.handshake.headers['user-agent'] || 'unknown';
+      console.log(`[Collab] Client connected: ${socket.id} | ip=${ip} | transport=${transport} | ua=${userAgent}`);
 
       // Join graph room
       socket.on('join-graph', async ({ graphId, user }: { graphId: string; user: Omit<Collaborator, 'graphId'> }) => {
@@ -75,6 +78,14 @@ class CollaborationService {
           }
 
           const collaborator: Collaborator = { ...user, graphId, id: socket.id, dbUserId: user.id };
+
+          const previousSocketId = this.userSockets.get(user.id);
+          if (previousSocketId && previousSocketId !== socket.id) {
+            console.log(
+              `[Collab] User ${user.name} (${user.id}) opened additional socket: old=${previousSocketId}, new=${socket.id}`,
+            );
+          }
+          this.userSockets.set(user.id, socket.id);
           
           socket.join(graphId);
           this.collaborators.set(socket.id, collaborator);
@@ -325,7 +336,7 @@ class CollaborationService {
       });
 
       // Disconnect
-      socket.on('disconnect', async () => {
+      socket.on('disconnect', async (reason) => {
         const collaborator = this.collaborators.get(socket.id);
         
         if (collaborator) {
@@ -362,8 +373,14 @@ class CollaborationService {
           if (dbUserId && graphId) {
             await this.cleanupMembership(dbUserId, graphId);
           }
+
+          if (this.userSockets.get(dbUserId) === socket.id) {
+            this.userSockets.delete(dbUserId);
+          }
           
-          console.log(`[Collab] ${name} disconnected from graph ${graphId}. Remaining: ${this.getGraphCollaborators(graphId).length}`);
+          console.log(
+            `[Collab] ${name} disconnected from graph ${graphId}. Remaining: ${this.getGraphCollaborators(graphId).length}. reason=${reason}`,
+          );
         }
       });
     });

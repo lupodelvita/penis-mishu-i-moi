@@ -26,7 +26,7 @@ export default function CollaborationPanel() {
     return (
       <button
         onClick={() => setIsVisible(true)}
-        className="fixed top-20 right-[340px] glass rounded-lg p-3 shadow-xl hover:scale-105 transition-transform z-40"
+        className="fixed bottom-6 right-4 lg:right-[340px] glass rounded-lg p-3 shadow-xl hover:scale-105 transition-transform z-40"
         title="Show Collaboration"
       >
         <Users className="w-5 h-5 text-slate-300" />
@@ -35,7 +35,7 @@ export default function CollaborationPanel() {
   }
   
   return (
-    <div className="fixed top-20 right-[340px] bg-slate-900/95 backdrop-blur-xl border border-purple-500/20 rounded-xl shadow-xl z-40 min-w-[200px] max-w-[300px]">
+    <div className="fixed bottom-6 right-4 lg:right-[340px] bg-slate-900/95 backdrop-blur-xl border border-purple-500/20 rounded-xl shadow-xl z-40 min-w-[200px] max-w-[300px]">
       {/* Header */}
       <div 
         className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-800/50 transition-colors rounded-t-xl"

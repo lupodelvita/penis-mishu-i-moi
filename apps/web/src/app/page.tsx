@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Zap, Info } from 'lucide-react';
 import { EntityType } from '@nodeweaver/shared-types';
 import { useGraphStore } from '@/store';
 import GraphCanvas from '@/components/GraphCanvasV2';
@@ -17,6 +18,47 @@ import TransformBuilder from '@/components/TransformBuilder';
 import { useCollaborationStore } from '@/store';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+
+function RightSidebar({ selectedEntityId }: { selectedEntityId: string | null }) {
+  const [activeTab, setActiveTab] = useState<'transforms' | 'details'>('transforms');
+
+  return (
+    <div className="w-80 flex flex-col border-l border-border overflow-hidden">
+      {/* Tab Bar */}
+      <div className="flex border-b border-border shrink-0">
+        <button
+          onClick={() => setActiveTab('transforms')}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors ${
+            activeTab === 'transforms'
+              ? 'text-primary border-b-2 border-primary bg-accent/30'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent/20'
+          }`}
+        >
+          <Zap className="w-3.5 h-3.5" />
+          Трансформы
+        </button>
+        <button
+          onClick={() => setActiveTab('details')}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors ${
+            activeTab === 'details'
+              ? 'text-primary border-b-2 border-primary bg-accent/30'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent/20'
+          }`}
+        >
+          <Info className="w-3.5 h-3.5" />
+          Детали
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'transforms' ? (
+        <TransformPanel selectedEntityId={selectedEntityId} />
+      ) : (
+        <DetailPanel selectedEntityId={selectedEntityId} />
+      )}
+    </div>
+  );
+}
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -163,13 +205,8 @@ export default function Home() {
           />
         </div>
 
-        {/* Right Sidebar - Transform Panel & Details */}
-        <div className="w-80 flex flex-col border-l border-border overflow-hidden">
-          <TransformPanel 
-            selectedEntityId={selectedEntityId}
-          />
-          <DetailPanel selectedEntityId={selectedEntityId} />
-        </div>
+        {/* Right Sidebar - Tabbed Panel */}
+        <RightSidebar selectedEntityId={selectedEntityId} />
       </div>
 
       {/* Floating Components */}

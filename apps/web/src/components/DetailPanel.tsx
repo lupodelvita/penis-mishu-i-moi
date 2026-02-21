@@ -104,9 +104,6 @@ export default function DetailPanel({ selectedEntityId }: DetailPanelProps) {
   if (!selectedEntityId || !selectedEntity) {
     return (
       <div className="flex-1 flex flex-col">
-        <div className="p-4 border-b border-border">
-          <h2 className="text-sm font-semibold">Детали</h2>
-        </div>
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-center text-muted-foreground text-sm">
             Выберите сущность для просмотра деталей
@@ -121,9 +118,9 @@ export default function DetailPanel({ selectedEntityId }: DetailPanelProps) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold">Детали</h2>
+      <div className="p-3 border-b border-border">
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-muted-foreground">{selectedEntity.data?.type || 'Entity'}</div>
           <button 
             className="p-1 hover:bg-accent rounded-md transition-colors text-muted-foreground" 
             title="Редактировать"
@@ -135,7 +132,6 @@ export default function DetailPanel({ selectedEntityId }: DetailPanelProps) {
             <Edit3 className="w-4 h-4" />
           </button>
         </div>
-        <div className="text-xs text-muted-foreground">{selectedEntity.data?.type || 'Entity'}</div>
       </div>
 
       {/* Content */}

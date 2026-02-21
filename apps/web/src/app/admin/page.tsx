@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
-import { ArrowLeft, Users, Database, Shield, Send, Plus, CheckCircle, XCircle, Trash2, Clock } from 'lucide-react';
+import { ArrowLeft, Users, Database, Shield, Send, Plus, CheckCircle, XCircle, Trash2, Clock, Bell } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AdminPage() {
@@ -94,6 +94,15 @@ export default function AdminPage() {
             Control Center
           </h1>
           <p className="text-gray-400">NodeWeaver Administrative Dashboard</p>
+          <div className="mt-4">
+            <Link
+              href="/admin/alerts-access"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 transition"
+            >
+              <Bell className="w-4 h-4" />
+              Alerts Access
+            </Link>
+          </div>
         </div>
         <div className="text-right">
            <div className="text-xs font-bold text-gray-500">SYSTEM STATUS</div>

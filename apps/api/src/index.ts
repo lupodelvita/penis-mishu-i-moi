@@ -34,6 +34,7 @@ const httpServer = createServer(app);
 collaborationService.initialize(httpServer);
 
 const PORT = process.env.PORT || 4000;
+let isShuttingDown = false;
 
 // Middleware
 app.use(cors());
@@ -70,6 +71,48 @@ app.use('/uploads', express.static('uploads'));
 
 // Error handling
 app.use(errorHandler);
+
+function shutdown(signal: string, restartSignal?: NodeJS.Signals) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  console.log(`[API] Received ${signal}. Shutting down HTTP server...`);
+
+  httpServer.close((error) => {
+    if (error) {
+      console.error('[API] Error during shutdown:', error);
+      process.exit(1);
+      return;
+    }
+
+    if (restartSignal) {
+      process.kill(process.pid, restartSignal);
+      return;
+    }
+
+    process.exit(0);
+  });
+
+  setTimeout(() => {
+    console.error('[API] Forced shutdown timeout exceeded. Exiting.');
+    process.exit(1);
+  }, 5000).unref();
+}
+
+process.once('SIGINT', () => shutdown('SIGINT'));
+process.once('SIGTERM', () => shutdown('SIGTERM'));
+process.once('SIGUSR2', () => shutdown('SIGUSR2', 'SIGUSR2'));
+
+httpServer.on('error', (error: any) => {
+  if (error?.code === 'EADDRINUSE') {
+    console.error(`[API] Port ${PORT} is already in use. Stop the previous process and retry.`);
+    process.exit(1);
+    return;
+  }
+
+  console.error('[API] HTTP server error:', error);
+  process.exit(1);
+});
 
 // Start server
 httpServer.listen(PORT, () => {
