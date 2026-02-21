@@ -1151,11 +1151,40 @@
         });
 
         // ===== Platform detection & download =====
-        const PLATFORM_FILES = {
-            windows: ['NodeWeaver-Setup.exe', 'NodeWeaver Setup 1.0.0.exe'],
-            mac: ['NodeWeaver.dmg', 'NodeWeaver-1.0.0.dmg'],
-            linux: ['NodeWeaver.AppImage', 'NodeWeaver-1.0.0.AppImage']
+        const DEFAULT_VERSION = 'v1.0.2';
+
+        const buildPlatformFiles = (version) => {
+            const plain = (version || '').replace(/^v/, '') || 'latest';
+            return {
+                windows: [
+                    'NodeWeaver-Setup.exe',
+                    `NodeWeaver-Setup-${plain}.exe`,
+                    `NodeWeaver Setup ${plain}.exe`
+                ],
+                mac: [
+                    'NodeWeaver.dmg',
+                    `NodeWeaver-${plain}.dmg`
+                ],
+                linux: [
+                    'NodeWeaver.AppImage',
+                    `NodeWeaver-${plain}.AppImage`
+                ]
+            };
         };
+
+        const normalizeFiles = (files) => {
+            if (!files || typeof files !== 'object') return null;
+            const out = {};
+            ['windows', 'mac', 'linux'].forEach((key) => {
+                const val = files[key];
+                if (Array.isArray(val) && val.length) out[key] = val;
+                if (typeof val === 'string' && val.trim()) out[key] = [val.trim()];
+            });
+            return Object.keys(out).length ? out : null;
+        };
+
+        let appVersion = DEFAULT_VERSION;
+        let platformFiles = buildPlatformFiles(appVersion);
 
         function detectPlatform() {
             const ua = navigator.userAgent;
@@ -1172,7 +1201,7 @@
         }
 
         async function resolveExistingFile(platform) {
-            const candidates = PLATFORM_FILES[platform] || [];
+            const candidates = platformFiles[platform] || [];
 
             for (const fileName of candidates) {
                 try {
@@ -1233,30 +1262,52 @@
             }, 5000);
         }
 
-        // Smart platform-aware download button
-        window.addEventListener('DOMContentLoaded', () => {
-            const detectedPlatform = detectPlatform();
+        const renderDownloadUI = (detectedPlatform) => {
             const platformLabels = {
                 windows: 'Скачать для Windows',
                 mac: 'Скачать для macOS',
                 linux: 'Скачать для Linux'
             };
-            
             const label = document.getElementById('smart-download-label');
             if (label) label.textContent = platformLabels[detectedPlatform];
 
-            // Show other platforms as links (hide current)
             const otherPlatforms = document.getElementById('other-platforms');
             if (otherPlatforms) {
                 const others = ['windows', 'mac', 'linux'].filter(p => p !== detectedPlatform);
                 const labels = { windows: 'Windows', mac: 'macOS', linux: 'Linux' };
-                otherPlatforms.innerHTML = '<span>Также:</span> ' + 
-                    others.map(p => `<a href="#" onclick="downloadApp(event, '${p}')">${labels[p]}</a>`).join(' <span class="sep">·</span> ');
+                otherPlatforms.innerHTML = '<span>Также:</span> ' +
+                    others.map(p => `<a href=\"#\" onclick=\"downloadApp(event, '${p}')\">${labels[p]}</a>`).join(' <span class="sep">·</span> ');
             }
-        });
 
-        // ===== Version display =====
-        document.getElementById('current-version').textContent = 'v1.0.0';
+            const versionEl = document.getElementById('current-version');
+            if (versionEl) versionEl.textContent = appVersion;
+        };
+
+        // Smart platform-aware download button + remote version fetch
+        window.addEventListener('DOMContentLoaded', async () => {
+            const detectedPlatform = detectPlatform();
+
+            // Try to pull latest.json to update version and file names
+            try {
+                const res = await fetch('./latest.json', { cache: 'no-store' });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.version && typeof data.version === 'string') {
+                        appVersion = data.version.trim();
+                        const remoteFiles = normalizeFiles(data.files);
+                        platformFiles = remoteFiles ? remoteFiles : buildPlatformFiles(appVersion);
+                    } else {
+                        platformFiles = buildPlatformFiles(appVersion);
+                    }
+                } else {
+                    platformFiles = buildPlatformFiles(appVersion);
+                }
+            } catch {
+                platformFiles = buildPlatformFiles(appVersion);
+            }
+
+            renderDownloadUI(detectedPlatform);
+        });
     </script>
 </body>
 </html>
