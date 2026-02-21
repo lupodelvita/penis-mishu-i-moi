@@ -57,12 +57,39 @@ jobs:
         run: cd apps/desktop && npx electron-builder --win --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+
+      - name: Normalize artifact names
+        shell: pwsh
+        run: |
+          $releaseDir = "apps/desktop/release"
+
+          $setup = Get-ChildItem "$releaseDir/NodeWeaver Setup *.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($setup) {
+            Copy-Item $setup.FullName "$releaseDir/NodeWeaver-Setup.exe" -Force
+          }
+
+          $setupBlockmap = Get-ChildItem "$releaseDir/NodeWeaver Setup *.exe.blockmap" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($setupBlockmap) {
+            Copy-Item $setupBlockmap.FullName "$releaseDir/NodeWeaver-Setup.exe.blockmap" -Force
+          }
+
+          $portable = Get-ChildItem "$releaseDir/NodeWeaver *.exe" -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -notlike "*Setup*" -and $_.Name -ne "NodeWeaver-Setup.exe" } |
+            Select-Object -First 1
+          if ($portable) {
+            Copy-Item $portable.FullName "$releaseDir/NodeWeaver-Portable.exe" -Force
+          }
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
           path: |
+            apps/desktop/release/NodeWeaver-Setup.exe
+            apps/desktop/release/NodeWeaver-Portable.exe
+            apps/desktop/release/NodeWeaver-Setup.exe.blockmap
             apps/desktop/release/*.exe
             apps/desktop/release/*.exe.blockmap
 
@@ -94,7 +121,9 @@ jobs:
             Смотрите коммиты для деталей.
           draft: false
           prerelease: false
-          files: release-files/**/*.exe
+          files: |
+            release-files/**/*.exe
+            release-files/**/*.exe.blockmap
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
