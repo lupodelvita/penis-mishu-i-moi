@@ -4,6 +4,7 @@ import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { authService } from '../services/AuthService';
 import { userService } from '../services/UserService';
 import { botManager } from '../services/BotManager';
+import observabilityAdminRoutes from './observabilityAdmin';
 // Prisma Enums are sometimes under $Enums in newer versions or just use strings for types
 
 
@@ -46,6 +47,7 @@ const requireAdmin = async (req: AuthRequest, res: any, next: any) => {
 
 router.use(authenticateToken);
 router.use(requireAdmin);
+router.use('/observability', observabilityAdminRoutes);
 
 // Dashboard Stats
 router.get('/stats', async (_req, res, next) => {
