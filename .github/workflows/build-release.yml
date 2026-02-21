@@ -67,6 +67,31 @@ jobs:
             exit 1
           }
 
+          if ($link -match '^https?://') {
+            Write-Output "WIN_CSC_LINK is URL-based; skipping local PFX validation step."
+            exit 0
+          }
+
+          $normalized = ($link -replace '\s', '')
+          try {
+            $bytes = [Convert]::FromBase64String($normalized)
+          } catch {
+            Write-Error "WIN_CSC_LINK is not valid Base64 (or contains extra characters). Re-copy the full .pfx.b64 content."
+            exit 1
+          }
+
+          $tmpPfx = Join-Path $env:RUNNER_TEMP 'codesign-cert.pfx'
+          [IO.File]::WriteAllBytes($tmpPfx, $bytes)
+
+          try {
+            $secure = ConvertTo-SecureString -String $pass -AsPlainText -Force
+            Get-PfxData -FilePath $tmpPfx -Password $secure | Out-Null
+            Write-Output "PFX/password pair validated successfully."
+          } catch {
+            Write-Error "WIN_CSC_KEY_PASSWORD does not match WIN_CSC_LINK certificate. Update both secrets from the same generated PFX."
+            exit 1
+          }
+
       - name: Package Windows .exe
         run: cd apps/desktop && npx electron-builder --win --publish never
         env:
