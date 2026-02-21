@@ -27,6 +27,32 @@ enum BotType {
   TELEGRAM
 }
 
+enum ObservabilityScope {
+  VIEW_DASHBOARDS
+  VIEW_ERRORS
+  MANAGE_ALERTS
+  RECEIVE_TELEGRAM_ALERTS
+  MANAGE_INTEGRATIONS
+}
+
+enum ObservabilityInviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+enum ObservabilityAuditAction {
+  INVITE_CREATED
+  INVITE_ACCEPTED
+  INVITE_REVOKED
+  ACCESS_GRANTED
+  ACCESS_REVOKED
+  TELEGRAM_CHAT_LINKED
+  TELEGRAM_CHAT_UNLINKED
+  SCOPES_UPDATED
+}
+
 // Models
 
 model User {
@@ -45,6 +71,12 @@ model User {
   memories     AIMemory[]
   ownedTeams   Team[]           @relation("TeamOwner")
   teamMembers  TeamMember[]
+  observabilityAccess         ObservabilityAccess?
+  observabilityInvitesCreated ObservabilityInvite[]   @relation("ObservabilityInviteCreator")
+  observabilityInvitesAccepted ObservabilityInvite[]  @relation("ObservabilityInviteAcceptor")
+  observabilityAccessGrants   ObservabilityAccess[]   @relation("ObservabilityAccessGranter")
+  observabilityAuditActor     ObservabilityAuditLog[] @relation("ObservabilityAuditActor")
+  observabilityAuditSubject   ObservabilityAuditLog[] @relation("ObservabilityAuditSubject")
 }
 
 model License {
@@ -203,4 +235,70 @@ model GraphCommand {
   
   @@index([graphId])
   @@index([timestamp])
+}
+
+model ObservabilityInvite {
+  id             String                    @id @default(uuid())
+  tokenHash      String                    @unique
+  status         ObservabilityInviteStatus @default(PENDING)
+  invitedUserId  String?
+  invitedUser    User?                     @relation("ObservabilityInviteAcceptor", fields: [invitedUserId], references: [id], onDelete: SetNull)
+  invitedUsername String?
+  invitedById    String
+  invitedBy      User                      @relation("ObservabilityInviteCreator", fields: [invitedById], references: [id], onDelete: Cascade)
+  scopes         ObservabilityScope[]
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  access         ObservabilityAccess?
+  auditLogs      ObservabilityAuditLog[]
+
+  @@index([status])
+  @@index([invitedUserId])
+  @@index([expiresAt])
+}
+
+model ObservabilityAccess {
+  id             String               @id @default(uuid())
+  userId         String               @unique
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grantedById    String
+  grantedBy      User                 @relation("ObservabilityAccessGranter", fields: [grantedById], references: [id], onDelete: Cascade)
+  inviteId       String?              @unique
+  invite         ObservabilityInvite? @relation(fields: [inviteId], references: [id], onDelete: SetNull)
+  scopes         ObservabilityScope[]
+  telegramChatId String?
+  isActive       Boolean              @default(true)
+  expiresAt      DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  auditLogs      ObservabilityAuditLog[]
+
+  @@index([isActive])
+  @@index([telegramChatId])
+  @@index([expiresAt])
+}
+
+model ObservabilityAuditLog {
+  id            String                  @id @default(uuid())
+  action        ObservabilityAuditAction
+  actorUserId   String?
+  actorUser     User?                   @relation("ObservabilityAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  subjectUserId String?
+  subjectUser   User?                   @relation("ObservabilityAuditSubject", fields: [subjectUserId], references: [id], onDelete: SetNull)
+  accessId      String?
+  access        ObservabilityAccess?    @relation(fields: [accessId], references: [id], onDelete: SetNull)
+  inviteId      String?
+  invite        ObservabilityInvite?    @relation(fields: [inviteId], references: [id], onDelete: SetNull)
+  details       Json?
+  createdAt     DateTime                @default(now())
+
+  @@index([action])
+  @@index([createdAt])
+  @@index([actorUserId])
+  @@index([subjectUserId])
 }
