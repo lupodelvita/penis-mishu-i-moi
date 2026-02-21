@@ -1,0 +1,17 @@
+{
+  "version": "v1.0.2",
+  "files": {
+    "windows": [
+      "NodeWeaver-Setup.exe",
+      "NodeWeaver-Portable.exe",
+      "NodeWeaver-1.0.0.exe"
+    ],
+    "mac": [
+      "NodeWeaver-1.0.0-arm64.dmg",
+      "NodeWeaver-1.0.0-arm64-mac.zip"
+    ],
+    "linux": [
+      "NodeWeaver-1.0.0.AppImage"
+    ]
+  }
+}
