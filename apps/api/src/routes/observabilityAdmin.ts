@@ -275,6 +275,15 @@ router.get('/access', async (_req, res, next) => {
   }
 });
 
+router.get('/recipients/telegram', async (_req, res, next) => {
+  try {
+    const recipients = await observabilityAccessService.getTelegramRecipients('RECEIVE_TELEGRAM_ALERTS');
+    res.json({ success: true, data: recipients });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.patch('/access/:accessId', async (req: any, res, next) => {
   try {
     const actorUserId = req.user?.userId as string;

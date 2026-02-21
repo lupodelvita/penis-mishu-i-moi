@@ -19,6 +19,7 @@ import adminRoutes from './routes/admin';
 import reportRoutes from './routes/reports';
 import uploadRoutes from './routes/upload';
 import teamsRoutes from './routes/teams';
+import observabilityRoutes from './routes/observability';
 import { botManager } from './services/BotManager';
 import { collaborationService } from './services/CollaborationService';
 import { errorHandler } from './middleware/error';
@@ -62,6 +63,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/teams', teamsRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/observability', observabilityRoutes);
 
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));
