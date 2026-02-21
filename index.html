@@ -1158,16 +1158,25 @@
             return {
                 windows: [
                     'NodeWeaver-Setup.exe',
+                    'NodeWeaver-Setup',
+                    'NodeWeaver Setup.exe',
+                    'NodeWeaver Setup',
                     `NodeWeaver-Setup-${plain}.exe`,
-                    `NodeWeaver Setup ${plain}.exe`
+                    `NodeWeaver-Setup-${plain}`,
+                    `NodeWeaver Setup ${plain}.exe`,
+                    `NodeWeaver Setup ${plain}`
                 ],
                 mac: [
                     'NodeWeaver.dmg',
-                    `NodeWeaver-${plain}.dmg`
+                    'NodeWeaver',
+                    `NodeWeaver-${plain}.dmg`,
+                    `NodeWeaver ${plain}.dmg`
                 ],
                 linux: [
                     'NodeWeaver.AppImage',
-                    `NodeWeaver-${plain}.AppImage`
+                    'NodeWeaver',
+                    `NodeWeaver-${plain}.AppImage`,
+                    `NodeWeaver ${plain}.AppImage`
                 ]
             };
         };
@@ -1183,8 +1192,27 @@
             return Object.keys(out).length ? out : null;
         };
 
+        const addReleaseUrls = (filesMap, version) => {
+            const tag = version || 'latest';
+            const plain = (version || '').replace(/^v/, '') || 'latest';
+            const baseTag = `https://github.com/lupodelvita/penis-mishu-i-moi/releases/download/${tag}/`;
+            const baseLatest = 'https://github.com/lupodelvita/penis-mishu-i-moi/releases/latest/download/';
+            const out = {};
+            ['windows', 'mac', 'linux'].forEach((key) => {
+                const items = filesMap[key] || [];
+                out[key] = [];
+                items.forEach((name) => {
+                    const encoded = encodeURIComponent(name);
+                    out[key].push(name);
+                    out[key].push(`${baseTag}${encoded}`);
+                    out[key].push(`${baseLatest}${encoded}`);
+                });
+            });
+            return out;
+        };
+
         let appVersion = DEFAULT_VERSION;
-        let platformFiles = buildPlatformFiles(appVersion);
+        let platformFiles = addReleaseUrls(buildPlatformFiles(appVersion), appVersion);
 
         function detectPlatform() {
             const ua = navigator.userAgent;
@@ -1295,15 +1323,16 @@
                     if (data.version && typeof data.version === 'string') {
                         appVersion = data.version.trim();
                         const remoteFiles = normalizeFiles(data.files);
-                        platformFiles = remoteFiles ? remoteFiles : buildPlatformFiles(appVersion);
+                        const baseFiles = remoteFiles ? remoteFiles : buildPlatformFiles(appVersion);
+                        platformFiles = addReleaseUrls(baseFiles, appVersion);
                     } else {
-                        platformFiles = buildPlatformFiles(appVersion);
+                        platformFiles = addReleaseUrls(buildPlatformFiles(appVersion), appVersion);
                     }
                 } else {
-                    platformFiles = buildPlatformFiles(appVersion);
+                    platformFiles = addReleaseUrls(buildPlatformFiles(appVersion), appVersion);
                 }
             } catch {
-                platformFiles = buildPlatformFiles(appVersion);
+                platformFiles = addReleaseUrls(buildPlatformFiles(appVersion), appVersion);
             }
 
             renderDownloadUI(detectedPlatform);
