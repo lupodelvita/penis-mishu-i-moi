@@ -111,8 +111,129 @@ jobs:
             apps/desktop/release/*.exe
             apps/desktop/release/*.exe.blockmap
 
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install shared-types dependencies
+        run: cd packages/shared-types && npm ci
+
+      - name: Build shared-types
+        run: cd packages/shared-types && npm run build
+        continue-on-error: true
+
+      - name: Install web dependencies
+        run: cd apps/web && npm ci
+
+      - name: Build web (Next.js export)
+        run: cd apps/web && npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000
+
+      - name: Prepare exported web for Electron
+        run: |
+          cd apps/web
+          rm -rf ../desktop/renderer
+          mkdir -p ../desktop/renderer
+          cp -R out/. ../desktop/renderer/
+
+      - name: Install desktop dependencies
+        run: cd apps/desktop && npm ci
+
+      - name: Build desktop main process
+        run: cd apps/desktop && npm run build:main
+
+      - name: Package macOS app
+        run: cd apps/desktop && npx electron-builder --mac --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/latest-mac.yml
+
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install shared-types dependencies
+        run: cd packages/shared-types && npm ci
+
+      - name: Build shared-types
+        run: cd packages/shared-types && npm run build
+        continue-on-error: true
+
+      - name: Install web dependencies
+        run: cd apps/web && npm ci
+
+      - name: Build web (Next.js export)
+        run: cd apps/web && npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000
+
+      - name: Prepare exported web for Electron
+        run: |
+          cd apps/web
+          rm -rf ../desktop/renderer
+          mkdir -p ../desktop/renderer
+          cp -R out/. ../desktop/renderer/
+
+      - name: Install desktop dependencies
+        run: cd apps/desktop && npm ci
+
+      - name: Build desktop main process
+        run: cd apps/desktop && npm run build:main
+
+      - name: Package Linux app
+        run: cd apps/desktop && npx electron-builder --linux --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: |
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+            apps/desktop/release/latest-linux.yml
+
   create-release:
-    needs: build-windows
+    needs:
+      - build-windows
+      - build-macos
+      - build-linux
     runs-on: ubuntu-latest
 
     steps:
@@ -120,7 +241,19 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: windows-build
-          path: release-files
+          path: release-files/windows
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-build
+          path: release-files/macos
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-build
+          path: release-files/linux
 
       - name: List release files
         run: find release-files -type f
@@ -133,7 +266,9 @@ jobs:
             ## NodeWeaver ${{ github.ref_name }}
             
             ### 📥 Скачать
-            Скачайте `.exe` файл ниже для установки на Windows.
+            - Windows: `NodeWeaver-Setup.exe` / `NodeWeaver-Portable.exe`
+            - macOS: `.dmg` / `.zip`
+            - Linux: `.AppImage` / `.deb`
             
             ### 📋 Изменения
             Смотрите коммиты для деталей.
