@@ -418,98 +418,9 @@
             display: flex;
         }
 
-        /* Platform buttons */
-        .platform-buttons {
-            display: flex;
-            gap: 16px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 8px;
-        }
-
-        .btn-platform {
-            position: relative;
-            padding: 20px 32px;
-            font-size: 1rem;
-            min-width: 160px;
-            background: var(--bg-card);
-            border: 2px solid var(--border);
-            color: var(--text-primary);
-            font-weight: 600;
-            backdrop-filter: blur(10px);
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .btn-platform::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(34, 211, 238, 0.05));
-            opacity: 0;
-            transition: opacity 0.4s ease;
-            border-radius: var(--radius-md);
-        }
-
-        .btn-platform:hover {
-            border-color: var(--accent);
-            transform: translateY(-4px);
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15),
-                        0 0 0 1px var(--accent) inset;
-        }
-
-        .btn-platform:hover::before {
-            opacity: 1;
-        }
-
-        .btn-platform.recommended {
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(99, 102, 241, 0.12));
-            border-color: var(--accent);
-            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.25),
-                        0 0 0 1px rgba(99, 102, 241, 0.3) inset;
-            padding-right: 120px; /* Space for badge */
-        }
-
-        .btn-platform.recommended:hover {
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(99, 102, 241, 0.16));
-            border-color: var(--accent-light);
-            box-shadow: 0 12px 40px rgba(99, 102, 241, 0.35),
-                        0 0 0 2px rgba(99, 102, 241, 0.4) inset;
-        }
-
-        .btn-platform.recommended::after {
-            content: '✓ Рекомендовано';
-            position: absolute;
-            top: 6px;
-            right: 8px;
-            background: linear-gradient(135deg, var(--emerald), #10b981);
-            color: white;
-            font-size: 0.65rem;
-            padding: 3px 8px;
-            border-radius: 8px;
-            font-weight: 700;
-            box-shadow: 0 2px 10px rgba(52, 211, 153, 0.4);
-            animation: badge-glow 2s ease-in-out infinite;
-            letter-spacing: 0.02em;
-        }
-
-        @keyframes badge-glow {
-            0%, 100% { 
-                box-shadow: 0 4px 15px rgba(52, 211, 153, 0.4);
-                transform: scale(1);
-            }
-            50% { 
-                box-shadow: 0 4px 25px rgba(52, 211, 153, 0.6);
-                transform: scale(1.05);
-            }
-        }
-
-        /* Download progress */
+        /* Download status */
         .download-status {
-            margin-top: 16px;
+            margin-top: 8px;
             font-size: 0.85rem;
             color: var(--text-muted);
             height: 20px;
@@ -726,48 +637,140 @@
             line-height: 1.5;
         }
 
-        /* ===== Requirements ===== */
-        .requirements {
+        /* ===== Integrations ===== */
+        .integrations {
             padding: 80px 0;
         }
 
-        .req-grid {
+        .integrations-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 20px;
-            max-width: 900px;
+            max-width: 1000px;
             margin: 0 auto;
         }
 
-        .req-item {
+        .integration-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: var(--radius-md);
             padding: 28px;
-            text-align: center;
+            display: flex;
+            align-items: center;
+            gap: 16px;
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
         }
 
-        .req-item:hover {
+        .integration-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--cyan));
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .integration-card:hover {
             border-color: var(--border-hover);
             transform: translateY(-4px);
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
         }
 
-        .req-icon {
-            font-size: 2rem;
-            margin-bottom: 12px;
+        .integration-card:hover::after { opacity: 1; }
+
+        .integration-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
         }
 
-        .req-item h4 {
+        .integration-card h4 {
             color: var(--text-primary);
             font-weight: 700;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
+            font-size: 0.95rem;
         }
 
-        .req-item p {
+        .integration-card p {
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            font-size: 0.82rem;
+            line-height: 1.5;
+        }
+
+        /* ===== Smart download button ===== */
+        .smart-download {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-download-main {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 18px 40px;
+            border-radius: var(--radius-md);
+            font-size: 1.05rem;
+            font-weight: 700;
+            text-decoration: none;
+            background: linear-gradient(135deg, var(--accent), #7c3aed);
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 25px rgba(99, 102, 241, 0.3),
+                        0 0 0 1px rgba(99, 102, 241, 0.1) inset;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-download-main::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-download-main:hover::before { left: 100%; }
+
+        .btn-download-main:hover {
+            box-shadow: 0 8px 40px rgba(99, 102, 241, 0.45),
+                        0 0 0 1px rgba(99, 102, 241, 0.2) inset;
+            transform: translateY(-3px);
+        }
+
+        .other-platforms {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        .other-platforms a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+            font-weight: 500;
+        }
+
+        .other-platforms a:hover {
+            color: var(--accent-light);
+        }
+
+        .other-platforms .sep {
+            color: var(--border);
         }
 
         /* ===== CTA Section ===== */
@@ -841,6 +844,7 @@
             .features-grid { grid-template-columns: repeat(2, 1fr); }
             .steps { grid-template-columns: repeat(2, 1fr); }
             .steps::before { display: none; }
+            .integrations-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
         @media (max-width: 768px) {
@@ -853,18 +857,8 @@
             .cta-box { padding: 40px 24px; }
             .cta-box h2 { font-size: 1.6rem; }
             
-            /* Platform buttons on mobile */
-            .platform-buttons { 
-                flex-direction: column; 
-                gap: 12px;
-                width: 100%;
-                max-width: 280px;
-                margin: 0 auto;
-            }
-            .btn-platform { 
-                width: 100%;
-                min-width: auto;
-            }
+            .integrations-grid { grid-template-columns: 1fr; }
+            .other-platforms { flex-direction: column; gap: 8px; }
             
             .nav-links { display: none; }
             .mobile-toggle { display: block; }
@@ -903,7 +897,7 @@
             <div class="nav-links">
                 <a href="#features">Возможности</a>
                 <a href="#how">Как работает</a>
-                <a href="#requirements">Требования</a>
+                <a href="#integrations">Интеграции</a>
                 <a href="#download" class="nav-cta">Скачать</a>
             </div>
         </div>
@@ -919,29 +913,28 @@
             <h1 class="reveal-blur" style="transition-delay: 0.25s">Визуализируй<br>скрытые связи</h1>
             <p class="hero-subtitle reveal-blur" style="transition-delay: 0.4s">NodeWeaver — мощный инструмент OSINT визуализации. Стройте графы, запускайте трансформы, раскрывайте паттерны в данных с AI-ассистентом.</p>
 
-            <div class="hero-buttons reveal-blur" style="transition-delay: 0.55s">
+            <div class="smart-download reveal-blur" style="transition-delay: 0.55s" id="download">
+                <button class="btn-download-main" id="smart-download-btn" onclick="downloadApp(event, detectPlatform())">
+                    <span>⬇</span>
+                    <span id="smart-download-label">Скачать для Windows</span>
+                </button>
+                <div class="other-platforms" id="other-platforms">
+                    <span>Также:</span>
+                    <a href="#" onclick="downloadApp(event, 'mac')">macOS</a>
+                    <span class="sep">·</span>
+                    <a href="#" onclick="downloadApp(event, 'linux')">Linux</a>
+                </div>
+                <div class="download-status" id="download-status"></div>
+                <div class="version-info" style="margin-top: 4px;">
+                    Версия: <span id="current-version">v1.0.0</span>
+                </div>
+            </div>
+
+            <div class="reveal-blur" style="margin-top: 24px; transition-delay: 0.7s">
                 <a href="#features" class="btn btn-secondary">
                     <span class="btn-icon">✦</span>
                     Узнать больше
                 </a>
-            </div>
-
-            <div class="platform-buttons reveal-blur" style="transition-delay: 0.65s" id="download">
-                <a href="#" class="btn btn-platform" id="download-windows" onclick="downloadApp(event, 'windows')">
-                    Windows
-                </a>
-                <a href="#" class="btn btn-platform" id="download-mac" onclick="downloadApp(event, 'mac')">
-                    macOS
-                </a>
-                <a href="#" class="btn btn-platform" id="download-linux" onclick="downloadApp(event, 'linux')">
-                    Linux
-                </a>
-            </div>
-
-            <div class="download-status" id="download-status"></div>
-
-            <div class="version-info reveal-blur" style="transition-delay: 0.75s">
-                Версия: <span id="current-version">v1.0.0</span> · <span id="platform-text">Определяем платформу...</span>
             </div>
         </section>
 
@@ -1015,8 +1008,8 @@
             <div class="steps">
                 <div class="step reveal-child" style="transition-delay: 0.1s">
                     <div class="step-number">1</div>
-                    <h4>Скачай</h4>
-                    <p>Установи NodeWeaver на свой компьютер за 30 секунд.</p>
+                    <h4>Установи</h4>
+                    <p>Скачай NodeWeaver и зарегистрируй аккаунт за минуту.</p>
                 </div>
                 <div class="step reveal-child" style="transition-delay: 0.25s">
                     <div class="step-number">2</div>
@@ -1036,27 +1029,55 @@
             </div>
         </section>
 
-        <!-- Requirements -->
-        <section class="requirements" id="requirements">
+        <!-- Integrations -->
+        <section class="integrations" id="integrations">
             <div class="section-header">
-                <div class="section-label reveal-blur">✦ Системные требования</div>
-                <h2 class="section-title reveal-blur" style="transition-delay: 0.1s">Запуск без проблем</h2>
+                <div class="section-label reveal-blur">✦ Интеграции</div>
+                <h2 class="section-title reveal-blur" style="transition-delay: 0.1s">Подключай источники<br>данных</h2>
+                <p class="section-desc reveal-blur" style="transition-delay: 0.2s">NodeWeaver работает с ведущими OSINT-сервисами и инструментами сетевой разведки.</p>
             </div>
-            <div class="req-grid">
-                <div class="req-item reveal-scale" style="transition-delay: 0.1s">
-                    <div class="req-icon">🖥️</div>
-                    <h4>ОС</h4>
-                    <p>Windows 10/11, macOS 10.13+, Linux (x64)</p>
+            <div class="integrations-grid">
+                <div class="integration-card reveal-child" style="transition-delay: 0.1s">
+                    <div class="integration-icon fi-rose">🔍</div>
+                    <div>
+                        <h4>Shodan</h4>
+                        <p>Поиск устройств и сервисов, анализ хостов и открытых портов</p>
+                    </div>
                 </div>
-                <div class="req-item reveal-scale" style="transition-delay: 0.25s">
-                    <div class="req-icon">⚡</div>
-                    <h4>ОЗУ</h4>
-                    <p>4 GB минимум</p>
+                <div class="integration-card reveal-child" style="transition-delay: 0.2s">
+                    <div class="integration-icon fi-emerald">🛡️</div>
+                    <div>
+                        <h4>VirusTotal</h4>
+                        <p>Проверка доменов, IP и файлов на вредоносность</p>
+                    </div>
                 </div>
-                <div class="req-item reveal-scale" style="transition-delay: 0.4s">
-                    <div class="req-icon">💾</div>
-                    <h4>Диск</h4>
-                    <p>500 MB свободного места</p>
+                <div class="integration-card reveal-child" style="transition-delay: 0.3s">
+                    <div class="integration-icon fi-amber">🔓</div>
+                    <div>
+                        <h4>Have I Been Pwned</h4>
+                        <p>Поиск утечек email-адресов и аккаунтов</p>
+                    </div>
+                </div>
+                <div class="integration-card reveal-child" style="transition-delay: 0.4s">
+                    <div class="integration-icon fi-cyan">📡</div>
+                    <div>
+                        <h4>Nmap</h4>
+                        <p>Сканирование портов, обнаружение сервисов и ОС</p>
+                    </div>
+                </div>
+                <div class="integration-card reveal-child" style="transition-delay: 0.5s">
+                    <div class="integration-icon fi-purple">📋</div>
+                    <div>
+                        <h4>WHOIS & DNS</h4>
+                        <p>Информация о доменах, DNS-записи, регистрационные данные</p>
+                    </div>
+                </div>
+                <div class="integration-card reveal-child" style="transition-delay: 0.6s">
+                    <div class="integration-icon fi-blue">🤖</div>
+                    <div>
+                        <h4>AI анализ</h4>
+                        <p>GPT-powered анализ данных, генерация выводов и отчётов</p>
+                    </div>
                 </div>
             </div>
         </section>
@@ -1064,18 +1085,13 @@
         <!-- CTA -->
         <section class="cta-section">
             <div class="cta-box">
-                <h2 class="reveal-blur">Готов начать?</h2>
-                <p class="reveal-blur" style="transition-delay: 0.15s">Скачай NodeWeaver бесплатно и начни OSINT исследование прямо сейчас.</p>
-                <div class="platform-buttons reveal-blur" style="transition-delay: 0.3s">
-                    <a href="#" class="btn btn-platform" onclick="downloadApp(event, 'windows')">
-                        Windows
-                    </a>
-                    <a href="#" class="btn btn-platform" onclick="downloadApp(event, 'mac')">
-                        macOS
-                    </a>
-                    <a href="#" class="btn btn-platform" onclick="downloadApp(event, 'linux')">
-                        Linux
-                    </a>
+                <h2 class="reveal-blur">Готов раскрыть связи?</h2>
+                <p class="reveal-blur" style="transition-delay: 0.15s">Начни OSINT исследование прямо сейчас — бесплатно и без ограничений.</p>
+                <div class="reveal-blur" style="transition-delay: 0.3s; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+                    <button class="btn-download-main" onclick="downloadApp(event, detectPlatform())">
+                        <span>⬇</span>
+                        Скачать NodeWeaver
+                    </button>
                 </div>
             </div>
         </section>
@@ -1231,29 +1247,25 @@
             }, 5000);
         }
 
-        // Highlight recommended platform on page load
+        // Smart platform-aware download button
         window.addEventListener('DOMContentLoaded', () => {
             const detectedPlatform = detectPlatform();
-            const platformNames = {
-                windows: 'Windows 10/11 x64',
-                mac: 'macOS 10.13+ (Intel/Apple Silicon)',
-                linux: 'Linux x64 (AppImage)'
+            const platformLabels = {
+                windows: 'Скачать для Windows',
+                mac: 'Скачать для macOS',
+                linux: 'Скачать для Linux'
             };
             
-            // Update platform text
-            document.getElementById('platform-text').textContent = platformNames[detectedPlatform];
-            
-            // Mark recommended buttons
-            const btnWindows = document.getElementById('download-windows');
-            const btnMac = document.getElementById('download-mac');
-            const btnLinux = document.getElementById('download-linux');
-            
-            if (detectedPlatform === 'windows' && btnWindows) {
-                btnWindows.classList.add('recommended');
-            } else if (detectedPlatform === 'mac' && btnMac) {
-                btnMac.classList.add('recommended');
-            } else if (detectedPlatform === 'linux' && btnLinux) {
-                btnLinux.classList.add('recommended');
+            const label = document.getElementById('smart-download-label');
+            if (label) label.textContent = platformLabels[detectedPlatform];
+
+            // Show other platforms as links (hide current)
+            const otherPlatforms = document.getElementById('other-platforms');
+            if (otherPlatforms) {
+                const others = ['windows', 'mac', 'linux'].filter(p => p !== detectedPlatform);
+                const labels = { windows: 'Windows', mac: 'macOS', linux: 'Linux' };
+                otherPlatforms.innerHTML = '<span>Также:</span> ' + 
+                    others.map(p => `<a href="#" onclick="downloadApp(event, '${p}')">${labels[p]}</a>`).join(' <span class="sep">·</span> ');
             }
         });
 
