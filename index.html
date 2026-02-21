@@ -1150,9 +1150,9 @@
 
         // ===== Platform detection & download =====
         const PLATFORM_FILES = {
-            windows: 'NodeWeaver-Setup.exe',
-            mac: 'NodeWeaver.dmg',
-            linux: 'NodeWeaver.AppImage'
+            windows: ['NodeWeaver-Setup.exe', 'NodeWeaver Setup 1.0.0.exe'],
+            mac: ['NodeWeaver.dmg', 'NodeWeaver-1.0.0.dmg'],
+            linux: ['NodeWeaver.AppImage', 'NodeWeaver-1.0.0.AppImage']
         };
 
         function detectPlatform() {
@@ -1169,14 +1169,49 @@
             return 'windows'; // default
         }
 
-        function downloadApp(e, platform) {
+        async function resolveExistingFile(platform) {
+            const candidates = PLATFORM_FILES[platform] || [];
+
+            for (const fileName of candidates) {
+                try {
+                    const response = await fetch(`./${encodeURIComponent(fileName)}`, {
+                        method: 'HEAD',
+                        cache: 'no-store',
+                    });
+
+                    if (!response.ok) {
+                        continue;
+                    }
+
+                    const contentType = (response.headers.get('content-type') || '').toLowerCase();
+                    if (contentType.includes('text/html')) {
+                        continue;
+                    }
+
+                    return fileName;
+                } catch {
+                    // try next candidate
+                }
+            }
+
+            return null;
+        }
+
+        async function downloadApp(e, platform) {
             e.preventDefault();
             const statusEl = document.getElementById('download-status');
-            const fileName = PLATFORM_FILES[platform];
-            const fileUrl = `./${fileName}`;
-            
+
             statusEl.textContent = 'Начинаю скачивание...';
             statusEl.style.color = 'var(--accent-light)';
+
+            const fileName = await resolveExistingFile(platform);
+            if (!fileName) {
+                statusEl.textContent = 'Файл для этой платформы пока недоступен. Сборка ещё не загружена на сайт.';
+                statusEl.style.color = '#f87171';
+                return;
+            }
+
+            const fileUrl = `./${encodeURIComponent(fileName)}`;
 
             const link = document.createElement('a');
             link.href = fileUrl;
