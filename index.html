@@ -1320,47 +1320,38 @@
 
             const fallbackBuild = () => addReleaseUrls(buildPlatformFiles(appVersion), appVersion);
 
-            // 1) Try GitHub Releases API (no token)
-            try {
-                const gh = await fetch('https://api.github.com/repos/lupodelvita/penis-mishu-i-moi/releases/latest', { cache: 'no-store' });
-                if (gh.ok) {
-                    const rel = await gh.json();
-                    if (rel?.tag_name) appVersion = rel.tag_name.trim();
-                    const assets = filesFromGitHubAssets(rel?.assets);
-                    const defaults = fallbackBuild();
-                    platformFiles = defaults;
-                    if (assets) {
-                        ['windows', 'mac', 'linux'].forEach((key) => {
-                            if (assets[key]?.length) {
-                                platformFiles[key] = assets[key];
-                            }
-                        });
+            // 1) Try proxy API (set window.NODEWEAVER_RELEASE_API to your Worker URL)
+            const releaseApi = window.NODEWEAVER_RELEASE_API || null;
+            if (releaseApi) {
+                try {
+                    const gh = await fetch(releaseApi, {
+                        cache: 'no-store',
+                        headers: { 'Accept': 'application/json' },
+                    });
+                    if (gh.ok) {
+                        const rel = await gh.json();
+                        if (rel?.tag_name) appVersion = rel.tag_name.trim();
+                        const assets = filesFromGitHubAssets(rel?.assets || rel?.files);
+                        const defaults = fallbackBuild();
+                        platformFiles = defaults;
+                        if (assets) {
+                            ['windows', 'mac', 'linux'].forEach((key) => {
+                                if (assets[key]?.length) {
+                                    platformFiles[key] = assets[key];
+                                }
+                            });
+                        }
+                    } else {
+                        platformFiles = fallbackBuild();
                     }
-                } else {
+                } catch {
                     platformFiles = fallbackBuild();
                 }
-            } catch {
+            } else {
                 platformFiles = fallbackBuild();
             }
 
-            // 2) Optional: local latest.json as secondary fallback
-            if (!platformFiles?.windows?.length && !platformFiles?.mac?.length && !platformFiles?.linux?.length) {
-                try {
-                    const res = await fetch('./latest.json', { cache: 'no-store' });
-                    if (res.ok) {
-                        const data = await res.json();
-                        if (data.version && typeof data.version === 'string') {
-                            appVersion = data.version.trim();
-                        }
-                        const remoteFiles = normalizeFiles(data.files);
-                        platformFiles = remoteFiles ? remoteFiles : fallbackBuild();
-                    }
-                } catch {
-                    // ignore
-                }
-            }
-
-            // 3) If still empty, use defaults with release URLs
+            // 2) If still empty, use defaults with release URLs
             if (!platformFiles?.windows?.length && !platformFiles?.mac?.length && !platformFiles?.linux?.length) {
                 platformFiles = fallbackBuild();
             }
