@@ -277,10 +277,12 @@ jobs:
       - name: List release files
         run: find release-files -type f
 
-      - name: Delete existing release (if any)
-        run: gh release delete ${{ github.ref_name }} --yes 2>/dev/null || true
+      - name: Delete existing release and tag (if any)
+        run: |
+          gh release delete ${{ github.ref_name }} --yes --cleanup-tag || true
+          sleep 3
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
