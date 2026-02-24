@@ -182,11 +182,21 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
+      - name: Normalize macOS artifact names
+        run: |
+          releaseDir="apps/desktop/release"
+          dmg=$(find "$releaseDir" -name "*.dmg" | head -1)
+          if [ -n "$dmg" ]; then cp "$dmg" "$releaseDir/NodeWeaver.dmg"; fi
+          zip=$(find "$releaseDir" -name "*-mac.zip" -o -name "*arm64*.zip" | head -1)
+          if [ -n "$zip" ]; then cp "$zip" "$releaseDir/NodeWeaver-mac.zip"; fi
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
           path: |
+            apps/desktop/release/NodeWeaver.dmg
+            apps/desktop/release/NodeWeaver-mac.zip
             apps/desktop/release/*.dmg
             apps/desktop/release/*.zip
             apps/desktop/release/latest-mac.yml
@@ -240,11 +250,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Normalize Linux artifact names
+        run: |
+          releaseDir="apps/desktop/release"
+          appimage=$(find "$releaseDir" -name "*.AppImage" | head -1)
+          if [ -n "$appimage" ]; then cp "$appimage" "$releaseDir/NodeWeaver.AppImage"; fi
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-build
           path: |
+            apps/desktop/release/NodeWeaver.AppImage
             apps/desktop/release/*.AppImage
             apps/desktop/release/latest-linux.yml
 
