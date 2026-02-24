@@ -1,10 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     output: 'export',
-    // In production (Electron), all assets are served via the app:// custom protocol
-    // so that file:// absolute paths don't break on the end-user's machine.
-    // In dev the Next.js dev server serves assets normally, so assetPrefix stays empty.
-    assetPrefix: process.env.NODE_ENV === 'production' ? 'app://renderer' : '',
     trailingSlash: true,
     typescript: {
         ignoreBuildErrors: true,
