@@ -131,8 +131,6 @@ jobs:
             apps/desktop/release/NodeWeaver-Setup.exe
             apps/desktop/release/NodeWeaver-Portable.exe
             apps/desktop/release/NodeWeaver-Setup.exe.blockmap
-            apps/desktop/release/*.exe
-            apps/desktop/release/*.exe.blockmap
 
   build-macos:
     runs-on: macos-latest
@@ -278,6 +276,11 @@ jobs:
 
       - name: List release files
         run: find release-files -type f
+
+      - name: Delete existing release (if any)
+        run: gh release delete ${{ github.ref_name }} --yes 2>/dev/null || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
