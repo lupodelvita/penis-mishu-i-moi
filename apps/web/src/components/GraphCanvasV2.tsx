@@ -525,7 +525,6 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
         sendCommand({
           type: 'add_entity',
           payload: newEntity,
-          userId: 'local',
         });
       }
       

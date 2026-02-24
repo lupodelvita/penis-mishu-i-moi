@@ -1,18 +1,26 @@
 import cytoscape from 'cytoscape';
 
 let extensionsRegistered = false;
+let pendingRegistration: Promise<void> | null = null;
 const EXTENSION_MARK = '__nodeHtmlLabelRegistered';
 
 export const registerCytoscapeExtensions = async () => {
   if (extensionsRegistered) return;
 
+  // Prevent parallel registrations racing before flag is set
+  if (pendingRegistration) {
+    return pendingRegistration;
+  }
+
   // Only run on client — plugin may access DOM / custom elements
   if (typeof window === 'undefined') return;
 
-  try {
+  pendingRegistration = (async () => {
+    try {
     const globalWindow = window as Window & { [EXTENSION_MARK]?: boolean };
     if (globalWindow[EXTENSION_MARK]) {
       extensionsRegistered = true;
+        pendingRegistration = null;
       return;
     }
 
@@ -22,6 +30,7 @@ export const registerCytoscapeExtensions = async () => {
       if (coreProto && coreProto.nodeHtmlLabel) {
         extensionsRegistered = true;
         globalWindow[EXTENSION_MARK] = true;
+          pendingRegistration = null;
         return;
       }
 
@@ -44,7 +53,12 @@ export const registerCytoscapeExtensions = async () => {
     }
     extensionsRegistered = true;
     globalWindow[EXTENSION_MARK] = true;
-  } catch (error) {
-    // Extension registration error silently handled
-  }
+    } catch (error) {
+      // Extension registration error silently handled
+    } finally {
+      pendingRegistration = null;
+    }
+  })();
+
+  return pendingRegistration;
 };

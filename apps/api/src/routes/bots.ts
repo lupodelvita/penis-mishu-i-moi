@@ -22,18 +22,37 @@ router.get('/', authenticateToken, async (req, res, next) => {
 router.post('/', authenticateToken, requireBotLimit, async (req, res, next) => {
     try {
         const userId = (req as AuthRequest).user!.userId;
-        const { name, type, token, autoStart, settings } = req.body;
+           const { name, type, token, autoStart, settings } = req.body;
 
-        if (!name || !token) {
-             res.status(400).json({ success: false, error: 'Name and Token required' });
-             return;
-        }
+           if (!name || !token || !type) {
+               res.status(400).json({ success: false, error: 'Name, type и token обязательны' });
+               return;
+           }
+
+           if (!Object.values(BotType).includes(type)) {
+               res.status(400).json({ success: false, error: 'Некорректный тип бота (DISCORD или TELEGRAM)' });
+               return;
+           }
+
+           // Check for duplicate token
+           const existingToken = await prisma.botConfig.findFirst({ where: { token } });
+           if (existingToken) {
+               res.status(409).json({ success: false, error: `Бот с таким токеном уже существует (${existingToken.name})` });
+               return;
+           }
+
+           // Check for duplicate name (globally)
+           const existingName = await prisma.botConfig.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } });
+           if (existingName) {
+               res.status(409).json({ success: false, error: `Бот с именем «${existingName.name}» уже существует` });
+               return;
+           }
 
         const newBot = await prisma.botConfig.create({
             data: {
                 userId,
                 name,
-                type: type || BotType.DISCORD,
+                type,
                 token,
                 autoStart: autoStart || false,
                 isActive: true,
@@ -41,9 +60,10 @@ router.post('/', authenticateToken, requireBotLimit, async (req, res, next) => {
             }
         });
 
-        // Try to start immediately
+        // Start in background — do not await so the HTTP response returns immediately
         if (newBot.isActive) {
-            await botManager.startBot(newBot.id, newBot.type, newBot.token, newBot.settings);
+            botManager.startBot(newBot.id, newBot.type, newBot.token, newBot.settings)
+                .catch((err: any) => console.error(`[BotManager] Background start failed for ${newBot.id}:`, err?.message ?? err));
         }
 
         res.json({ success: true, data: newBot });
@@ -97,7 +117,9 @@ router.patch('/:id/toggle', authenticateToken, async (req, res, next) => {
         if (isActive === false) {
             await botManager.stopBot(id);
         } else if (isActive === true && !botManager.getBot(id)) {
-            await botManager.startBot(id, updated.type, updated.token, updated.settings);
+            // Fire in background — eviction + launch takes several seconds
+            botManager.startBot(id, updated.type, updated.token, updated.settings)
+                .catch((err: any) => console.error(`[BotManager] Failed to start bot ${id}:`, err?.message ?? err));
         }
 
         res.json({ success: true, data: updated });

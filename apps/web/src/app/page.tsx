@@ -122,7 +122,7 @@ export default function Home() {
     if (user) {
       const userName = user.username || `User-${Math.floor(Math.random() * 1000)}`;
       const { initializeSocket } = useCollaborationStore.getState();
-      initializeSocket(userName, user.id);
+      initializeSocket(userName, user.id, user.accountCode);
       
       // CRITICAL: Cleanup on unmount to prevent duplicates
       return () => {

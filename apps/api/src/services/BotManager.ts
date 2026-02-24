@@ -2,6 +2,7 @@ import { prisma } from '../lib/prisma';
 import { DiscordBot } from './DiscordBot';
 import { TelegrafBot } from './TelegrafBot';
 import { BotType } from '@prisma/client';
+import { alertDispatchService } from './AlertDispatchService';
 
 class BotManagerService {
   private bots: Map<string, DiscordBot | TelegrafBot> = new Map();
@@ -34,9 +35,41 @@ class BotManagerService {
       try {
           await bot.connect();
           this.bots.set(botId, bot);
+          const statusInfo = bot.getStatus ? bot.getStatus() : undefined;
+          const tag = statusInfo?.tag || statusInfo?.type || '';
+          const label = type === BotType.DISCORD ? 'Discord' : type === BotType.TELEGRAM ? 'Telegram' : 'Bot';
+          console.log(`🤖 ${label} Bot (${botId}) Started${tag ? ` as ${tag}` : ''}`);
+
+          // Notify all Telegram recipients that the bot came online (fire-and-forget)
+          if (type === BotType.TELEGRAM && bot instanceof TelegrafBot) {
+            const botTag = (statusInfo as any)?.tag || botId;
+            const now = new Date().toLocaleString('ru-RU', { timeZone: 'UTC' });
+            const startMsg =
+              `▸ *NODEWEAVER SOC — АГЕНТ АКТИВИРОВАН*\n\n` +
+              `АГЕНТ      : \`${botTag}\`\n` +
+              `СОБЫТИЕ    : MONITORING STARTED\n` +
+              `ВРЕМЯ      : ${now} UTC\n\n` +
+              `Система мониторинга NodeWeaver переведена в активный режим.\n` +
+              `Все инциденты, аномалии и критические события подлежат регистрации и передаче.\n\n` +
+              `Уклонение от мониторинга является основанием для эскалации инцидента.\n\n` +
+              `— _NodeWeaver Security Operations Center_`;
+            alertDispatchService.dispatchTelegramToScope({
+              bot: bot as TelegrafBot,
+              message: startMsg,
+              scope: 'RECEIVE_TELEGRAM_ALERTS',
+              requireAtLeastOneSuccess: false,
+            }).catch((err: any) => {
+              console.warn(`[BotManager] Failed to send startup notification for bot ${botId}:`, err?.message);
+            });
+          }
+
           return bot;
       } catch (error) {
-          console.error(`Failed to start bot ${botId}:`, error);
+          if ((error as any)?.response?.error_code === 409) {
+              console.error(`Failed to start bot ${botId}: Telegram reports another instance is polling (409 conflict). Stop other process or hosting that uses this token.`);
+          } else {
+              console.error(`Failed to start bot ${botId}:`, error);
+          }
           return null;
       }
   }
@@ -44,6 +77,29 @@ class BotManagerService {
   public async stopBot(botId: string) {
       const bot = this.bots.get(botId);
       if (bot) {
+          // Notify all Telegram recipients that the bot is going offline (fire-and-forget)
+          if (bot instanceof TelegrafBot) {
+            const statusInfo = (bot as TelegrafBot).getStatus();
+            const botTag = statusInfo?.tag || botId;
+            const now = new Date().toLocaleString('ru-RU', { timeZone: 'UTC' });
+            const stopMsg =
+              `▸ *NODEWEAVER SOC — АГЕНТ ДЕАКТИВИРОВАН*\n\n` +
+              `АГЕНТ      : \`${botTag}\`\n` +
+              `СОБЫТИЕ    : MONITORING HALTED\n` +
+              `ВРЕМЯ      : ${now} UTC\n\n` +
+              `Система мониторинга переведена в режим ожидания.\n` +
+              `Доставка алертов приостановлена до следующего запуска.\n\n` +
+              `Если остановка не была инициирована вами — незамедлительно свяжитесь с администратором.\n\n` +
+              `— _NodeWeaver Security Operations Center_`;
+            try {
+              await alertDispatchService.dispatchTelegramToScope({
+                bot: bot as TelegrafBot,
+                message: stopMsg,
+                scope: 'RECEIVE_TELEGRAM_ALERTS',
+                requireAtLeastOneSuccess: false,
+              });
+            } catch (_) { /* best-effort */ }
+          }
           await bot.disconnect();
           this.bots.delete(botId);
       }

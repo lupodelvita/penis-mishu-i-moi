@@ -58,6 +58,7 @@ enum ObservabilityAuditAction {
 model User {
   id           String   @id @default(uuid())
   username     String   @unique
+  accountCode  String?  @unique
   passwordHash String
   role         Role     @default(USER)
   created      DateTime @default(now())

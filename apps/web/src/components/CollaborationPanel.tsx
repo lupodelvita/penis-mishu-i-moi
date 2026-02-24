@@ -113,7 +113,14 @@ export default function CollaborationPanel() {
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: currentUser.color }}
                 />
-                <span className="text-sm text-white font-medium truncate">{currentUser.name}</span>
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <span className="text-sm text-white font-medium truncate">{currentUser.name}</span>
+                  {currentUser.accountCode && (
+                    <span className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] text-slate-300 font-mono w-fit">
+                      {currentUser.accountCode}
+                    </span>
+                  )}
+                </div>
                 {isLeader && (
                   <span title="Лидер"><Crown className="w-3 h-3 text-yellow-500" /></span>
                 )}
@@ -151,6 +158,7 @@ export default function CollaborationPanel() {
                 commandHistory.slice().reverse().map((cmd) => {
                   let displayText = '';
                   let emoji = '•';
+                  const actorLabel = cmd.actorAccountCode || cmd.actorName;
                   
                   switch (cmd.type) {
                     case 'add_entity':
@@ -191,7 +199,17 @@ export default function CollaborationPanel() {
                       <div className="flex items-start justify-between gap-2 min-h-[20px]">
                         <div className="flex items-start gap-1 flex-1 min-w-0">
                           <span className="flex-shrink-0 mt-0.5">{emoji}</span>
-                          <span className="text-slate-300 break-words flex-1 leading-tight">{displayText}</span>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-slate-300 break-words flex-1 leading-tight block">{displayText}</span>
+                            {actorLabel && (
+                              <div className="text-[10px] text-slate-400 mt-0.5">
+                                {cmd.actorAccountCode && (
+                                  <span className="font-mono bg-slate-800 border border-slate-700 rounded px-1 py-0.5 mr-1 inline-block align-middle">{cmd.actorAccountCode}</span>
+                                )}
+                                <span className="align-middle">{cmd.actorName || 'Неизвестно'}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <span className="text-slate-500 text-[10px] whitespace-nowrap flex-shrink-0 ml-1">{timeStr}</span>
                       </div>
@@ -369,6 +387,11 @@ export default function CollaborationPanel() {
                           <span title="Лидер"><Crown className="w-3 h-3 text-yellow-500 flex-shrink-0" /></span>
                         )}
                       </div>
+                      {collab.accountCode && (
+                        <div className="text-[10px] text-slate-300 font-mono bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 w-fit mt-0.5">
+                          {collab.accountCode}
+                        </div>
+                      )}
                       {collab.selectedEntity && (
                         <div className="text-xs text-slate-500">Редактирует...</div>
                       )}

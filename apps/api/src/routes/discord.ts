@@ -71,8 +71,9 @@ router.post('/export-graph', async (req, res) => {
 
     // Send Logic
     if (botId) {
+        const config = await prisma.botConfig.findUnique({ where: { id: botId } });
         const bot = botManager.getBot(botId);
-        if (!bot) {
+        if (!bot || !config || !config.isActive) {
              res.status(404).json({ success: false, error: 'Bot not found or not active' });
              return;
         }
@@ -86,20 +87,18 @@ router.post('/export-graph', async (req, res) => {
             if (bot instanceof DiscordBot) {
                 await bot.sendReport(channelId, embed);
             } else {
+                if (config.type !== 'TELEGRAM') {
+                  res.status(400).json({ success: false, error: 'Selected bot is not a Telegram bot' });
+                  return;
+                }
+
                 const text = `📊 *${graph.name}*\n${graph.description}\n\n🔍 Entities: ${graph.entities?.length}\n🔗 Links: ${graph.links?.length}`;
                 const dispatchResult = await alertDispatchService.dispatchTelegramToScope({
                   bot: bot as { sendReport(chatId: string | null, message: string): Promise<boolean> },
                   message: text,
                   scope: 'RECEIVE_TELEGRAM_ALERTS',
+                  requireAtLeastOneSuccess: true,
                 });
-
-                if (!dispatchResult.totalRecipients) {
-                  res.status(403).json({
-                    success: false,
-                    error: 'No approved Telegram recipients with RECEIVE_TELEGRAM_ALERTS scope',
-                  });
-                  return;
-                }
 
                 res.json({
                   success: true,

@@ -1,7 +1,16 @@
-import { app, BrowserWindow, Menu, shell, ipcMain, dialog, nativeTheme } from 'electron';
+import { app, BrowserWindow, Menu, shell, ipcMain, dialog, nativeTheme, net, protocol } from 'electron';
 import path from 'path';
+import { pathToFileURL } from 'url';
 import Store from 'electron-store';
 import { initAutoUpdater, checkForUpdates } from './services/AutoUpdater';
+
+// Register app:// as a privileged scheme — MUST be called before app.ready
+// This lets the renderer load _next/static assets via app://renderer/... instead of
+// broken absolute file:// paths that differ on every end-user machine.
+protocol.registerSchemesAsPrivileged([{
+  scheme: 'app',
+  privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true },
+}]);
 
 // Check if running in development
 const isDev = !app.isPackaged;
@@ -88,8 +97,8 @@ function createWindow() {
     };
     loadDevServer();
   } else {
-    // In production, load the exported Next.js app
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+    // In production, serve via the app:// custom protocol so _next/ assets resolve correctly
+    mainWindow.loadURL('app://renderer/index.html');
   }
 
   // Show window when ready
@@ -362,6 +371,29 @@ function createMenu() {
 
 // App ready
 app.whenReady().then(() => {
+  // Serve the exported Next.js renderer via app://renderer/* in production
+  if (!isDev) {
+    const rendererDir = path.normalize(path.join(__dirname, '../renderer'));
+    protocol.handle('app', (request) => {
+      const url = new URL(request.url);
+      // url.host === 'renderer', url.pathname === '/_next/static/...' or '/index.html' etc.
+      const pathname = decodeURIComponent(url.pathname);
+      const resolved = path.normalize(path.join(rendererDir, pathname));
+
+      // Security: block path traversal
+      if (!resolved.startsWith(rendererDir)) {
+        return new Response('Forbidden', { status: 403 });
+      }
+
+      // If path has no extension, serve directory index.html (for sub-routes)
+      const fileUrl = /\.[a-zA-Z0-9]+$/.test(resolved)
+        ? pathToFileURL(resolved).toString()
+        : pathToFileURL(path.join(resolved, 'index.html')).toString();
+
+      return net.fetch(fileUrl);
+    });
+  }
+
   createWindow();
 
   app.on('activate', () => {

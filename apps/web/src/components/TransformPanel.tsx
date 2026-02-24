@@ -298,7 +298,6 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
                  sendCommand({
                    type: 'transform',
                    payload: { transformId, sourceEntity: sourceEntity.value, resultCount: data.data.results.length },
-                   userId: 'local',
                  });
                }
                

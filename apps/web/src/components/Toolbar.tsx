@@ -22,10 +22,13 @@ export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeo
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isLoadingBots, setIsLoadingBots] = useState(false);
   const [isSendingToBot, setIsSendingToBot] = useState(false);
+  const [isTestingSend, setIsTestingSend] = useState(false);
   const [botExportStatus, setBotExportStatus] = useState('');
   const [exportBots, setExportBots] = useState<any[]>([]);
   const [selectedBotId, setSelectedBotId] = useState('');
   const [discordChannelId, setDiscordChannelId] = useState('');
+  const [tgRecipientsCount, setTgRecipientsCount] = useState<number | null>(null);
+  const [tgRecipientsStatus, setTgRecipientsStatus] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleNew = () => {
@@ -111,6 +114,8 @@ export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeo
     setIsExportModalOpen(true);
     setIsLoadingBots(true);
     setBotExportStatus('Загрузка активных ботов...');
+    setTgRecipientsCount(null);
+    setTgRecipientsStatus('');
 
     try {
       const botsRes = await api.get('/bots');
@@ -124,6 +129,10 @@ export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeo
         setSelectedBotId(firstBot.id);
         setDiscordChannelId(firstBot.settings?.channelId || '');
         setBotExportStatus(`Найдено активных ботов: ${activeBots.length}`);
+
+        if (firstBot.type === 'TELEGRAM') {
+          await loadTelegramRecipients();
+        }
       } else {
         setSelectedBotId('');
         setDiscordChannelId('');
@@ -137,6 +146,22 @@ export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeo
       setBotExportStatus(error?.response?.data?.error || 'Не удалось загрузить список ботов');
     } finally {
       setIsLoadingBots(false);
+    }
+  };
+
+  const loadTelegramRecipients = async () => {
+    try {
+      setTgRecipientsStatus('Проверяем получателей Telegram...');
+      const res = await api.get('/admin/observability/recipients/telegram');
+      const recipients = Array.isArray(res.data?.data) ? res.data.data : [];
+      setTgRecipientsCount(recipients.length);
+      setTgRecipientsStatus(recipients.length
+        ? `Получателей: ${recipients.length}`
+        : 'Получателей нет. Добавьте пользователей со scope RECEIVE_TELEGRAM_ALERTS и chatId.');
+    } catch (error: any) {
+      console.error('Failed to load Telegram recipients', error);
+      setTgRecipientsCount(0);
+      setTgRecipientsStatus(error?.response?.data?.error || 'Не удалось получить список получателей');
     }
   };
 
@@ -156,6 +181,16 @@ export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeo
       if (!selectedBot) {
         setBotExportStatus('Выбранный бот не найден. Обнови список.');
         return;
+      }
+
+      if (selectedBot.type === 'TELEGRAM') {
+        if (tgRecipientsCount === null) {
+          await loadTelegramRecipients();
+        }
+        if (!tgRecipientsCount) {
+          setBotExportStatus('Нет получателей Telegram (scope RECEIVE_TELEGRAM_ALERTS). Добавьте chatId или выдайте доступ.');
+          return;
+        }
       }
 
       setIsSendingToBot(true);
@@ -184,6 +219,58 @@ export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeo
       setBotExportStatus(`❌ ${error?.response?.data?.error || 'Не удалось отправить граф в бота'}`);
     } finally {
       setIsSendingToBot(false);
+    }
+  };
+
+  const handleTestSend = async () => {
+    try {
+      if (!selectedBotId) {
+        setBotExportStatus('Выбери бота для тестовой отправки.');
+        return;
+      }
+
+      const selectedBot = exportBots.find((bot: any) => bot.id === selectedBotId);
+      if (!selectedBot) {
+        setBotExportStatus('Выбранный бот не найден. Обнови список.');
+        return;
+      }
+
+      if (selectedBot.type !== 'TELEGRAM') {
+        setBotExportStatus('Тестовая отправка доступна только для Telegram бота.');
+        return;
+      }
+
+      if (tgRecipientsCount === null) {
+        await loadTelegramRecipients();
+      }
+      if (!tgRecipientsCount) {
+        setBotExportStatus('Нет получателей Telegram для теста.');
+        return;
+      }
+
+      setIsTestingSend(true);
+      setBotExportStatus('Тестовая отправка...');
+
+      const payload: any = {
+        botId: selectedBot.id,
+        graph: {
+          id: 'test',
+          name: 'Test Alert',
+          description: 'Проверка доставки алертов',
+          created: new Date().toISOString(),
+          entities: [],
+          links: [],
+        },
+      };
+
+      const response = await api.post('/discord/export-graph', payload);
+      const message = response.data?.message || 'Тестовое сообщение отправлено';
+      setBotExportStatus(`✅ ${message}`);
+    } catch (error: any) {
+      console.error('Failed to send test alert', error);
+      setBotExportStatus(`❌ ${error?.response?.data?.error || 'Не удалось отправить тестовое сообщение'}`);
+    } finally {
+      setIsTestingSend(false);
     }
   };
 
@@ -347,7 +434,14 @@ export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeo
                    {user.licenseTier}
                    {user.role === 'ADMIN' && ' • ADMIN'}
                  </div>
-                 <div className="text-sm font-medium">{user.username}</div>
+                 <div className="text-sm font-medium flex items-center gap-2">
+                   <span>{user.username}</span>
+                   {user.accountCode && (
+                     <span className="px-2 py-[2px] rounded-md border border-cyan-500/40 text-[11px] text-cyan-200 bg-cyan-500/10 font-semibold">
+                       {user.accountCode}
+                     </span>
+                   )}
+                 </div>
               </div>
               <button onClick={logout} className="p-2 hover:bg-red-500/10 text-gray-500 hover:text-red-500 rounded-md transition-colors">
                  <LogOut className="w-4 h-4" />
@@ -398,11 +492,14 @@ export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeo
 
             <select
               value={selectedBotId}
-              onChange={(e) => {
+              onChange={async (e) => {
                 const nextId = e.target.value;
                 setSelectedBotId(nextId);
                 const bot = exportBots.find((item: any) => item.id === nextId);
                 setDiscordChannelId(bot?.settings?.channelId || '');
+                if (bot?.type === 'TELEGRAM') {
+                  await loadTelegramRecipients();
+                }
               }}
               className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm"
             >
@@ -413,6 +510,22 @@ export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeo
                 </option>
               ))}
             </select>
+
+            {exportBots.some((b: any) => b.type === 'TELEGRAM') ? (
+              <div className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
+                Для Telegram требуется: активный бот + получатели со scope RECEIVE_TELEGRAM_ALERTS с chatId. Тестовая отправка поможет проверить, что бот в чате.
+              </div>
+            ) : (
+              <div className="text-xs text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+                Нет активных Telegram-ботов. Добавьте бота в разделе Bots, иначе отправка алертов невозможна.
+              </div>
+            )}
+
+            {tgRecipientsStatus && (
+              <div className="text-xs rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-300 whitespace-pre-wrap">
+                {tgRecipientsStatus}
+              </div>
+            )}
 
             {(() => {
               const bot = exportBots.find((item: any) => item.id === selectedBotId);
@@ -427,6 +540,16 @@ export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeo
                 />
               );
             })()}
+
+            {exportBots.find((bot: any) => bot.id === selectedBotId)?.type === 'TELEGRAM' && (
+              <button
+                onClick={handleTestSend}
+                disabled={isTestingSend || isSendingToBot}
+                className="w-full px-3 py-2 rounded-lg bg-cyan-500/20 border border-cyan-500/30 text-cyan-200 hover:bg-cyan-500/30 transition font-semibold disabled:opacity-60"
+              >
+                {isTestingSend ? 'Тестируем...' : 'Отправить тестовое сообщение'}
+              </button>
+            )}
 
             <button
               onClick={handleExportToBot}

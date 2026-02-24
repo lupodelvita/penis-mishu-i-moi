@@ -5,16 +5,18 @@ interface Collaborator {
   id: string;
   name: string;
   color: string;
+  accountCode?: string;
   cursor?: { x: number; y: number };
   selectedEntity?: string | null;
   lastActivity?: number;
   isLeader?: boolean;
   userId?: string; // DB user ID for membership validation
+  dbUserId?: string;
 }
 
 interface GraphInvitation {
   id: string;
-  fromUser: { id: string; name: string };
+  fromUser: { id: string; name: string; accountCode?: string };
   graphId: string;
   graphName: string;
   createdAt: Date;
@@ -32,6 +34,9 @@ interface CollaborativeCommand {
   type: 'add_entity' | 'delete_entity' | 'update_entity' | 'add_link' | 'delete_link' | 'transform' | 'chat';
   payload: any;
   userId: string;
+  actorId?: string;
+  actorName?: string;
+  actorAccountCode?: string;
   timestamp: Date;
   graphId: string;
 }
@@ -52,12 +57,12 @@ interface CollaborationStore {
   disconnectReason: string | null;
   
   // Actions
-  initializeSocket: (userName: string, userId: string) => void;
+  initializeSocket: (userName: string, userId: string, accountCode?: string) => void;
   joinGraph: (graphId: string) => void;
   connect: (graphId: string, userName: string) => void;
   disconnect: () => void;
   sendUpdate: (update: GraphUpdate) => void;
-  sendCommand: (command: Omit<CollaborativeCommand, 'id' | 'timestamp' | 'graphId'>) => void;
+  sendCommand: (command: Omit<CollaborativeCommand, 'id' | 'timestamp' | 'graphId' | 'userId' | 'actorId' | 'actorName' | 'actorAccountCode'>) => void;
   updateCursor: (x: number, y: number) => void;
   selectEntity: (entityId: string | null) => void;
   broadcastChatMessage: (message: string) => void;
@@ -86,7 +91,7 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
   isLeader: false,
   disconnectReason: null,
   
-  initializeSocket: (userName: string, userId: string) => {
+  initializeSocket: (userName: string, userId: string, accountCode?: string) => {
     const existingSocket = get().socket;
     if (existingSocket && existingSocket.connected) {
       existingSocket.off();
@@ -108,6 +113,8 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
         color: colors[Math.floor(Math.random() * colors.length)],
         lastActivity: Date.now(),
         userId: userId, // Store the DB user ID
+        dbUserId: userId,
+        accountCode,
       };
       set({ isConnected: true, currentUser: { ...user, id: socket.id! } });
     });
@@ -321,14 +328,19 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
     }
   },
   
-  sendCommand: (command: Omit<CollaborativeCommand, 'id' | 'timestamp' | 'graphId'>) => {
+  sendCommand: (command: Omit<CollaborativeCommand, 'id' | 'timestamp' | 'graphId' | 'userId' | 'actorId' | 'actorName' | 'actorAccountCode'>) => {
     const { socket, graphId, currentUser } = get();
     if (socket && socket.connected && graphId && currentUser) {
+      const baseUserId = currentUser.userId || currentUser.dbUserId || currentUser.id;
       const fullCommand: CollaborativeCommand = {
         ...command,
         id: `cmd-${Date.now()}-${Math.random()}`,
         timestamp: new Date(),
         graphId,
+        userId: baseUserId || 'unknown-user',
+        actorId: baseUserId || 'unknown-user',
+        actorName: currentUser.name,
+        actorAccountCode: currentUser.accountCode,
       };
       socket.emit('command', fullCommand);
     }
@@ -349,18 +361,13 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
   },
   
   broadcastChatMessage: (message: string) => {
-    const { socket, graphId, currentUser } = get();
-    if (socket && socket.connected && graphId && currentUser) {
-      const command: CollaborativeCommand = {
-        id: `chat-${Date.now()}-${Math.random()}`,
-        type: 'chat',
-        payload: { message, sender: currentUser.name },
-        userId: currentUser.id,
-        timestamp: new Date(),
-        graphId,
-      };
-      socket.emit('command', command);
-    }
+    const { sendCommand, currentUser } = get();
+    if (!currentUser) return;
+
+    sendCommand({
+      type: 'chat',
+      payload: { message, sender: currentUser.name, accountCode: currentUser.accountCode },
+    });
   },
 
   loadHistoricalCommands: async (graphId: string) => {
@@ -388,6 +395,7 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
         fromUser: {
           id: currentUser.id,
           name: currentUser.name,
+          accountCode: currentUser.accountCode,
         },
         graphName: graphId,
       });

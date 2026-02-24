@@ -296,6 +296,7 @@ export class ObservabilityAccessService {
       .map((access) => ({
         userId: access.userId,
         username: access.user.username,
+        accountCode: access.user.accountCode || undefined,
         chatId: access.telegramChatId as string,
         scopes: access.scopes,
       }));

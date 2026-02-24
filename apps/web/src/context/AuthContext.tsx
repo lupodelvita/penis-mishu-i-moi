@@ -11,6 +11,7 @@ interface User {
   username: string;
   role: 'USER' | 'ADMIN';
   licenseTier: string;
+  accountCode?: string;
 }
 
 interface AuthContextType {
@@ -45,10 +46,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 logout();
             } else {
                 setUser({
-                    id: decoded.userId,
-                    username: decoded.username || 'User', // JWT payload might need username update
-                    role: decoded.role,
-                    licenseTier: decoded.licenseTier || 'OBSERVER'
+                  id: decoded.userId,
+                  username: decoded.username || 'User',
+                  role: decoded.role,
+                  licenseTier: decoded.licenseTier || 'OBSERVER',
+                  accountCode: decoded.accountCode,
                 });
             }
         } catch (e) {
@@ -65,7 +67,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         id: decoded.userId,
         username: decoded.username || 'User', // Backend needs to ensure this is in token or fetch /me
         role: decoded.role,
-        licenseTier: decoded.licenseTier || 'OBSERVER'
+        licenseTier: decoded.licenseTier || 'OBSERVER',
+        accountCode: decoded.accountCode,
     });
     router.push('/');
   };

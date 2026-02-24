@@ -274,6 +274,9 @@ router.get('/:id/commands', authenticateToken, async (req, res, next) => {
           type: dbCmd.type as any,
           payload: dbCmd.payload,
           userId: dbCmd.userId,
+          actorId: (dbCmd.payload as any)?.actorId || dbCmd.userId,
+          actorName: (dbCmd.payload as any)?.actorName || dbCmd.userName,
+          actorAccountCode: (dbCmd.payload as any)?.actorAccountCode,
           timestamp: dbCmd.timestamp,
           graphId: dbCmd.graphId,
         });

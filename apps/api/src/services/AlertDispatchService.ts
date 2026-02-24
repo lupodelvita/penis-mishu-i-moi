@@ -95,7 +95,10 @@ class AlertDispatchService {
     };
 
     if (!uniqueRecipients.length) {
-      return result;
+      if (params.requireAtLeastOneSuccess !== false) {
+        throw new Error(`No approved Telegram recipients with scope ${scope}`);
+      }
+      return result; // 0 recipients — return empty result gracefully
     }
 
     const chunks = this.splitTelegramMessage(params.message);

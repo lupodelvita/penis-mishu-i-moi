@@ -21,6 +21,9 @@ export function InvitationModal() {
           <div className="mb-3">
             <p className="text-sm text-slate-200">
               <span className="font-semibold text-purple-400">{invitation.fromUser.name}</span>
+              {invitation.fromUser.accountCode && (
+                <span className="ml-2 px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-[11px] font-mono text-slate-300 align-middle">{invitation.fromUser.accountCode}</span>
+              )}
               {' '}invited you to
             </p>
             <p className="text-base font-semibold text-white">{invitation.graphName}</p>

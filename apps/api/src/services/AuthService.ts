@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
 import { User, LicenseTier, Role } from '@prisma/client';
+import { randomBytes } from 'crypto';
 
 const SALT_ROUNDS = 10;
 const JWT_SECRET = process.env.JWT_SECRET || 'nodeweaver-secret-key-change-in-prod';
@@ -18,11 +19,15 @@ export class AuthService {
     // 2. Hash password
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
+    // 2.1 Generate human-friendly account code
+    const accountCode = await this.generateUniqueAccountCode();
+
     // 3. Create User
     // Default to USER role. First user defined? Maybe make admin manually later.
     const user = await prisma.user.create({
         data: {
             username,
+            accountCode,
             passwordHash,
             role: Role.USER
         }
@@ -78,13 +83,14 @@ export class AuthService {
     };
   }
 
-  private generateToken(user: User & { license?: { tier: LicenseTier } | null }) {
+    private generateToken(user: User & { license?: { tier: LicenseTier } | null }) {
     return jwt.sign(
         { 
             userId: user.id, 
             username: user.username,
             role: user.role,
-            licenseTier: user.license?.tier || LicenseTier.OBSERVER
+                        licenseTier: user.license?.tier || LicenseTier.OBSERVER,
+                        accountCode: (user as any).accountCode
         },
         JWT_SECRET,
         { expiresIn: '7d' }
@@ -138,6 +144,23 @@ export class AuthService {
       });
       return license;
   }
+
+    private async generateUniqueAccountCode(): Promise<string> {
+        const makeCode = () => {
+            const rand = randomBytes(3).toString('hex').toUpperCase(); // 6 hex chars
+            return `NW-${rand}`;
+        };
+
+        // Try until unique
+        for (let i = 0; i < 10; i++) {
+            const code = makeCode();
+            const existing = await prisma.user.findUnique({ where: { accountCode: code } });
+            if (!existing) return code;
+        }
+
+        // Fallback with extra entropy
+        return `NW-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2,6).toUpperCase()}`;
+    }
 }
 
 export const authService = new AuthService();

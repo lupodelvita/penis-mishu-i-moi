@@ -7,6 +7,7 @@ interface Collaborator {
   dbUserId: string; // database user ID for membership operations
   name: string;
   color: string;
+  accountCode?: string;
   cursor?: { x: number; y: number };
   selectedEntity?: string;
   graphId: string;
@@ -24,6 +25,9 @@ interface CollaborativeCommand {
   type: 'add_entity' | 'delete_entity' | 'update_entity' | 'add_link' | 'delete_link' | 'transform' | 'chat';
   payload: any;
   userId: string;
+  actorId?: string;
+  actorName?: string;
+  actorAccountCode?: string;
   timestamp: Date;
   graphId: string;
 }
@@ -77,7 +81,13 @@ class CollaborationService {
             return;
           }
 
-          const collaborator: Collaborator = { ...user, graphId, id: socket.id, dbUserId: user.id };
+          const collaborator: Collaborator = {
+            ...user,
+            graphId,
+            id: socket.id,
+            dbUserId: user.id,
+            accountCode: user.accountCode,
+          };
 
           const previousSocketId = this.userSockets.get(user.id);
           if (previousSocketId && previousSocketId !== socket.id) {
@@ -141,6 +151,10 @@ class CollaborationService {
             id: `cmd-${Date.now()}-${Math.random()}`,
             timestamp: new Date(),
             graphId: collaborator.graphId,
+            userId: collaborator.dbUserId,
+            actorId: collaborator.dbUserId,
+            actorName: collaborator.name,
+            actorAccountCode: collaborator.accountCode,
           };
 
           // Store in memory history
@@ -447,13 +461,20 @@ class CollaborationService {
    */
   private async persistCommand(command: CollaborativeCommand): Promise<void> {
     try {
+      const payloadWithActor = {
+        ...command.payload,
+        actorId: command.actorId,
+        actorName: command.actorName,
+        actorAccountCode: command.actorAccountCode,
+      };
+
       await prisma.graphCommand.create({
         data: {
           graphId: command.graphId,
           type: command.type,
-          payload: command.payload,
-          userId: command.userId,
-          userName: command.payload?.sender || 'Unknown',
+          payload: payloadWithActor,
+          userId: command.actorId || command.userId,
+          userName: command.actorName || command.payload?.sender || 'Unknown',
           timestamp: command.timestamp,
         },
       });

@@ -53,7 +53,23 @@ router.get('/me', authenticateToken, async (req, res, next) => {
   try {
     const userId = (req as AuthRequest).user!.userId;
     const user = await userService.getWithLicense(userId);
-    res.json({ success: true, data: user });
+
+    if (!user) {
+      res.status(404).json({ success: false, error: 'User not found' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        accountCode: (user as any).accountCode,
+        license: user.license,
+        bots: user.bots,
+      },
+    });
   } catch (error) {
     next(error);
   }
