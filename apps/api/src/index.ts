@@ -39,7 +39,31 @@ const PORT = process.env.PORT || 4000;
 let isShuttingDown = false;
 
 // Middleware
-app.use(cors());
+const ALLOWED_ORIGINS = [
+  'app://renderer',          // Electron desktop (production)
+  'http://localhost:3000',   // Next.js dev server
+  'http://localhost:4000',   // API self
+  'https://nodeweaver-site.pages.dev',
+  /^http:\/\/localhost:\d+$/,
+  /^https:\/\/.*\.nodeweaver-site\.pages\.dev$/,
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    const allowed = ALLOWED_ORIGINS.some((o) =>
+      typeof o === 'string' ? o === origin : o.test(origin)
+    );
+    if (allowed) return callback(null, true);
+    // Also allow any Electron renderer scheme
+    if (origin.startsWith('app://') || origin.startsWith('file://')) return callback(null, true);
+    callback(new Error(`CORS: origin "${origin}" not allowed`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(helmet({
   crossOriginResourcePolicy: false,
   crossOriginOpenerPolicy: false,
