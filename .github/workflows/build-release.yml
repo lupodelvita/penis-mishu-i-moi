@@ -38,7 +38,7 @@ jobs:
       - name: Build web (Next.js export)
         run: cd apps/web && npm run build
         env:
-          NEXT_PUBLIC_API_URL: http://localhost:4000
+          NEXT_PUBLIC_API_URL: https://nodeweaver-api.onrender.com
 
       - name: Prepare exported web for Electron
         run: |
@@ -161,7 +161,7 @@ jobs:
       - name: Build web (Next.js export)
         run: cd apps/web && npm run build
         env:
-          NEXT_PUBLIC_API_URL: http://localhost:4000
+          NEXT_PUBLIC_API_URL: https://nodeweaver-api.onrender.com
 
       - name: Prepare exported web for Electron
         run: |
@@ -230,7 +230,7 @@ jobs:
       - name: Build web (Next.js export)
         run: cd apps/web && npm run build
         env:
-          NEXT_PUBLIC_API_URL: http://localhost:4000
+          NEXT_PUBLIC_API_URL: https://nodeweaver-api.onrender.com
 
       - name: Prepare exported web for Electron
         run: |

@@ -1,18 +1,31 @@
 import axios from 'axios';
 
-const envUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-const API_URL = envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://nodeweaver-api.onrender.com';
+
+/** Returns the active API base URL (localStorage override → env → default) */
+export function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('nw_api_url');
+    if (saved && saved.trim()) {
+      const url = saved.trim().replace(/\/$/, '');
+      return url.endsWith('/api') ? url : `${url}/api`;
+    }
+  }
+  const env = DEFAULT_API_URL.replace(/\/$/, '');
+  return env.endsWith('/api') ? env : `${env}/api`;
+}
 
 export const api = axios.create({
-  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request Interceptor: Attach Token
+// Request Interceptor: Dynamic baseURL + Attach Token
 api.interceptors.request.use(
   (config) => {
+    // Re-read on every request so Settings changes apply immediately
+    config.baseURL = getApiBaseUrl();
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

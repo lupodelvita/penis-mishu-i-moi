@@ -6,20 +6,29 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
+const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://nodeweaver-api.onrender.com';
+
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [discordToken, setDiscordToken] = useState('');
   const [discordChannelId, setDiscordChannelId] = useState('');
+  const [apiUrl, setApiUrl] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setDiscordToken(localStorage.getItem('nw_discord_token') || '');
       setDiscordChannelId(localStorage.getItem('nw_discord_channel') || '');
+      setApiUrl(localStorage.getItem('nw_api_url') || '');
     }
   }, [isOpen]);
 
   const handleSave = () => {
     localStorage.setItem('nw_discord_token', discordToken);
     localStorage.setItem('nw_discord_channel', discordChannelId);
+    if (apiUrl.trim()) {
+      localStorage.setItem('nw_api_url', apiUrl.trim().replace(/\/$/, ''));
+    } else {
+      localStorage.removeItem('nw_api_url');
+    }
     alert('Settings saved!');
     onClose();
   };
@@ -41,6 +50,18 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </div>
 
         <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">API Server URL</label>
+            <input 
+              type="url"
+              value={apiUrl}
+              onChange={(e) => setApiUrl(e.target.value)}
+              placeholder={DEFAULT_API_URL}
+              className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition-colors"
+            />
+            <p className="text-xs text-slate-500 mt-1">Leave empty to use the default server. Changes apply immediately.</p>
+          </div>
+
           <div>
             <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Discord Bot Token</label>
             <input 
@@ -81,3 +102,4 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     </div>
   );
 }
+

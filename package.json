@@ -1,6 +1,6 @@
 {
   "name": "nodeweaver",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "private": true,
   "description": "NodeWeaver - Modern OSINT graph visualization tool for weaving connections between data nodes",
   "workspaces": [

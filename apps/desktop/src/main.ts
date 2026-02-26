@@ -34,7 +34,7 @@ const store = new Store({
   defaults: {
     windowBounds: { width: 1400, height: 900 },
     theme: 'dark',
-    apiUrl: 'http://localhost:4000',
+    apiUrl: 'https://nodeweaver-api.onrender.com',
     recentGraphs: [],
   },
 });
