@@ -4,7 +4,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 
 // Load env from apps/api/.env so script can run from repo root
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
 function makeCode() {
   const rand = randomBytes(3).toString('hex').toUpperCase();

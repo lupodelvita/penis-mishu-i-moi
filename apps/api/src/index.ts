@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
+import path from 'path';
 
 // Routes
 import graphRoutes from './routes/graphs';
@@ -25,7 +26,8 @@ import { collaborationService } from './services/CollaborationService';
 import { errorHandler } from './middleware/error';
 
 
-dotenv.config();
+// Load from monorepo root .env (works from both src/ and dist/)
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 const app = express();
 const httpServer = createServer(app);
