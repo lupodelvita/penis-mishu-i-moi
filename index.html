@@ -1082,9 +1082,23 @@
             </div>
         </section>
 
+        <!-- CTA -->
+        <section class="cta-section">
+            <div class="cta-box">
+                <h2 class="reveal-blur">Готов раскрыть связи?</h2>
+                <p class="reveal-blur" style="transition-delay: 0.15s">Начни OSINT исследование прямо сейчас — бесплатно и без ограничений.</p>
+                <div class="reveal-blur" style="transition-delay: 0.3s; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+                    <button class="btn-download-main" onclick="downloadApp(event, detectPlatform())">
+                        <span>⬇</span>
+                        Скачать NodeWeaver
+                    </button>
+                </div>
+            </div>
+        </section>
+
         <!-- Footer -->
         <footer>
-            <p>© 2026 NodeWeaver · Made by DEVLOCKER</a></p>
+            <p>© 2026 NodeWeaver · Создано с ❤️ · <a href="https://github.com/lupodelvita" target="_blank">GitHub</a></p>
         </footer>
     </div>
 
@@ -1151,90 +1165,11 @@
         });
 
         // ===== Platform detection & download =====
-        const DEFAULT_VERSION = 'v1.0.2';
-
-        const buildPlatformFiles = (version) => {
-            const plain = (version || '').replace(/^v/, '') || 'latest';
-            return {
-                windows: [
-                    'NodeWeaver-Setup.exe',
-                    'NodeWeaver-Setup',
-                    'NodeWeaver Setup.exe',
-                    'NodeWeaver Setup',
-                    `NodeWeaver-Setup-${plain}.exe`,
-                    `NodeWeaver-Setup-${plain}`,
-                    `NodeWeaver Setup ${plain}.exe`,
-                    `NodeWeaver Setup ${plain}`
-                ],
-                mac: [
-                    'NodeWeaver.dmg',
-                    'NodeWeaver',
-                    `NodeWeaver-${plain}.dmg`,
-                    `NodeWeaver ${plain}.dmg`
-                ],
-                linux: [
-                    'NodeWeaver.AppImage',
-                    'NodeWeaver',
-                    `NodeWeaver-${plain}.AppImage`,
-                    `NodeWeaver ${plain}.AppImage`
-                ]
-            };
+        const PLATFORM_FILES = {
+            windows: ['NodeWeaver-Setup.exe', 'NodeWeaver Setup 1.0.0.exe'],
+            mac: ['NodeWeaver.dmg', 'NodeWeaver-1.0.0.dmg'],
+            linux: ['NodeWeaver.AppImage', 'NodeWeaver-1.0.0.AppImage']
         };
-
-        const normalizeFiles = (files) => {
-            if (!files || typeof files !== 'object') return null;
-            const out = {};
-            ['windows', 'mac', 'linux'].forEach((key) => {
-                const val = files[key];
-                if (Array.isArray(val) && val.length) out[key] = val;
-                if (typeof val === 'string' && val.trim()) out[key] = [val.trim()];
-            });
-            return Object.keys(out).length ? out : null;
-        };
-
-        const filesFromGitHubAssets = (assets) => {
-            if (!Array.isArray(assets)) return null;
-            const acc = { windows: [], mac: [], linux: [] };
-            assets.forEach((asset) => {
-                const name = asset?.name || '';
-                const url = asset?.browser_download_url || '';
-                if (!url) return;
-                if (/\.exe$/i.test(name) && !/blockmap|yml/i.test(name)) {
-                    acc.windows.push(url);
-                    return;
-                }
-                if ((/\.dmg$/i.test(name) || /\.zip$/i.test(name)) && /mac|osx|darwin|arm64|universal/i.test(name)) {
-                    acc.mac.push(url);
-                    return;
-                }
-                if (/\.appimage$/i.test(name)) {
-                    acc.linux.push(url);
-                }
-            });
-            return acc;
-        };
-
-        const addReleaseUrls = (filesMap, version) => {
-            const tag = version || 'latest';
-            const baseTag = `https://github.com/lupodelvita/penis-mishu-i-moi/releases/download/${tag}/`;
-            const baseLatest = 'https://github.com/lupodelvita/penis-mishu-i-moi/releases/latest/download/';
-            const out = {};
-            ['windows', 'mac', 'linux'].forEach((key) => {
-                const items = filesMap[key] || [];
-                out[key] = [];
-                items.forEach((name) => {
-                    const encoded = encodeURIComponent(name);
-                    // Prefer direct release URLs; keep plain name last for potential local hosting
-                    out[key].push(`${baseTag}${encoded}`);
-                    out[key].push(`${baseLatest}${encoded}`);
-                    out[key].push(name);
-                });
-            });
-            return out;
-        };
-
-        let appVersion = DEFAULT_VERSION;
-        let platformFiles = addReleaseUrls(buildPlatformFiles(appVersion), appVersion);
 
         function detectPlatform() {
             const ua = navigator.userAgent;
@@ -1250,12 +1185,33 @@
             return 'windows'; // default
         }
 
-        const selectDownloadCandidate = (platform) => {
-            const candidates = platformFiles[platform] || [];
-            const urls = candidates.filter((c) => /^https?:\/\//i.test(c));
-            const locals = candidates.filter((c) => !/^https?:\/\//i.test(c));
-            return urls[0] || locals[0] || null;
-        };
+        async function resolveExistingFile(platform) {
+            const candidates = PLATFORM_FILES[platform] || [];
+
+            for (const fileName of candidates) {
+                try {
+                    const response = await fetch(`./${encodeURIComponent(fileName)}`, {
+                        method: 'HEAD',
+                        cache: 'no-store',
+                    });
+
+                    if (!response.ok) {
+                        continue;
+                    }
+
+                    const contentType = (response.headers.get('content-type') || '').toLowerCase();
+                    if (contentType.includes('text/html')) {
+                        continue;
+                    }
+
+                    return fileName;
+                } catch {
+                    // try next candidate
+                }
+            }
+
+            return null;
+        }
 
         async function downloadApp(e, platform) {
             e.preventDefault();
@@ -1264,20 +1220,18 @@
             statusEl.textContent = 'Начинаю скачивание...';
             statusEl.style.color = 'var(--accent-light)';
 
-            const candidate = selectDownloadCandidate(platform);
-            if (!candidate) {
+            const fileName = await resolveExistingFile(platform);
+            if (!fileName) {
                 statusEl.textContent = 'Файл для этой платформы пока недоступен. Сборка ещё не загружена на сайт.';
                 statusEl.style.color = '#f87171';
                 return;
             }
 
-            const fileUrl = /^https?:\/\//i.test(candidate)
-                ? candidate
-                : `./${encodeURIComponent(candidate)}`;
+            const fileUrl = `./${encodeURIComponent(fileName)}`;
 
             const link = document.createElement('a');
             link.href = fileUrl;
-            link.download = candidate;
+            link.download = fileName;
             link.style.display = 'none';
             document.body.appendChild(link);
             link.click();
@@ -1293,71 +1247,30 @@
             }, 5000);
         }
 
-        const renderDownloadUI = (detectedPlatform) => {
+        // Smart platform-aware download button
+        window.addEventListener('DOMContentLoaded', () => {
+            const detectedPlatform = detectPlatform();
             const platformLabels = {
                 windows: 'Скачать для Windows',
                 mac: 'Скачать для macOS',
                 linux: 'Скачать для Linux'
             };
+            
             const label = document.getElementById('smart-download-label');
             if (label) label.textContent = platformLabels[detectedPlatform];
 
+            // Show other platforms as links (hide current)
             const otherPlatforms = document.getElementById('other-platforms');
             if (otherPlatforms) {
                 const others = ['windows', 'mac', 'linux'].filter(p => p !== detectedPlatform);
                 const labels = { windows: 'Windows', mac: 'macOS', linux: 'Linux' };
-                otherPlatforms.innerHTML = '<span>Также:</span> ' +
-                    others.map(p => `<a href=\"#\" onclick=\"downloadApp(event, '${p}')\">${labels[p]}</a>`).join(' <span class="sep">·</span> ');
+                otherPlatforms.innerHTML = '<span>Также:</span> ' + 
+                    others.map(p => `<a href="#" onclick="downloadApp(event, '${p}')">${labels[p]}</a>`).join(' <span class="sep">·</span> ');
             }
-
-            const versionEl = document.getElementById('current-version');
-            if (versionEl) versionEl.textContent = appVersion;
-        };
-
-        // Smart platform-aware download button + remote version fetch
-        window.addEventListener('DOMContentLoaded', async () => {
-            const detectedPlatform = detectPlatform();
-
-            const fallbackBuild = () => addReleaseUrls(buildPlatformFiles(appVersion), appVersion);
-
-            // 1) Try proxy API (set window.NODEWEAVER_RELEASE_API to your Worker URL)
-            const releaseApi = window.NODEWEAVER_RELEASE_API || null;
-            if (releaseApi) {
-                try {
-                    const gh = await fetch(releaseApi, {
-                        cache: 'no-store',
-                        headers: { 'Accept': 'application/json' },
-                    });
-                    if (gh.ok) {
-                        const rel = await gh.json();
-                        if (rel?.tag_name) appVersion = rel.tag_name.trim();
-                        const assets = filesFromGitHubAssets(rel?.assets || rel?.files);
-                        const defaults = fallbackBuild();
-                        platformFiles = defaults;
-                        if (assets) {
-                            ['windows', 'mac', 'linux'].forEach((key) => {
-                                if (assets[key]?.length) {
-                                    platformFiles[key] = assets[key];
-                                }
-                            });
-                        }
-                    } else {
-                        platformFiles = fallbackBuild();
-                    }
-                } catch {
-                    platformFiles = fallbackBuild();
-                }
-            } else {
-                platformFiles = fallbackBuild();
-            }
-
-            // 2) If still empty, use defaults with release URLs
-            if (!platformFiles?.windows?.length && !platformFiles?.mac?.length && !platformFiles?.linux?.length) {
-                platformFiles = fallbackBuild();
-            }
-
-            renderDownloadUI(detectedPlatform);
         });
+
+        // ===== Version display =====
+        document.getElementById('current-version').textContent = 'v1.0.0';
     </script>
 </body>
 </html>
