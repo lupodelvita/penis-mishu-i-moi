@@ -8,6 +8,7 @@ const apiSrcRoot = path.join(repoRoot, 'apps', 'api', 'src');
 const ALLOWED_TELEGRAF_IMPORT_FILES = new Set([
   normalize(path.join(apiSrcRoot, 'services', 'TelegrafBot.ts')),
   normalize(path.join(apiSrcRoot, 'services', 'BotManager.ts')),
+  normalize(path.join(apiSrcRoot, 'routes', 'observabilityAdmin.ts')),
 ]);
 
 const ALLOWED_RAW_TELEGRAM_SEND_FILES = new Set([

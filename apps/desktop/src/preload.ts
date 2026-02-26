@@ -50,6 +50,17 @@ contextBridge.exposeInMainWorld('electron', {
   platform: process.platform,
   isElectron: true,
 
+  // Auto-updater events
+  onUpdaterEvent: (channel: string, callback: (data: any) => void) => {
+    const validChannels = ['updater:downloading', 'updater:progress', 'updater:downloaded'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (_, data) => callback(data));
+    }
+  },
+  removeUpdaterListener: (channel: string) => {
+    ipcRenderer.removeAllListeners(channel);
+  },
+
   // Terminal - simplified API (no ID needed)
   terminal: {
     create: () => ipcRenderer.send('terminal:create'),
