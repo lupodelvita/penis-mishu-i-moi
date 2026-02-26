@@ -123,6 +123,12 @@ jobs:
             Copy-Item $portable.FullName "$releaseDir/NodeWeaver-Portable.exe" -Force
           }
 
+          # latest.yml is required by electron-updater to detect new versions
+          $latestYml = Get-ChildItem "$releaseDir/latest.yml" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $latestYml) {
+            $latestYml = Get-ChildItem "$releaseDir" -Filter "*.yml" -ErrorAction SilentlyContinue | Select-Object -First 1
+          }
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -131,6 +137,7 @@ jobs:
             apps/desktop/release/NodeWeaver-Setup.exe
             apps/desktop/release/NodeWeaver-Portable.exe
             apps/desktop/release/NodeWeaver-Setup.exe.blockmap
+            apps/desktop/release/latest.yml
 
   build-macos:
     runs-on: macos-latest
