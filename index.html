@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -926,7 +926,7 @@
                 </div>
                 <div class="download-status" id="download-status"></div>
                 <div class="version-info" style="margin-top: 4px;">
-                    Версия: <span id="current-version">v1.0.0</span>
+                    Версия: <span id="current-version">v1.0.3</span>
                 </div>
             </div>
 
@@ -1151,8 +1151,9 @@
         });
 
         // ===== Platform detection & download =====
-        const DEFAULT_VERSION = 'v1.0.2';
+        const DEFAULT_VERSION = 'v1.0.3';
 
+        const PAGES_BASE = 'https://nodeweaver-site.pages.dev';
         const buildPlatformFiles = (version) => {
             const plain = (version || '').replace(/^v/, '') || 'latest';
             return {
