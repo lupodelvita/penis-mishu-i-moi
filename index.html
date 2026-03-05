@@ -877,7 +877,7 @@
         }
         /* ===== v2 Custom CSS ===== */
         nav { padding: 0 !important; }
-        .orb { position:fixed; border-radius:50%; filter:blur(100px); pointer-events:none; z-index:0; animation:orbFloat var(--dur,25s) ease-in-out infinite; animation-delay:var(--delay,0s); will-change:transform; }
+        .orb { position:fixed; border-radius:50%; pointer-events:none; z-index:0; animation:orbFloat var(--dur,25s) ease-in-out infinite; animation-delay:var(--delay,0s); will-change:transform; contain:layout style; }
         @keyframes orbFloat { 0%,100%{transform:translate3d(0,0,0) scale(1)} 33%{transform:translate3d(30px,-40px,0) scale(1.06)} 66%{transform:translate3d(-20px,20px,0) scale(.94)} }
         @keyframes grdShift { 0%,100%{background-position:0% center} 50%{background-position:100% center} }
         .text-grd { background:linear-gradient(135deg,#fff 0%,#818cf8 40%,#22d3ee 75%,#34d399 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; background-size:220% auto; animation:grdShift 8s ease infinite; }
@@ -1239,7 +1239,7 @@
     <div class="relative">
         <!-- Animated connector -->
         <style>@keyframes stepLine{0%{opacity:.18}100%{opacity:.55}}</style>
-        <div class="absolute hidden lg:flex items-center" style="top:44px;left:calc(12.5% + 21px);right:calc(12.5% + 21px);height:2px;pointer-events:none;">
+        <div class="absolute hidden lg:flex items-center" style="top:45px;left:45px;right:45px;height:2px;pointer-events:none;">
             <div class="w-full h-full rounded-full overflow-hidden" style="background:rgba(255,255,255,0.03);">
                 <div class="h-full rounded-full will-change-[opacity]" style="background:linear-gradient(90deg,#6366f1,#22d3ee,#34d399,#a5b4fc);animation:stepLine 3s ease-in-out infinite alternate;"></div>
             </div>
