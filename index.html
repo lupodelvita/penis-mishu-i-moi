@@ -877,10 +877,9 @@
         }
         /* ===== v2 Custom CSS ===== */
         nav { padding: 0 !important; }
-        .orb { position:fixed; border-radius:50%; pointer-events:none; z-index:0; animation:orbFloat var(--dur,25s) ease-in-out infinite; animation-delay:var(--delay,0s); will-change:transform; contain:layout style; }
+        .orb { position:absolute; border-radius:50%; pointer-events:none; animation:orbFloat var(--dur,25s) ease-in-out infinite; animation-delay:var(--delay,0s); will-change:transform; }
         @keyframes orbFloat { 0%,100%{transform:translate3d(0,0,0) scale(1)} 33%{transform:translate3d(30px,-40px,0) scale(1.06)} 66%{transform:translate3d(-20px,20px,0) scale(.94)} }
-        @keyframes grdShift { 0%,100%{background-position:0% center} 50%{background-position:100% center} }
-        .text-grd { background:linear-gradient(135deg,#fff 0%,#818cf8 40%,#22d3ee 75%,#34d399 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; background-size:220% auto; animation:grdShift 8s ease infinite; }
+        .text-grd { background:linear-gradient(135deg,#fff 0%,#818cf8 40%,#22d3ee 75%,#34d399 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
         .text-grd-sm { background:linear-gradient(135deg,#818cf8,#22d3ee); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
         nav.scrolled { background:rgba(11,15,26,.88)!important; backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px) saturate(180%); border-bottom:1px solid rgba(148,163,184,.07); }
         .cglow::before { content:""; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,#6366f1,transparent); opacity:0; transition:opacity .4s; }
@@ -914,10 +913,12 @@
 </head>
 <body>
 
-<!-- Ambient orbs -->
-<div class="orb w-[700px] h-[700px] opacity-30" style="top:-180px;left:-180px;background:radial-gradient(circle,rgba(99,102,241,0.18),transparent 68%);--dur:26s;"></div>
-<div class="orb w-[560px] h-[560px] opacity-20" style="top:45%;right:-160px;background:radial-gradient(circle,rgba(34,211,238,0.14),transparent 68%);--dur:32s;--delay:-7s;"></div>
-<div class="orb w-[460px] h-[460px] opacity-[0.15]" style="bottom:-80px;left:35%;background:radial-gradient(circle,rgba(52,211,153,0.12),transparent 68%);--dur:22s;--delay:-14s;"></div>
+<!-- Ambient orbs — single fixed layer for cheap GPU compositing -->
+<div style="position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;">
+    <div class="orb w-[700px] h-[700px] opacity-30" style="top:-180px;left:-180px;background:radial-gradient(circle,rgba(99,102,241,0.18),transparent 68%);--dur:26s;"></div>
+    <div class="orb w-[560px] h-[560px] opacity-20" style="top:45%;right:-160px;background:radial-gradient(circle,rgba(34,211,238,0.14),transparent 68%);--dur:32s;--delay:-7s;"></div>
+    <div class="orb w-[460px] h-[460px] opacity-[0.15]" style="bottom:-80px;left:35%;background:radial-gradient(circle,rgba(52,211,153,0.12),transparent 68%);--dur:22s;--delay:-14s;"></div>
+</div>
 <div class="noise"></div>
 
 <!-- Navigation -->
@@ -1239,14 +1240,14 @@
     <div class="relative">
         <!-- Animated connector -->
         <style>@keyframes stepLine{0%{opacity:.18}100%{opacity:.55}}</style>
-        <div class="absolute hidden lg:flex items-center" style="top:45px;left:45px;right:45px;height:2px;pointer-events:none;">
+        <div class="absolute hidden lg:flex items-center" style="top:45px;left:45px;right:calc(25% - 57px);height:2px;pointer-events:none;">
             <div class="w-full h-full rounded-full overflow-hidden" style="background:rgba(255,255,255,0.03);">
                 <div class="h-full rounded-full will-change-[opacity]" style="background:linear-gradient(90deg,#6366f1,#22d3ee,#34d399,#a5b4fc);animation:stepLine 3s ease-in-out infinite alternate;"></div>
             </div>
         </div>
         <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="reveal-child" style="transition-delay:.08s">
-                <div class="rounded-3xl border border-nw-border overflow-hidden p-6 group hover:border-nw-bh transition-all duration-400" style="background:rgba(255,255,255,0.022);">
+                <div class="rounded-3xl border border-nw-border overflow-hidden p-6 group hover:border-nw-bh transition-colors duration-300" style="background:rgba(255,255,255,0.022);">
                     <div class="flex items-center gap-3 mb-4">
                         <div class="w-[42px] h-[42px] rounded-2xl flex items-center justify-center flex-shrink-0 relative" style="background:linear-gradient(135deg,rgba(99,102,241,0.3),rgba(99,102,241,0.1));border:1px solid rgba(99,102,241,0.3);">
                             <span class="text-base font-black" style="color:#818cf8;">1</span>
@@ -1258,7 +1259,7 @@
                 </div>
             </div>
             <div class="reveal-child" style="transition-delay:.18s">
-                <div class="rounded-3xl border border-nw-border overflow-hidden p-6 group hover:border-nw-bh transition-all duration-400" style="background:rgba(255,255,255,0.022);">
+                <div class="rounded-3xl border border-nw-border overflow-hidden p-6 group hover:border-nw-bh transition-colors duration-300" style="background:rgba(255,255,255,0.022);">
                     <div class="flex items-center gap-3 mb-4">
                         <div class="w-[42px] h-[42px] rounded-2xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,rgba(34,211,238,0.25),rgba(34,211,238,0.07));border:1px solid rgba(34,211,238,0.28);">
                             <span class="text-base font-black" style="color:#22d3ee;">2</span>
@@ -1270,7 +1271,7 @@
                 </div>
             </div>
             <div class="reveal-child" style="transition-delay:.28s">
-                <div class="rounded-3xl border border-nw-border overflow-hidden p-6 group hover:border-nw-bh transition-all duration-400" style="background:rgba(255,255,255,0.022);">
+                <div class="rounded-3xl border border-nw-border overflow-hidden p-6 group hover:border-nw-bh transition-colors duration-300" style="background:rgba(255,255,255,0.022);">
                     <div class="flex items-center gap-3 mb-4">
                         <div class="w-[42px] h-[42px] rounded-2xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,rgba(52,211,153,0.25),rgba(52,211,153,0.07));border:1px solid rgba(52,211,153,0.28);">
                             <span class="text-base font-black" style="color:#34d399;">3</span>
@@ -1282,7 +1283,7 @@
                 </div>
             </div>
             <div class="reveal-child" style="transition-delay:.38s">
-                <div class="rounded-3xl border border-nw-border overflow-hidden p-6 group hover:border-nw-bh transition-all duration-400" style="background:rgba(255,255,255,0.022);">
+                <div class="rounded-3xl border border-nw-border overflow-hidden p-6 group hover:border-nw-bh transition-colors duration-300" style="background:rgba(255,255,255,0.022);">
                     <div class="flex items-center gap-3 mb-4">
                         <div class="w-[42px] h-[42px] rounded-2xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,rgba(129,140,248,0.25),rgba(129,140,248,0.07));border:1px solid rgba(129,140,248,0.28);">
                             <span class="text-base font-black" style="color:#a5b4fc;">4</span>
@@ -1458,9 +1459,14 @@
         });
 
         // ===== Navbar scroll effect =====
+        let _navRaf = null;
         window.addEventListener('scroll', () => {
-            document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
-        });
+            if (_navRaf) return;
+            _navRaf = requestAnimationFrame(() => {
+                document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
+                _navRaf = null;
+            });
+        }, { passive: true });
 
         // ===== Platform detection & download =====
         const DEFAULT_VERSION = 'v1.0.3';
