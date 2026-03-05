@@ -1141,107 +1141,240 @@
 
 <!-- Features -->
 <section class="py-20" id="features">
-    <div class="text-center mb-16">
+    <div class="text-center mb-14">
         <div class="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-nw-alight mb-4 reveal-blur">✦ Возможности</div>
         <h2 class="font-black tracking-tight leading-tight reveal-blur" style="font-size:clamp(1.9rem,4vw,3rem);transition-delay:.1s">Всё что нужно<br><span class="text-grd-sm">для OSINT</span></h2>
         <p class="text-nw-tx2 max-w-lg mx-auto mt-4 leading-relaxed reveal-blur" style="transition-delay:.2s">Полный набор инструментов для разведки, анализа и визуализации данных.</p>
     </div>
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        <div class="cglow relative overflow-hidden rounded-2xl border border-nw-border p-8 transition-all duration-500 hover:-translate-y-2 hover:border-nw-bh reveal-child" style="background:rgba(255,255,255,0.025);transition-delay:.1s">
-            <div class="w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-2xl mb-5 border" style="background:rgba(99,102,241,0.1);border-color:rgba(99,102,241,0.16);">🌐</div>
-            <h3 class="text-base font-bold mb-2.5 tracking-tight text-nw-tx1">Граф визуализация</h3>
-            <p class="text-nw-tx2 text-sm leading-relaxed">Интерактивные графы: IP, домены, email, телефоны, люди, организации и другие сущности.</p>
+    <!-- Bento grid -->
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-[minmax(170px,auto)]">
+        <!-- Big hero card: Graph viz -->
+        <div class="col-span-2 row-span-2 relative rounded-3xl border border-nw-border overflow-hidden p-8 reveal-child group cursor-default" style="background:linear-gradient(135deg,rgba(99,102,241,0.09) 0%,rgba(7,10,20,0.97) 70%);transition-delay:.05s">
+            <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700" style="background:radial-gradient(ellipse at 25% 40%,rgba(99,102,241,0.14),transparent 55%);"></div>
+            <div class="absolute top-0 left-0 right-0 h-px" style="background:linear-gradient(90deg,transparent,rgba(99,102,241,0.5),transparent);"></div>
+            <!-- floating bg graph -->
+            <svg class="absolute bottom-0 right-0 opacity-[0.06] group-hover:opacity-[0.14] transition-opacity duration-700" width="260" height="200" viewBox="0 0 260 200" fill="none">
+                <circle cx="130" cy="70" r="28" stroke="#818cf8" stroke-width="1.5"/>
+                <circle cx="40" cy="160" r="18" stroke="#22d3ee" stroke-width="1.2"/>
+                <circle cx="220" cy="155" r="18" stroke="#34d399" stroke-width="1.2"/>
+                <circle cx="80" cy="130" r="12" stroke="#6366f1" stroke-width="1"/>
+                <circle cx="180" cy="125" r="12" stroke="#818cf8" stroke-width="1"/>
+                <line x1="130" y1="98" x2="40" y2="142" stroke="#6366f1" stroke-width="1"/>
+                <line x1="130" y1="98" x2="220" y2="137" stroke="#22d3ee" stroke-width="1"/>
+                <line x1="130" y1="98" x2="80" y2="118" stroke="#818cf8" stroke-width="1"/>
+                <line x1="130" y1="98" x2="180" y2="113" stroke="#34d399" stroke-width="1"/>
+                <line x1="80" y1="130" x2="40" y2="152" stroke="#6366f1" stroke-width="0.7"/>
+                <line x1="180" y1="125" x2="220" y2="147" stroke="#22d3ee" stroke-width="0.7"/>
+            </svg>
+            <div class="relative z-10 h-full flex flex-col justify-between">
+                <div>
+                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center mb-5" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="5" r="2.5" fill="#818cf8"/><circle cx="4" cy="14.5" r="2" fill="#22d3ee"/><circle cx="16" cy="14.5" r="2" fill="#34d399"/><line x1="10" y1="7.5" x2="4" y2="12.5" stroke="#818cf8" stroke-width="1.2" stroke-opacity="0.7"/><line x1="10" y1="7.5" x2="16" y2="12.5" stroke="#22d3ee" stroke-width="1.2" stroke-opacity="0.7"/></svg>
+                    </div>
+                    <h3 class="text-2xl font-black mb-3 text-nw-tx1 tracking-tight">Граф визуализация</h3>
+                    <p class="text-nw-tx2 text-sm leading-relaxed max-w-sm">Интерактивные графы: IP, домены, email, телефоны, люди, организации и другие сущности. Сила Cytoscape в красивом интерфейсе.</p>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-6">
+                    <span class="text-[10px] font-semibold px-2.5 py-1 rounded-full" style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.18);color:#818cf8;">Cytoscape.js</span>
+                    <span class="text-[10px] font-semibold px-2.5 py-1 rounded-full" style="background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.15);color:#22d3ee;">Force Layout</span>
+                    <span class="text-[10px] font-semibold px-2.5 py-1 rounded-full" style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.15);color:#34d399;">Real-time sync</span>
+                </div>
+            </div>
         </div>
-        <div class="cglow relative overflow-hidden rounded-2xl border border-nw-border p-8 transition-all duration-500 hover:-translate-y-2 hover:border-nw-bh reveal-child" style="background:rgba(255,255,255,0.025);transition-delay:.18s">
-            <div class="w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-2xl mb-5 border" style="background:rgba(34,211,238,0.1);border-color:rgba(34,211,238,0.16);">🔄</div>
-            <h3 class="text-base font-bold mb-2.5 tracking-tight text-nw-tx1">OSINT Трансформы</h3>
-            <p class="text-nw-tx2 text-sm leading-relaxed">WHOIS, DNS, Nmap, Shodan, VirusTotal, HIBP — автоматический сбор и связывание данных.</p>
+        <!-- OSINT Transforms -->
+        <div class="relative rounded-3xl border border-nw-border overflow-hidden p-6 reveal-child group cursor-default" style="background:rgba(255,255,255,0.022);transition-delay:.12s">
+            <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style="background:radial-gradient(circle at 50% 0%,rgba(34,211,238,0.09),transparent 65%);"></div>
+            <div class="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-400" style="background:linear-gradient(90deg,transparent,rgba(34,211,238,0.5),transparent);"></div>
+            <div class="relative z-10">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-4" style="background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.2);">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M8 3l5 5-5 5" stroke="#22d3ee" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <h3 class="font-bold text-sm mb-1.5 text-nw-tx1">OSINT Трансформы</h3>
+                <p class="text-nw-tx2 text-xs leading-relaxed">WHOIS, DNS, Nmap, Shodan, VirusTotal, HIBP</p>
+            </div>
         </div>
-        <div class="cglow relative overflow-hidden rounded-2xl border border-nw-border p-8 transition-all duration-500 hover:-translate-y-2 hover:border-nw-bh reveal-child" style="background:rgba(255,255,255,0.025);transition-delay:.26s">
-            <div class="w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-2xl mb-5 border" style="background:rgba(52,211,153,0.1);border-color:rgba(52,211,153,0.16);">🤖</div>
-            <h3 class="text-base font-bold mb-2.5 tracking-tight text-nw-tx1">AI Ассистент</h3>
-            <p class="text-nw-tx2 text-sm leading-relaxed">AI-помощник для анализа данных, выявления паттернов и генерации выводов из графов.</p>
+        <!-- AI assistant -->
+        <div class="relative rounded-3xl border border-nw-border overflow-hidden p-6 reveal-child group cursor-default" style="background:rgba(255,255,255,0.022);transition-delay:.2s">
+            <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style="background:radial-gradient(circle at 50% 0%,rgba(52,211,153,0.09),transparent 65%);"></div>
+            <div class="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-400" style="background:linear-gradient(90deg,transparent,rgba(52,211,153,0.5),transparent);"></div>
+            <div class="relative z-10">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-4" style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.2);">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="9" rx="2" stroke="#34d399" stroke-width="1.3"/><path d="M5 14h6M8 11v3" stroke="#34d399" stroke-width="1.3" stroke-linecap="round"/><circle cx="5.5" cy="6.5" r="1" fill="#34d399"/><circle cx="10.5" cy="6.5" r="1" fill="#34d399"/></svg>
+                </div>
+                <h3 class="font-bold text-sm mb-1.5 text-nw-tx1">AI Ассистент</h3>
+                <p class="text-nw-tx2 text-xs leading-relaxed">GPT-powered анализ паттернов и автоматические выводы</p>
+            </div>
         </div>
-        <div class="cglow relative overflow-hidden rounded-2xl border border-nw-border p-8 transition-all duration-500 hover:-translate-y-2 hover:border-nw-bh reveal-child" style="background:rgba(255,255,255,0.025);transition-delay:.34s">
-            <div class="w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-2xl mb-5 border" style="background:rgba(251,113,133,0.1);border-color:rgba(251,113,133,0.16);">👥</div>
-            <h3 class="text-base font-bold mb-2.5 tracking-tight text-nw-tx1">Совместная работа</h3>
-            <p class="text-nw-tx2 text-sm leading-relaxed">WebSocket-синхронизация в реальном времени. Работайте над графами вместе.</p>
+        <!-- Collaboration narrow -->
+        <div class="relative rounded-3xl border border-nw-border overflow-hidden p-6 reveal-child group cursor-default" style="background:rgba(255,255,255,0.022);transition-delay:.28s">
+            <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style="background:radial-gradient(circle at 50% 0%,rgba(251,113,133,0.09),transparent 65%);"></div>
+            <div class="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-400" style="background:linear-gradient(90deg,transparent,rgba(251,113,133,0.5),transparent);"></div>
+            <div class="relative z-10">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-4" style="background:rgba(251,113,133,0.1);border:1px solid rgba(251,113,133,0.2);">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="5.5" r="2.5" stroke="#fb7185" stroke-width="1.3"/><circle cx="10.5" cy="5.5" r="2.5" stroke="#fb7185" stroke-width="1.3"/><path d="M1 13c0-2.2 2-4 4.5-4M15 13c0-2.2-2-4-4.5-4" stroke="#fb7185" stroke-width="1.3" stroke-linecap="round"/></svg>
+                </div>
+                <h3 class="font-bold text-sm mb-1.5 text-nw-tx1">Совместная работа</h3>
+                <p class="text-nw-tx2 text-xs leading-relaxed">WebSocket-синхронизация в реальном времени</p>
+            </div>
         </div>
-        <div class="cglow relative overflow-hidden rounded-2xl border border-nw-border p-8 transition-all duration-500 hover:-translate-y-2 hover:border-nw-bh reveal-child" style="background:rgba(255,255,255,0.025);transition-delay:.42s">
-            <div class="w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-2xl mb-5 border" style="background:rgba(251,191,36,0.1);border-color:rgba(251,191,36,0.16);">💬</div>
-            <h3 class="text-base font-bold mb-2.5 tracking-tight text-nw-tx1">Discord &amp; Telegram</h3>
-            <p class="text-nw-tx2 text-sm leading-relaxed">Управляйте исследованиями из мессенджеров через встроенных ботов с полным API.</p>
-        </div>
-        <div class="cglow relative overflow-hidden rounded-2xl border border-nw-border p-8 transition-all duration-500 hover:-translate-y-2 hover:border-nw-bh reveal-child" style="background:rgba(255,255,255,0.025);transition-delay:.5s">
-            <div class="w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-2xl mb-5 border" style="background:rgba(56,189,248,0.1);border-color:rgba(56,189,248,0.16);">📊</div>
-            <h3 class="text-base font-bold mb-2.5 tracking-tight text-nw-tx1">Отчёты и экспорт</h3>
-            <p class="text-nw-tx2 text-sm leading-relaxed">Экспорт в PNG, PDF, CSV. Генерация профессиональных отчётов прямо из интерфейса.</p>
+        <!-- Discord/Telegram + Reports: side by side wide -->
+        <div class="col-span-2 grid grid-cols-2 gap-3 reveal-child" style="transition-delay:.36s">
+            <div class="relative rounded-3xl border border-nw-border overflow-hidden p-6 group cursor-default" style="background:rgba(255,255,255,0.022);">
+                <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style="background:radial-gradient(circle at 50% 0%,rgba(251,191,36,0.08),transparent 65%);"></div>
+                <div class="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-400" style="background:linear-gradient(90deg,transparent,rgba(251,191,36,0.5),transparent);"></div>
+                <div class="relative z-10">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-4" style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2);">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M14 2L2 6.5l5 2 2 5L14 2z" stroke="#fbbf24" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                    </div>
+                    <h3 class="font-bold text-sm mb-1.5 text-nw-tx1">Discord &amp; Telegram</h3>
+                    <p class="text-nw-tx2 text-xs leading-relaxed">Управляйте исследованиями прямо из мессенджеров</p>
+                </div>
+            </div>
+            <div class="relative rounded-3xl border border-nw-border overflow-hidden p-6 group cursor-default" style="background:rgba(255,255,255,0.022);">
+                <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style="background:radial-gradient(circle at 50% 0%,rgba(56,189,248,0.08),transparent 65%);"></div>
+                <div class="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-400" style="background:linear-gradient(90deg,transparent,rgba(56,189,248,0.5),transparent);"></div>
+                <div class="relative z-10">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-4" style="background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.2);">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="13" height="10" rx="2" stroke="#38bdf8" stroke-width="1.3"/><path d="M4 7h8M4 10h5" stroke="#38bdf8" stroke-width="1.3" stroke-linecap="round"/></svg>
+                    </div>
+                    <h3 class="font-bold text-sm mb-1.5 text-nw-tx1">Отчёты и экспорт</h3>
+                    <p class="text-nw-tx2 text-xs leading-relaxed">PNG, PDF, CSV — профессиональные отчёты за секунды</p>
+                </div>
+            </div>
         </div>
     </div>
 </section>
 
 <!-- How it works -->
 <section class="py-20" id="how">
-    <div class="text-center mb-16">
+    <div class="text-center mb-14">
         <div class="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-nw-alight mb-4 reveal-blur">✦ Начни за минуту</div>
         <h2 class="font-black tracking-tight reveal-blur" style="font-size:clamp(1.9rem,4vw,3rem);transition-delay:.1s">Как это <span class="text-grd-sm">работает</span></h2>
     </div>
-    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 relative">
-        <div class="absolute top-[35px] left-[12%] right-[12%] h-px hidden lg:block" style="background:linear-gradient(90deg,transparent,rgba(99,102,241,0.28),rgba(34,211,238,0.22),rgba(52,211,153,0.22),transparent);"></div>
-        <div class="text-center reveal-child" style="transition-delay:.1s">
-            <div class="w-[72px] h-[72px] rounded-full flex items-center justify-center text-2xl font-black text-nw-alight border-2 border-nw-border mx-auto mb-5 relative z-10 transition-all duration-300 hover:border-nw-accent hover:scale-110" style="background:rgba(14,20,38,0.9);">1</div>
-            <h4 class="font-bold mb-2 text-sm text-nw-tx1">Установи</h4>
-            <p class="text-nw-tx2 text-sm leading-relaxed">Скачай NodeWeaver и зарегистрируй аккаунт за одну минуту.</p>
+    <!-- Horizontal steps with connecting line -->
+    <div class="relative">
+        <!-- Animated connector -->
+        <div class="absolute top-[28px] left-[calc(12.5%+20px)] right-[calc(12.5%+20px)] h-[2px] hidden lg:block overflow-hidden rounded-full" style="background:rgba(255,255,255,0.04);">
+            <div class="h-full rounded-full" style="background:linear-gradient(90deg,#6366f1,#22d3ee,#34d399,#818cf8);width:100%;animation:stepLine 3s ease-in-out infinite alternate;"></div>
         </div>
-        <div class="text-center reveal-child" style="transition-delay:.22s">
-            <div class="w-[72px] h-[72px] rounded-full flex items-center justify-center text-2xl font-black text-nw-alight border-2 border-nw-border mx-auto mb-5 relative z-10 transition-all duration-300 hover:border-nw-accent hover:scale-110" style="background:rgba(14,20,38,0.9);">2</div>
-            <h4 class="font-bold mb-2 text-sm text-nw-tx1">Создай граф</h4>
-            <p class="text-nw-tx2 text-sm leading-relaxed">Добавь первую сущность — домен, IP, email или телефон.</p>
-        </div>
-        <div class="text-center reveal-child" style="transition-delay:.34s">
-            <div class="w-[72px] h-[72px] rounded-full flex items-center justify-center text-2xl font-black text-nw-alight border-2 border-nw-border mx-auto mb-5 relative z-10 transition-all duration-300 hover:border-nw-accent hover:scale-110" style="background:rgba(14,20,38,0.9);">3</div>
-            <h4 class="font-bold mb-2 text-sm text-nw-tx1">Запусти трансформ</h4>
-            <p class="text-nw-tx2 text-sm leading-relaxed">Выбери трансформ и получи данные автоматически.</p>
-        </div>
-        <div class="text-center reveal-child" style="transition-delay:.46s">
-            <div class="w-[72px] h-[72px] rounded-full flex items-center justify-center text-2xl font-black text-nw-alight border-2 border-nw-border mx-auto mb-5 relative z-10 transition-all duration-300 hover:border-nw-accent hover:scale-110" style="background:rgba(14,20,38,0.9);">4</div>
-            <h4 class="font-bold mb-2 text-sm text-nw-tx1">Анализируй</h4>
-            <p class="text-nw-tx2 text-sm leading-relaxed">Изучай связи и паттерны, генерируй отчёты с AI.</p>
+        <style>@keyframes stepLine{0%{opacity:.25;filter:blur(0px)}100%{opacity:.7;filter:blur(0.5px)}}</style>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="reveal-child" style="transition-delay:.08s">
+                <div class="rounded-3xl border border-nw-border overflow-hidden p-6 group hover:border-nw-bh transition-all duration-400" style="background:rgba(255,255,255,0.022);">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-[42px] h-[42px] rounded-2xl flex items-center justify-center flex-shrink-0 relative" style="background:linear-gradient(135deg,rgba(99,102,241,0.3),rgba(99,102,241,0.1));border:1px solid rgba(99,102,241,0.3);">
+                            <span class="text-base font-black" style="color:#818cf8;">1</span>
+                        </div>
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" class="text-nw-tx3"><path d="M3 9l4 4 8-8" stroke="#6366f1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/></svg>
+                    </div>
+                    <h4 class="font-bold mb-2 text-nw-tx1">Установи</h4>
+                    <p class="text-nw-tx3 text-xs leading-relaxed">Скачай NodeWeaver и зарегистрируй аккаунт за одну минуту.</p>
+                </div>
+            </div>
+            <div class="reveal-child" style="transition-delay:.18s">
+                <div class="rounded-3xl border border-nw-border overflow-hidden p-6 group hover:border-nw-bh transition-all duration-400" style="background:rgba(255,255,255,0.022);">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-[42px] h-[42px] rounded-2xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,rgba(34,211,238,0.25),rgba(34,211,238,0.07));border:1px solid rgba(34,211,238,0.28);">
+                            <span class="text-base font-black" style="color:#22d3ee;">2</span>
+                        </div>
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="3" fill="rgba(34,211,238,0.5)"/><circle cx="9" cy="9" r="7" stroke="rgba(34,211,238,0.2)" stroke-width="1.2"/></svg>
+                    </div>
+                    <h4 class="font-bold mb-2 text-nw-tx1">Создай граф</h4>
+                    <p class="text-nw-tx3 text-xs leading-relaxed">Добавь первую сущность — домен, IP, email или телефон.</p>
+                </div>
+            </div>
+            <div class="reveal-child" style="transition-delay:.28s">
+                <div class="rounded-3xl border border-nw-border overflow-hidden p-6 group hover:border-nw-bh transition-all duration-400" style="background:rgba(255,255,255,0.022);">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-[42px] h-[42px] rounded-2xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,rgba(52,211,153,0.25),rgba(52,211,153,0.07));border:1px solid rgba(52,211,153,0.28);">
+                            <span class="text-base font-black" style="color:#34d399;">3</span>
+                        </div>
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9h12M9 3l6 6-6 6" stroke="#34d399" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/></svg>
+                    </div>
+                    <h4 class="font-bold mb-2 text-nw-tx1">Запусти трансформ</h4>
+                    <p class="text-nw-tx3 text-xs leading-relaxed">Выбери трансформ и получи данные автоматически.</p>
+                </div>
+            </div>
+            <div class="reveal-child" style="transition-delay:.38s">
+                <div class="rounded-3xl border border-nw-border overflow-hidden p-6 group hover:border-nw-bh transition-all duration-400" style="background:rgba(255,255,255,0.022);">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-[42px] h-[42px] rounded-2xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,rgba(129,140,248,0.25),rgba(129,140,248,0.07));border:1px solid rgba(129,140,248,0.28);">
+                            <span class="text-base font-black" style="color:#a5b4fc;">4</span>
+                        </div>
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 14l4-6 3 4 3-3 4 5" stroke="#818cf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/></svg>
+                    </div>
+                    <h4 class="font-bold mb-2 text-nw-tx1">Анализируй</h4>
+                    <p class="text-nw-tx3 text-xs leading-relaxed">Изучай связи и паттерны, генерируй отчёты с AI.</p>
+                </div>
+            </div>
         </div>
     </div>
 </section>
 
 <!-- Integrations -->
 <section class="py-20" id="integrations">
-    <div class="text-center mb-16">
+    <div class="text-center mb-12">
         <div class="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-nw-alight mb-4 reveal-blur">✦ Интеграции</div>
         <h2 class="font-black tracking-tight reveal-blur" style="font-size:clamp(1.9rem,4vw,3rem);transition-delay:.1s">Подключай<br><span class="text-grd-sm">источники данных</span></h2>
         <p class="text-nw-tx2 max-w-md mx-auto mt-4 leading-relaxed reveal-blur" style="transition-delay:.2s">Работает с ведущими OSINT-сервисами и инструментами сетевой разведки.</p>
     </div>
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
-        <div class="cbar relative overflow-hidden flex items-center gap-4 p-6 rounded-2xl border border-nw-border transition-all duration-300 hover:-translate-y-1 hover:border-nw-bh reveal-child" style="background:rgba(255,255,255,0.025);transition-delay:.1s">
-            <div class="w-12 h-12 rounded-[14px] flex items-center justify-center text-2xl flex-shrink-0 border" style="background:rgba(251,113,133,0.1);border-color:rgba(251,113,133,0.15);">🔍</div>
-            <div><h4 class="font-bold text-sm mb-1 text-nw-tx1">Shodan</h4><p class="text-nw-tx2 text-xs leading-relaxed">Поиск устройств и анализ хостов</p></div>
-        </div>
-        <div class="cbar relative overflow-hidden flex items-center gap-4 p-6 rounded-2xl border border-nw-border transition-all duration-300 hover:-translate-y-1 hover:border-nw-bh reveal-child" style="background:rgba(255,255,255,0.025);transition-delay:.18s">
-            <div class="w-12 h-12 rounded-[14px] flex items-center justify-center text-2xl flex-shrink-0 border" style="background:rgba(52,211,153,0.1);border-color:rgba(52,211,153,0.15);">🛡️</div>
-            <div><h4 class="font-bold text-sm mb-1 text-nw-tx1">VirusTotal</h4><p class="text-nw-tx2 text-xs leading-relaxed">Проверка доменов, IP и файлов</p></div>
-        </div>
-        <div class="cbar relative overflow-hidden flex items-center gap-4 p-6 rounded-2xl border border-nw-border transition-all duration-300 hover:-translate-y-1 hover:border-nw-bh reveal-child" style="background:rgba(255,255,255,0.025);transition-delay:.26s">
-            <div class="w-12 h-12 rounded-[14px] flex items-center justify-center text-2xl flex-shrink-0 border" style="background:rgba(251,191,36,0.1);border-color:rgba(251,191,36,0.15);">🔓</div>
-            <div><h4 class="font-bold text-sm mb-1 text-nw-tx1">Have I Been Pwned</h4><p class="text-nw-tx2 text-xs leading-relaxed">Поиск утечек email и аккаунтов</p></div>
-        </div>
-        <div class="cbar relative overflow-hidden flex items-center gap-4 p-6 rounded-2xl border border-nw-border transition-all duration-300 hover:-translate-y-1 hover:border-nw-bh reveal-child" style="background:rgba(255,255,255,0.025);transition-delay:.34s">
-            <div class="w-12 h-12 rounded-[14px] flex items-center justify-center text-2xl flex-shrink-0 border" style="background:rgba(34,211,238,0.1);border-color:rgba(34,211,238,0.15);">📡</div>
-            <div><h4 class="font-bold text-sm mb-1 text-nw-tx1">Nmap</h4><p class="text-nw-tx2 text-xs leading-relaxed">Сканирование портов и сервисов</p></div>
-        </div>
-        <div class="cbar relative overflow-hidden flex items-center gap-4 p-6 rounded-2xl border border-nw-border transition-all duration-300 hover:-translate-y-1 hover:border-nw-bh reveal-child" style="background:rgba(255,255,255,0.025);transition-delay:.42s">
-            <div class="w-12 h-12 rounded-[14px] flex items-center justify-center text-2xl flex-shrink-0 border" style="background:rgba(99,102,241,0.1);border-color:rgba(99,102,241,0.15);">📋</div>
-            <div><h4 class="font-bold text-sm mb-1 text-nw-tx1">WHOIS &amp; DNS</h4><p class="text-nw-tx2 text-xs leading-relaxed">Домены, DNS-записи, регистраторы</p></div>
-        </div>
-        <div class="cbar relative overflow-hidden flex items-center gap-4 p-6 rounded-2xl border border-nw-border transition-all duration-300 hover:-translate-y-1 hover:border-nw-bh reveal-child" style="background:rgba(255,255,255,0.025);transition-delay:.5s">
-            <div class="w-12 h-12 rounded-[14px] flex items-center justify-center text-2xl flex-shrink-0 border" style="background:rgba(56,189,248,0.1);border-color:rgba(56,189,248,0.15);">🤖</div>
-            <div><h4 class="font-bold text-sm mb-1 text-nw-tx1">AI Analysis</h4><p class="text-nw-tx2 text-xs leading-relaxed">GPT-powered выводы и отчёты</p></div>
+    <!-- Marquee ticker -->
+    <style>
+        .marquee-track { display:flex; gap:12px; animation:marqueeScroll 22s linear infinite; width:max-content; }
+        .marquee-track:hover { animation-play-state:paused; }
+        @keyframes marqueeScroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+        .itag { display:inline-flex; align-items:center; gap:10px; padding:10px 18px; border-radius:9999px; border:1px solid; white-space:nowrap; transition:all .3s; cursor:default; }
+        .itag:hover { transform:translateY(-2px); }
+    </style>
+    <div class="overflow-hidden reveal-blur" style="mask:linear-gradient(90deg,transparent,black 10%,black 90%,transparent);-webkit-mask:linear-gradient(90deg,transparent,black 10%,black 90%,transparent);">
+        <div class="marquee-track">
+            <!-- Row 1 (repeated x2 for seamless) -->
+            <span class="itag" style="background:rgba(251,113,133,0.07);border-color:rgba(251,113,133,0.18);">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#fb7185" stroke-width="1.2"/><circle cx="7" cy="7" r="2.5" fill="#fb7185"/></svg>
+                <span class="text-sm font-semibold" style="color:#fb7185;">Shodan</span>
+            </span>
+            <span class="itag" style="background:rgba(52,211,153,0.07);border-color:rgba(52,211,153,0.18);">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M7 2v10" stroke="#34d399" stroke-width="1.4" stroke-linecap="round"/></svg>
+                <span class="text-sm font-semibold" style="color:#34d399;">VirusTotal</span>
+            </span>
+            <span class="itag" style="background:rgba(251,191,36,0.07);border-color:rgba(251,191,36,0.18);">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="8" rx="2" stroke="#fbbf24" stroke-width="1.2"/><path d="M4 7h6" stroke="#fbbf24" stroke-width="1.2" stroke-linecap="round"/></svg>
+                <span class="text-sm font-semibold" style="color:#fbbf24;">Have I Been Pwned</span>
+            </span>
+            <span class="itag" style="background:rgba(34,211,238,0.07);border-color:rgba(34,211,238,0.18);">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#22d3ee" stroke-width="1.2"/><path d="M4 7h6M7 4v6" stroke="#22d3ee" stroke-width="1" stroke-linecap="round" opacity="0.5"/></svg>
+                <span class="text-sm font-semibold" style="color:#22d3ee;">Nmap</span>
+            </span>
+            <span class="itag" style="background:rgba(99,102,241,0.07);border-color:rgba(99,102,241,0.18);">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="10" rx="2" stroke="#818cf8" stroke-width="1.2"/><path d="M3 5h8M3 8h5" stroke="#818cf8" stroke-width="1" stroke-linecap="round"/></svg>
+                <span class="text-sm font-semibold" style="color:#818cf8;">WHOIS &amp; DNS</span>
+            </span>
+            <span class="itag" style="background:rgba(56,189,248,0.07);border-color:rgba(56,189,248,0.18);">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2.5" width="11" height="9" rx="2" stroke="#38bdf8" stroke-width="1.2"/><path d="M4 6.5l2 2 4-4" stroke="#38bdf8" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span class="text-sm font-semibold" style="color:#38bdf8;">AI Analysis</span>
+            </span>
+            <span class="itag" style="background:rgba(129,140,248,0.07);border-color:rgba(129,140,248,0.18);">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L1 5v3c0 3.3 2.5 6.4 6 7 3.5-.6 6-3.7 6-7V5L7 1z" stroke="#a5b4fc" stroke-width="1.2" stroke-linejoin="round"/></svg>
+                <span class="text-sm font-semibold" style="color:#a5b4fc;">Censys</span>
+            </span>
+            <span class="itag" style="background:rgba(52,211,153,0.07);border-color:rgba(52,211,153,0.18);">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="5" r="3" stroke="#34d399" stroke-width="1.2"/><path d="M1 13c0-2.8 2.7-5 6-5s6 2.2 6 5" stroke="#34d399" stroke-width="1.2" stroke-linecap="round"/></svg>
+                <span class="text-sm font-semibold" style="color:#34d399;">HunterIO</span>
+            </span>
+            <span class="itag" style="background:rgba(251,113,133,0.07);border-color:rgba(251,113,133,0.18);">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 11L11 3M3 3h8v8" stroke="#fb7185" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span class="text-sm font-semibold" style="color:#fb7185;">URLScan</span>
+            </span>
+            <!-- Duplicate for seamless loop -->
+            <span class="itag" style="background:rgba(251,113,133,0.07);border-color:rgba(251,113,133,0.18);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#fb7185" stroke-width="1.2"/><circle cx="7" cy="7" r="2.5" fill="#fb7185"/></svg><span class="text-sm font-semibold" style="color:#fb7185;">Shodan</span></span>
+            <span class="itag" style="background:rgba(52,211,153,0.07);border-color:rgba(52,211,153,0.18);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M7 2v10" stroke="#34d399" stroke-width="1.4" stroke-linecap="round"/></svg><span class="text-sm font-semibold" style="color:#34d399;">VirusTotal</span></span>
+            <span class="itag" style="background:rgba(251,191,36,0.07);border-color:rgba(251,191,36,0.18);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="8" rx="2" stroke="#fbbf24" stroke-width="1.2"/><path d="M4 7h6" stroke="#fbbf24" stroke-width="1.2" stroke-linecap="round"/></svg><span class="text-sm font-semibold" style="color:#fbbf24;">Have I Been Pwned</span></span>
+            <span class="itag" style="background:rgba(34,211,238,0.07);border-color:rgba(34,211,238,0.18);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#22d3ee" stroke-width="1.2"/><path d="M4 7h6M7 4v6" stroke="#22d3ee" stroke-width="1" stroke-linecap="round" opacity="0.5"/></svg><span class="text-sm font-semibold" style="color:#22d3ee;">Nmap</span></span>
+            <span class="itag" style="background:rgba(99,102,241,0.07);border-color:rgba(99,102,241,0.18);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="10" rx="2" stroke="#818cf8" stroke-width="1.2"/><path d="M3 5h8M3 8h5" stroke="#818cf8" stroke-width="1" stroke-linecap="round"/></svg><span class="text-sm font-semibold" style="color:#818cf8;">WHOIS &amp; DNS</span></span>
+            <span class="itag" style="background:rgba(56,189,248,0.07);border-color:rgba(56,189,248,0.18);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2.5" width="11" height="9" rx="2" stroke="#38bdf8" stroke-width="1.2"/><path d="M4 6.5l2 2 4-4" stroke="#38bdf8" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="text-sm font-semibold" style="color:#38bdf8;">AI Analysis</span></span>
+            <span class="itag" style="background:rgba(129,140,248,0.07);border-color:rgba(129,140,248,0.18);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L1 5v3c0 3.3 2.5 6.4 6 7 3.5-.6 6-3.7 6-7V5L7 1z" stroke="#a5b4fc" stroke-width="1.2" stroke-linejoin="round"/></svg><span class="text-sm font-semibold" style="color:#a5b4fc;">Censys</span></span>
+            <span class="itag" style="background:rgba(52,211,153,0.07);border-color:rgba(52,211,153,0.18);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="5" r="3" stroke="#34d399" stroke-width="1.2"/><path d="M1 13c0-2.8 2.7-5 6-5s6 2.2 6 5" stroke="#34d399" stroke-width="1.2" stroke-linecap="round"/></svg><span class="text-sm font-semibold" style="color:#34d399;">HunterIO</span></span>
+            <span class="itag" style="background:rgba(251,113,133,0.07);border-color:rgba(251,113,133,0.18);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 11L11 3M3 3h8v8" stroke="#fb7185" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="text-sm font-semibold" style="color:#fb7185;">URLScan</span></span>
         </div>
     </div>
 </section>
@@ -1263,33 +1396,6 @@
             <div class="pl-4 text-nw-emerald">✓ Open: 22/ssh  80/http  443/https</div>
             <div class="pl-4 text-nw-tx3">→ 3 service nodes added to graph</div>
             <div class="mt-2"><span class="text-nw-cyan">→</span> <span class="text-white">ai</span> analyze patterns<span class="cursor"></span></div>
-        </div>
-    </div>
-</section>
-
-<!-- CTA / Download -->
-<section class="py-20">
-    <div class="relative rounded-[2rem] overflow-hidden border text-center p-16 reveal-blur" style="background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(34,211,238,0.04));border-color:rgba(99,102,241,0.14);">
-        <div class="absolute top-0 left-0 w-64 h-64 rounded-full pointer-events-none" style="background:radial-gradient(circle,rgba(99,102,241,0.14),transparent 70%);transform:translate(-45%,-45%);"></div>
-        <div class="absolute bottom-0 right-0 w-64 h-64 rounded-full pointer-events-none" style="background:radial-gradient(circle,rgba(34,211,238,0.1),transparent 70%);transform:translate(45%,45%);"></div>
-        <div class="relative z-10">
-            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-nw-alight text-[11px] font-semibold uppercase tracking-widest mb-6" style="background:rgba(99,102,241,0.1);border-color:rgba(99,102,241,0.2);">⬇ Скачать бесплатно</div>
-            <h2 class="font-black tracking-tight mb-4" style="font-size:clamp(2rem,4.5vw,3.2rem);">Начни работать<br><span class="text-grd">прямо сейчас</span></h2>
-            <p class="text-nw-tx2 text-lg mb-10 max-w-md mx-auto">Бесплатно, без ограничений. Авто-обновления включены.</p>
-            <div class="flex flex-col items-center gap-4">
-                <button onclick="downloadApp(event,detectPlatform())" class="shimmer inline-flex items-center gap-3 px-12 py-5 rounded-2xl text-lg font-bold text-white transition-all duration-300 hover:-translate-y-1" style="background:linear-gradient(135deg,#6366f1,#7c3aed);box-shadow:0 4px 30px rgba(99,102,241,0.4);">
-                    <span class="text-2xl">⬇</span>
-                    <span id="cta-download-label">Скачать для Windows</span>
-                </button>
-                <div class="flex flex-wrap gap-5 justify-center text-sm text-nw-tx3">
-                    <a href="#" onclick="downloadApp(event,'windows')" class="hover:text-nw-alight transition-colors no-underline">Windows (.exe)</a>
-                    <span style="color:rgba(148,163,184,0.12)">·</span>
-                    <a href="#" onclick="downloadApp(event,'mac')" class="hover:text-nw-alight transition-colors no-underline">macOS (.dmg)</a>
-                    <span style="color:rgba(148,163,184,0.12)">·</span>
-                    <a href="#" onclick="downloadApp(event,'linux')" class="hover:text-nw-alight transition-colors no-underline">Linux (.AppImage)</a>
-                </div>
-                <div id="cta-download-status" class="h-5 text-sm"></div>
-            </div>
         </div>
     </div>
 </section>
