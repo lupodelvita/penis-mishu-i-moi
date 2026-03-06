@@ -169,16 +169,4 @@ router.post('/sqli-scan', async (req, res, next) => {
   }
 });
 
-// 4. Test Vulnerable Page
-router.get('/vulnerable', (req, res) => {
-    const { q, id } = req.query;
-    let html = `<h1>Vulnerable Test Page</h1><p>Params: ?q= (XSS), ?id= (SQLi)</p>`;
-    if (q) html += `<p>Query: ${q}</p>`;
-    if (id && String(id).includes("'")) {
-        res.status(500).send(`SQL Error near '${id}'`);
-        return;
-    }
-    res.send(html);
-});
-
 export default router;

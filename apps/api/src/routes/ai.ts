@@ -28,9 +28,6 @@ router.post('/chat', async (req, res, next) => {
       content: { message }
     });
     
-    // Имитация задержки обработки
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
     res.json({ success: true, response });
   } catch (error) {
     next(error);

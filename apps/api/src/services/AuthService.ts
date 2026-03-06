@@ -5,7 +5,11 @@ import { User, LicenseTier, Role } from '@prisma/client';
 import { randomBytes } from 'crypto';
 
 const SALT_ROUNDS = 10;
-const JWT_SECRET = process.env.JWT_SECRET || 'nodeweaver-secret-key-change-in-prod';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set');
+  process.exit(1);
+}
 
 export class AuthService {
   

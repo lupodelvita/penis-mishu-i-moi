@@ -4,8 +4,12 @@ import { botManager } from '../services/BotManager';
 import { DiscordBot } from '../services/DiscordBot';
 import { alertDispatchService } from '../services/AlertDispatchService';
 import { prisma } from '../lib/prisma';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
+
+// All discord routes require authentication
+router.use(authenticateToken);
 
 // ... Interfaces (kept same) ...
 interface DiscordWebhookPayload {

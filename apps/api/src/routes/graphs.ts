@@ -6,7 +6,7 @@ import { requireGraphLimit, requireEntityLimit } from '../middleware/license';
 const router = Router();
 
 // Get all graphs
-router.get('/', async (_req, res, next) => {
+router.get('/', authenticateToken, async (_req, res, next) => {
   try {
     const graphs = await prisma.graph.findMany({
         include: {

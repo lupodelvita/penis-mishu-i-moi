@@ -4,8 +4,12 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
+
+// All upload routes require authentication
+router.use(authenticateToken);
 
 // Ensure upload directory exists
 // On Vercel, use /tmp; locally use process.cwd()/uploads
