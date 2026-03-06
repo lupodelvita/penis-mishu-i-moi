@@ -792,26 +792,7 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
         />
       )}
       {}
-      {contextMenu && (
-        <div
-          className="fixed bg-slate-800 rounded-lg shadow-xl border border-slate-700 py-2 z-50"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-        >
-          {}
-        </div>
-      )}
-      {}
-      <NmapScanModal
-        isOpen={showNmapModal}
-        onClose={() => {
-          setShowNmapModal(false);
-          setNmapTarget(null);
-        }}
-        onScanComplete={(results) => {
-          // Nmap scan completed handler
-        }}
-      />
-      {}
+
       {showNameDialog && pendingEntity && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-700 p-6 rounded-xl shadow-2xl w-80 animate-in fade-in zoom-in duration-200">

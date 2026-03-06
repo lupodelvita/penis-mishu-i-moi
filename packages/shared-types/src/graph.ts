@@ -101,22 +101,6 @@ export interface GraphCollaborator {
 }
 
 /**
- * Graph snapshot (for version history)
- */
-export interface GraphSnapshot {
-  id: string;
-  graphId: string;
-  name?: string;
-  description?: string;
-  data: {
-    entities: Entity[];
-    links: Link[];
-  };
-  createdBy: string;
-  created: Date;
-}
-
-/**
  * Graph export formats
  */
 export enum GraphExportFormat {
@@ -151,30 +135,6 @@ export interface GraphImportData {
     mergeStrategy?: 'replace' | 'merge' | 'append';
     autoLayout?: boolean;
   };
-}
-
-/**
- * Graph template
- */
-export interface GraphTemplate {
-  id: string;
-  name: string;
-  description?: string;
-  category?: string;
-  thumbnail?: string;
-  
-  // Template structure
-  initialEntities?: Partial<Entity>[];
-  initialLinks?: Partial<Link>[];
-  suggestedTransforms?: string[];
-  
-  // Metadata
-  author?: string;
-  tags?: string[];
-  usageCount?: number;
-  
-  created: Date;
-  updated: Date;
 }
 
 /**

@@ -136,51 +136,6 @@ export interface LinkMetadata {
 }
 
 /**
- * Transform machine - automated sequence of transforms
- */
-export interface TransformMachine {
-  id: string;
-  name: string;
-  description?: string;
-  steps: TransformMachineStep[];
-  created: Date;
-  updated: Date;
-}
-
-/**
- * Transform machine step
- */
-export interface TransformMachineStep {
-  order: number;
-  transformId: string;
-  entityFilter?: {
-    types?: EntityType[]; // Only run on these types
-    conditions?: Record<string, any>; // Additional conditions
-  };
-  options?: TransformExecutionOptions;
-  continueOnError?: boolean;
-}
-
-/**
- * Transform machine execution
- */
-export interface TransformMachineExecution {
-  id: string;
-  machineId: string;
-  graphId: string;
-  status: TransformStatus;
-  currentStep: number;
-  totalSteps: number;
-  results: TransformExecutionResult[];
-  startTime: Date;
-  endTime?: Date;
-  error?: {
-    step: number;
-    message: string;
-  };
-}
-
-/**
  * Transform configuration (API keys, etc.)
  */
 export interface TransformConfig {

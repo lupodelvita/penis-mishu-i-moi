@@ -1,1 +1,1 @@
-declare module 'cytoscape-fcose';
+// Consolidated into cytoscape-extensions.d.ts
