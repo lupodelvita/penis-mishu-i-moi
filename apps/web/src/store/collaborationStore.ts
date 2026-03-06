@@ -98,7 +98,16 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
   
   initializeSocket: (userName: string, userId: string, accountCode?: string) => {
     const existingSocket = get().socket;
-    if (existingSocket && existingSocket.connected) {
+    const existingUser = get().currentUser;
+
+    // Guard: skip re-init if already connected as the same user.
+    // This prevents double socket creation caused by React StrictMode (double effect)
+    // and by navigation back from admin/bots/license routes.
+    if (existingSocket?.connected && existingUser?.userId === userId) {
+      return;
+    }
+
+    if (existingSocket) {
       existingSocket.off();
       existingSocket.disconnect();
       set({ socket: null, isConnected: false, collaborators: [], currentUser: null });

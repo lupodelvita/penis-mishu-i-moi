@@ -236,34 +236,41 @@ export default function Home() {
       
       {/* Action Input Modal */}
       {actionInput.isOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <form onSubmit={handleActionSubmit} className="bg-background border border-border rounded-lg p-4 w-96 shadow-lg">
-             <h3 className="font-semibold mb-4">
-               {actionInput.type === 'nmap' ? 'Nmap Scan' : 'WHOIS Lookup'}
-             </h3>
-             <input 
-               type="text" 
-               autoFocus
-               value={inputValue}
-               onChange={(e) => setInputValue(e.target.value)}
-               placeholder={actionInput.type === 'nmap' ? 'IP Address or Domain' : 'Domain Name'}
-               className="w-full px-3 py-2 bg-secondary border border-border rounded mb-4 focus:outline-none focus:ring-1 focus:ring-primary"
-             />
-             <div className="flex justify-end gap-2">
-               <button 
-                 type="button" 
-                 onClick={() => setActionInput({ ...actionInput, isOpen: false })}
-                 className="px-3 py-1 text-sm hover:bg-muted rounded"
-               >
-                 Cancel
-               </button>
-               <button 
-                 type="submit" 
-                 className="px-3 py-1 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90"
-               >
-                 Run
-               </button>
-             </div>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm">
+          <form onSubmit={handleActionSubmit} className="bg-card border border-border w-80 shadow-2xl">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-300 font-mono uppercase tracking-widest">
+                {actionInput.type === 'nmap' ? 'Nmap Scan' : 'WHOIS Lookup'}
+              </span>
+              <button type="button" onClick={() => setActionInput({ ...actionInput, isOpen: false })}
+                className="text-slate-600 hover:text-slate-300 transition text-sm leading-none">✕</button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="text-[10px] text-slate-500 font-mono uppercase tracking-widest mb-1.5 block">
+                  {actionInput.type === 'nmap' ? 'IP Address or Domain' : 'Domain Name'}
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder={actionInput.type === 'nmap' ? 'e.g. 192.168.1.1' : 'e.g. example.com'}
+                  className="w-full px-3 py-2 bg-background border border-border text-sm text-slate-200 focus:border-sky-500/60 focus:outline-none transition-colors"
+                />
+              </div>
+            </div>
+            <div className="px-4 pb-4 flex gap-2">
+              <button type="button" onClick={() => setActionInput({ ...actionInput, isOpen: false })}
+                className="flex-1 px-3 py-2 text-sm text-slate-400 border border-border hover:bg-accent hover:text-slate-200 transition-colors">
+                Cancel
+              </button>
+              <button type="submit"
+                className="flex-1 px-3 py-2 text-sm font-semibold bg-sky-500 text-slate-950 hover:bg-sky-400 transition-colors"
+                style={{ boxShadow: '0 0 12px rgba(56,189,248,0.2)' }}>
+                Run →
+              </button>
+            </div>
           </form>
         </div>
       )}

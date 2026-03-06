@@ -192,6 +192,37 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
         maxZoom: 3.0,
       });
       cyRef.current = cy;
+
+      // Hydrate canvas from store state — critical for remount after navigation (admin/bots/license -> back)
+      // The sync useEffect won't re-fire because currentGraph reference didn't change,
+      // so we must manually populate Cytoscape from the current store snapshot.
+      const initialGraph = useGraphStore.getState().currentGraph;
+      if (initialGraph && (initialGraph.entities.length > 0 || initialGraph.links.length > 0)) {
+        cy.batch(() => {
+          (initialGraph.entities as any[]).forEach(entity => {
+            if (cy.$id(entity.id).length === 0) {
+              cy.add({
+                data: {
+                  id: entity.id,
+                  label: entity.data?.label || entity.value,
+                  color: entity.data?.color || '#64748b',
+                  type: entity.type,
+                  properties: entity.properties || {},
+                  data: entity.data || {}
+                },
+                position: entity.position || { x: Math.random() * 800 + 100, y: Math.random() * 600 + 100 }
+              });
+            }
+          });
+          (initialGraph.links as any[]).forEach(link => {
+            if (cy.$id(link.id).length === 0) {
+              cy.add({ data: { id: link.id, source: link.source, target: link.target, label: link.label || '' } });
+            }
+          });
+        });
+        prevNodeCountRef.current = initialGraph.entities.length;
+      }
+
       setTimeout(() => {
         cy.resize();
         // After initial load, fit to content with reasonable zoom
@@ -781,16 +812,25 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
       {}
 
       {showNameDialog && pendingEntity && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-700 p-6 rounded-xl shadow-2xl w-80 animate-in fade-in zoom-in duration-200">
-            <h3 className="text-lg font-semibold mb-4 text-white">Добавить сущность</h3>
-            <div className="space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-card border border-border shadow-2xl w-80 animate-in fade-in zoom-in duration-150" style={{ borderRadius: 'var(--radius)' }}>
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-300 font-mono uppercase tracking-widest">Добавить сущность</span>
+              <button
+                onClick={() => { setShowNameDialog(false); setPendingEntity(null); setNewEntityName(''); setNewEntityNote(''); }}
+                className="text-slate-600 hover:text-slate-300 transition text-sm leading-none">
+                ✕
+              </button>
+            </div>
+            {/* Body */}
+            <div className="p-4 space-y-3">
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Имя / Значение</label>
-                <input 
+                <label className="text-[10px] text-slate-500 font-mono uppercase tracking-widest mb-1.5 block">Имя / Значение</label>
+                <input
                   autoFocus
-                  type="text" 
-                  value={newEntityName} 
+                  type="text"
+                  value={newEntityName}
                   onChange={(e) => setNewEntityName(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') confirmAddEntity();
@@ -801,33 +841,35 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
                       setNewEntityNote('');
                     }
                   }}
-                  className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white focus:border-purple-500 focus:outline-none mb-2"
+                  className="w-full bg-background border border-border px-3 py-2 text-sm text-slate-200 focus:border-sky-500/60 focus:outline-none transition-colors"
+                  style={{ borderRadius: 'var(--radius)' }}
                 />
-                <label className="text-xs text-slate-400 mb-1 block">Заметка (опционально)</label>
-                <textarea 
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-500 font-mono uppercase tracking-widest mb-1.5 block">Заметка (опционально)</label>
+                <textarea
                   value={newEntityNote}
                   onChange={(e) => setNewEntityNote(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white h-20 text-sm focus:border-purple-500 focus:outline-none resize-none"
+                  className="w-full bg-background border border-border px-3 py-2 text-sm text-slate-300 h-20 focus:border-sky-500/60 focus:outline-none resize-none transition-colors placeholder:text-slate-600"
+                  style={{ borderRadius: 'var(--radius)' }}
                   placeholder="Комментарий..."
                 />
               </div>
-              <div className="flex gap-2 mt-4">
-                <button 
-                  onClick={() => {
-                    setShowNameDialog(false);
-                    setPendingEntity(null);
-                    setNewEntityName('');
-                    setNewEntityNote('');
-                  }} 
-                  className="flex-1 px-3 py-2 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors">
-                  Отмена
-                </button>
-                <button 
-                  onClick={confirmAddEntity} 
-                  className="flex-1 px-3 py-2 rounded bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-500/50">
-                  Создать
-                </button>
-              </div>
+            </div>
+            {/* Footer */}
+            <div className="px-4 pb-4 flex gap-2">
+              <button
+                onClick={() => { setShowNameDialog(false); setPendingEntity(null); setNewEntityName(''); setNewEntityNote(''); }}
+                className="flex-1 px-3 py-2 text-sm text-slate-400 border border-border hover:bg-accent hover:text-slate-200 transition-colors"
+                style={{ borderRadius: 'var(--radius)' }}>
+                Отмена
+              </button>
+              <button
+                onClick={confirmAddEntity}
+                className="flex-1 px-3 py-2 text-sm font-semibold bg-sky-500 text-slate-950 hover:bg-sky-400 transition-colors"
+                style={{ borderRadius: 'var(--radius)', boxShadow: '0 0 12px rgba(56,189,248,0.25)' }}>
+                Создать
+              </button>
             </div>
           </div>
         </div>
@@ -838,42 +880,45 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
           pointer-events: none;
         }
         .node-card {
-          width: 200px;
-          background: #1e1e2e;
+          width: 196px;
+          background: #0d1420;
           border: 2px solid;
-          border-radius: 16px;
+          border-radius: 3px;
           overflow: hidden;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
-          font-family: system-ui, -apple-system, sans-serif;
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.7);
+          font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
         }
         .card-header {
-          padding: 6px 12px;
+          padding: 5px 10px;
           text-align: center;
-          font-size: 9px;
+          font-size: 8px;
           font-weight: 700;
-          letter-spacing: 1px;
+          letter-spacing: 1.5px;
           text-transform: uppercase;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          font-family: 'IBM Plex Mono', ui-monospace, monospace;
         }
         .card-body {
-          padding: 16px 12px 12px;
+          padding: 12px 10px 10px;
         }
         .main-value {
-          color: #ffffff;
-          font-size: 16px;
-          font-weight: 600;
+          color: #e2e8f0;
+          font-size: 14px;
+          font-weight: 500;
           text-align: center;
-          margin-bottom: 12px;
+          margin-bottom: 8px;
           word-break: break-word;
           line-height: 1.3;
+          font-family: 'IBM Plex Mono', ui-monospace, monospace;
         }
         .info-box {
-          background: rgba(0, 0, 0, 0.3);
-          border-radius: 8px;
-          padding: 8px 10px;
+          background: rgba(0, 0, 0, 0.35);
+          border-radius: 2px;
+          padding: 6px 8px;
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 4px;
+          border: 1px solid rgba(255,255,255,0.04);
         }
         .info-row {
           display: flex;
@@ -881,16 +926,18 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
           align-items: center;
         }
         .info-label {
-          color: #9ca3af;
-          font-size: 9px;
+          color: #64748b;
+          font-size: 8px;
           font-weight: 600;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.8px;
+          font-family: 'IBM Plex Mono', ui-monospace, monospace;
         }
         .info-value {
-          color: #e5e7eb;
-          font-size: 11px;
+          color: #94a3b8;
+          font-size: 10px;
           font-weight: 500;
+          font-family: 'IBM Plex Mono', ui-monospace, monospace;
         }
       `}</style>
     </div>

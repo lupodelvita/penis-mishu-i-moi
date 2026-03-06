@@ -709,10 +709,10 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className={`px-4 py-2 border-b text-sm font-medium flex items-center gap-2 ${
-          toastMessage.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' :
-          toastMessage.type === 'error' ? 'bg-red-50 text-red-800 border-red-200' :
-          'bg-blue-50 text-blue-800 border-blue-200'
+        <div className={`px-3 py-2 border-b text-xs font-medium flex items-center gap-2 font-mono ${
+          toastMessage.type === 'success' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' :
+          toastMessage.type === 'error' ? 'bg-red-500/10 text-red-300 border-red-500/20' :
+          'bg-sky-500/10 text-sky-300 border-sky-500/20'
         }`}>
           {toastMessage.type === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0" />}
           {toastMessage.type === 'error' && <XCircle className="w-4 h-4 shrink-0" />}
