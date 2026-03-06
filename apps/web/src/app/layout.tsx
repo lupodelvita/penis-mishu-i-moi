@@ -1,8 +1,18 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-geist-sans' });
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ['latin', 'cyrillic'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-sans',
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ['latin', 'cyrillic'],
+  weight: ['400', '500', '600'],
+  variable: '--font-mono',
+});
 
 export const metadata: Metadata = {
   title: 'NodeWeaver - OSINT Graph Visualization Tool',
@@ -18,7 +28,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className={inter.variable}>
+      <body className={`${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
         <AuthProvider>
           {children}
         </AuthProvider>

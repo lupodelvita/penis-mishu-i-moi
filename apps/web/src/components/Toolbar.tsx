@@ -278,7 +278,7 @@ export default memo(function Toolbar({ onToggleCollaboration, onToggleAI, onTogg
 
   return (
     <>
-    <div className="h-14 border-b border-border glass flex items-center justify-between px-4">
+    <div className="h-12 shrink-0 border-b border-border bg-card/90 backdrop-blur-sm flex items-center justify-between px-3">
       <input
         ref={fileInputRef}
         type="file"
@@ -287,242 +287,184 @@ export default memo(function Toolbar({ onToggleCollaboration, onToggleAI, onTogg
         className="hidden"
       />
 
-      {/* Left section - Logo & Title */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">NW</span>
+      {/* Left — Logo + File ops + Tools */}
+      <div className="flex items-center gap-2.5">
+        {/* Logo */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div
+            className="w-6 h-6 flex items-center justify-center border border-sky-400/50 bg-sky-400/10"
+            style={{ boxShadow: '0 0 10px rgba(56,189,248,0.12)' }}
+          >
+            <span className="font-mono font-bold text-[10px] text-sky-400 leading-none tracking-tight">NW</span>
           </div>
-          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
-            NodeWeaver
-          </h1>
+          <span className="text-sm font-medium tracking-wide text-slate-200 hidden sm:block">NodeWeaver</span>
         </div>
 
-        <div className="h-6 w-px bg-border" />
+        <div className="w-px h-5 bg-border" />
 
         {/* File operations */}
-        <div className="flex items-center gap-1">
-          <button 
-            onClick={handleNew}
-            className="p-2 hover:bg-accent rounded-md transition-colors group relative" 
-            title="Новый граф (Ctrl+N)"
-          >
-            <FolderOpen className="w-4 h-4" />
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-900 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-              Новый
-            </span>
+        <div className="flex items-center gap-0.5">
+          <button onClick={handleNew} title="Новый граф (Ctrl+N)"
+            className="p-1.5 rounded-none border border-transparent hover:bg-accent/70 hover:border-border text-slate-500 hover:text-sky-400 transition-all duration-150 group relative">
+            <FolderOpen className="w-3.5 h-3.5" />
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-0.5 text-[10px] bg-card border border-border text-slate-400 rounded-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">Новый</span>
           </button>
-          <button 
-            onClick={handleOpen}
-            className="p-2 hover:bg-accent rounded-md transition-colors group relative" 
-            title="Открыть (Ctrl+O)"
-          >
-            <Upload className="w-4 h-4" />
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-900 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-              Открыть
-            </span>
+          <button onClick={handleOpen} title="Открыть (Ctrl+O)"
+            className="p-1.5 rounded-none border border-transparent hover:bg-accent/70 hover:border-border text-slate-500 hover:text-sky-400 transition-all duration-150 group relative">
+            <Upload className="w-3.5 h-3.5" />
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-0.5 text-[10px] bg-card border border-border text-slate-400 rounded-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">Открыть</span>
           </button>
-          <button 
-            onClick={handleSave}
-            className="p-2 hover:bg-accent rounded-md transition-colors group relative" 
-            title="Сохранить (Ctrl+S)"
-          >
-            <Save className="w-4 h-4" />
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-900 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-              Сохранить
-            </span>
+          <button onClick={handleSave} title="Сохранить (Ctrl+S)"
+            className="p-1.5 rounded-none border border-transparent hover:bg-accent/70 hover:border-border text-slate-500 hover:text-sky-400 transition-all duration-150 group relative">
+            <Save className="w-3.5 h-3.5" />
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-0.5 text-[10px] bg-card border border-border text-slate-400 rounded-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">Сохранить</span>
           </button>
-
-          <button 
-            onClick={handleExport}
-            className="p-2 hover:bg-accent rounded-md transition-colors group relative" 
-            title="Экспорт"
-          >
-            <Download className="w-4 h-4" />
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-900 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-              Экспорт
-            </span>
+          <button onClick={handleExport} title="Экспорт"
+            className="p-1.5 rounded-none border border-transparent hover:bg-accent/70 hover:border-border text-slate-500 hover:text-sky-400 transition-all duration-150 group relative">
+            <Download className="w-3.5 h-3.5" />
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-0.5 text-[10px] bg-card border border-border text-slate-400 rounded-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">Экспорт</span>
           </button>
         </div>
 
-        <div className="h-6 w-px bg-border" />
+        <div className="w-px h-5 bg-border" />
 
         {/* Tools */}
-        <div className="flex items-center gap-1">
-          <button 
-            onClick={onToggleCollaboration}
-            className="p-2 hover:bg-accent rounded-md transition-colors group relative" 
-            title="Коллаборация"
-          >
-            <Users className="w-4 h-4" />
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-900 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-              Коллаборация
-            </span>
+        <div className="flex items-center gap-0.5">
+          <button onClick={onToggleCollaboration} title="Коллаборация"
+            className="p-1.5 rounded-none border border-transparent hover:bg-accent/70 hover:border-border text-slate-500 hover:text-sky-400 transition-all duration-150 group relative">
+            <Users className="w-3.5 h-3.5" />
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-0.5 text-[10px] bg-card border border-border text-slate-400 rounded-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">Коллаборация</span>
           </button>
-          <button 
-            onClick={onToggleAI}
-            className="p-2 hover:bg-accent rounded-md transition-colors group relative" 
-            title="AI Ассистент"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-900 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-              AI Ассистент
-            </span>
+          <button onClick={onToggleAI} title="AI Ассистент"
+            className="p-1.5 rounded-none border border-transparent hover:bg-accent/70 hover:border-border text-slate-500 hover:text-sky-400 transition-all duration-150 group relative">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-0.5 text-[10px] bg-card border border-border text-slate-400 rounded-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">AI Ассистент</span>
           </button>
-
         </div>
       </div>
 
-      {/* Center section - Graph name */}
-      <div className="flex-1 flex justify-center">
+      {/* Center — graph name with monospace brackets */}
+      <div className="flex-1 flex justify-center items-center gap-1">
+        <span className="font-mono text-xs text-slate-700 select-none">[</span>
         <input
           type="text"
           value={graphName}
           onChange={(e) => setGraphName(e.target.value)}
-          className="bg-transparent border-none outline-none text-center text-sm font-medium hover:bg-accent/50 px-4 py-1 rounded-md transition-colors max-w-xs"
+          className="bg-transparent border-none outline-none text-center text-sm font-mono text-slate-400 hover:text-slate-200 focus:text-sky-300 px-1 py-0.5 transition-colors max-w-xs"
         />
+        <span className="font-mono text-xs text-slate-700 select-none">]</span>
       </div>
 
-      {/* Right section - View controls & Auth */}
+      {/* Right — Nav + User */}
       <div className="flex items-center gap-1">
-        <div className="flex items-center gap-1 mr-4">
-            {/* Terminal Toggle - DISABLED */}
-            {/* <button 
-              onClick={onToggleTerminal}
-              className="p-2 hover:bg-accent rounded-md transition-colors group relative"
-              title="Terminal Console (Ctrl+`)"
-            >
-               <span className="w-4 h-4 flex items-center justify-center font-mono font-bold text-xs pointer-events-none">&gt;_</span>
-            </button> */}
-            
-            {/* CEO Console Button */}
-            {user?.licenseTier === 'CEO' && (
-              <button 
-                onClick={onToggleSeoConsole}
-                className="p-2 hover:bg-yellow-500/20 text-yellow-500 rounded-md transition-colors group relative border border-yellow-500/50 mr-1"
-                title="CEO Console (SEO Manager)"
-              >
-                <div className="absolute inset-0 bg-yellow-400/20 blur-sm rounded-full animate-pulse opacity-0 group-hover:opacity-100" />
-                <Crown className="w-4 h-4" />
-              </button>
-            )}
-           {(user?.role === 'ADMIN' || user?.licenseTier === 'CEO') && (
-             <Link href="/admin" className="p-2 hover:bg-red-500/10 rounded-md transition-colors group relative" title="Admin Panel">
-                <Shield className="w-4 h-4 text-red-500" />
-             </Link>
-           )}
-           <Link href="/bots" className="p-2 hover:bg-accent rounded-md transition-colors group relative" title="Bots">
-              <Bot className="w-4 h-4 text-blue-400" />
-           </Link>
-           <Link href="/license" className="p-2 hover:bg-accent rounded-md transition-colors group relative" title="License">
-              <Shield className="w-4 h-4 text-yellow-500" />
-           </Link>
+        <div className="flex items-center gap-0.5">
+          {user?.licenseTier === 'CEO' && (
+            <button onClick={onToggleSeoConsole} title="CEO Console"
+              className="p-1.5 hover:bg-amber-500/10 text-amber-400 border border-amber-500/40 hover:border-amber-400/60 transition-all mr-1">
+              <Crown className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {(user?.role === 'ADMIN' || user?.licenseTier === 'CEO') && (
+            <Link href="/admin" title="Admin"
+              className="p-1.5 hover:bg-red-500/10 border border-transparent hover:border-red-500/30 text-slate-500 hover:text-red-400 transition-all">
+              <Shield className="w-3.5 h-3.5" />
+            </Link>
+          )}
+          <Link href="/bots" title="Bots"
+            className="p-1.5 hover:bg-accent/70 border border-transparent hover:border-border text-slate-500 hover:text-sky-400 transition-all">
+            <Bot className="w-3.5 h-3.5" />
+          </Link>
+          <Link href="/license" title="License"
+            className="p-1.5 hover:bg-accent/70 border border-transparent hover:border-border text-slate-500 hover:text-amber-400 transition-all">
+            <Shield className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
         {user && (
-           <div className="flex items-center gap-3 border-l border-border pl-4">
-              <div className="hidden md:block">
-                 {/* Color-coded tier badge */}
-                 <div className={`text-[10px] font-black uppercase tracking-widest ${
-                   user.licenseTier === 'CEO' ? 'text-yellow-400' :
-                   user.licenseTier === 'ENTERPRISE' ? 'text-purple-400' :
-                   user.licenseTier === 'DEVELOPER' ? 'text-orange-400' :
-                   user.licenseTier === 'OPERATIVE' ? 'text-green-400' :
-                   user.licenseTier === 'ANALYST' ? 'text-blue-400' :
-                   'text-gray-400'
-                 }`}>
-                   {user.licenseTier}
-                   {user.role === 'ADMIN' && ' • ADMIN'}
-                 </div>
-                 <div className="text-sm font-medium flex items-center gap-2">
-                   <span>{user.username}</span>
-                   {user.accountCode && (
-                     <span className="px-2 py-[2px] rounded-md border border-cyan-500/40 text-[11px] text-cyan-200 bg-cyan-500/10 font-semibold">
-                       {user.accountCode}
-                     </span>
-                   )}
-                 </div>
+          <div className="flex items-center gap-2 border-l border-border pl-3 ml-1">
+            <div className="hidden md:flex flex-col items-end">
+              <span className={`text-[9px] font-bold uppercase tracking-widest font-mono ${
+                user.licenseTier === 'CEO'        ? 'text-amber-400'   :
+                user.licenseTier === 'ENTERPRISE' ? 'text-violet-400'  :
+                user.licenseTier === 'DEVELOPER'  ? 'text-orange-400'  :
+                user.licenseTier === 'OPERATIVE'  ? 'text-emerald-400' :
+                user.licenseTier === 'ANALYST'    ? 'text-sky-400'     :
+                                                    'text-slate-600'
+              }`}>
+                {user.licenseTier}{user.role === 'ADMIN' && ' · ADMIN'}
+              </span>
+              <div className="flex items-center gap-1.5 mt-px">
+                <span className="text-xs font-medium text-slate-300">{user.username}</span>
+                {user.accountCode && (
+                  <span className="px-1.5 py-px border border-sky-500/40 text-[9px] text-sky-400 bg-sky-500/10 font-mono">
+                    {user.accountCode}
+                  </span>
+                )}
               </div>
-              <button onClick={logout} className="p-2 hover:bg-red-500/10 text-gray-500 hover:text-red-500 rounded-md transition-colors">
-                 <LogOut className="w-4 h-4" />
-              </button>
-           </div>
+            </div>
+            <button onClick={logout}
+              className="p-1.5 hover:bg-red-500/10 text-slate-600 hover:text-red-400 border border-transparent hover:border-red-500/30 transition-all">
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
         )}
       </div>
     </div>
 
     {isExportModalOpen && (
-      <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-white">Export Graph</h3>
-            <button
-              onClick={() => setIsExportModalOpen(false)}
-              className="text-slate-400 hover:text-white transition"
-            >
-              ✕
-            </button>
+      <div className="fixed inset-0 z-[1000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="w-full max-w-md border border-border bg-card shadow-2xl p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-border pb-3">
+            <h3 className="text-xs font-semibold text-slate-300 font-mono uppercase tracking-widest">Export Graph</h3>
+            <button onClick={() => setIsExportModalOpen(false)} className="text-slate-600 hover:text-slate-300 transition text-sm">✕</button>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={handleSave}
-              className="px-3 py-2 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-300 hover:bg-blue-500/30 transition"
-            >
+            <button onClick={handleSave}
+              className="px-3 py-2 bg-sky-500/10 border border-sky-500/30 text-sky-300 hover:bg-sky-500/20 hover:border-sky-400/50 transition text-xs font-medium">
               JSON
             </button>
-            <button
-              onClick={handleDownloadReport}
-              className="px-3 py-2 rounded-lg bg-pink-500/20 border border-pink-500/30 text-pink-300 hover:bg-pink-500/30 transition"
-            >
-              PDF
+            <button onClick={handleDownloadReport}
+              className="px-3 py-2 bg-pink-500/10 border border-pink-500/30 text-pink-300 hover:bg-pink-500/20 hover:border-pink-400/50 transition text-xs font-medium">
+              PDF Report
             </button>
           </div>
 
-          <div className="border-t border-slate-800 pt-4 space-y-3">
-            <div className="text-sm font-semibold text-slate-200">Send to Bot (Discord/Telegram)</div>
+          <div className="border-t border-border pt-4 space-y-3">
+            <div className="text-[10px] font-semibold text-slate-500 font-mono uppercase tracking-widest">Send to Bot</div>
 
-            <button
-              onClick={openExportModal}
-              disabled={isLoadingBots}
-              className="w-full px-3 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 transition disabled:opacity-60"
-            >
-              {isLoadingBots ? 'Loading bots...' : 'Refresh bots'}
+            <button onClick={openExportModal} disabled={isLoadingBots}
+              className="w-full px-3 py-2 border border-border text-slate-500 hover:bg-accent hover:text-slate-300 text-xs transition disabled:opacity-60">
+              {isLoadingBots ? 'Loading...' : 'Refresh bots'}
             </button>
 
-            <select
-              value={selectedBotId}
+            <select value={selectedBotId}
               onChange={async (e) => {
                 const nextId = e.target.value;
                 setSelectedBotId(nextId);
                 const bot = exportBots.find((item: any) => item.id === nextId);
                 setDiscordChannelId(bot?.settings?.channelId || '');
-                if (bot?.type === 'TELEGRAM') {
-                  await loadTelegramRecipients();
-                }
+                if (bot?.type === 'TELEGRAM') await loadTelegramRecipients();
               }}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm"
-            >
+              className="w-full bg-background border border-border px-3 py-2 text-xs text-slate-300">
               {!exportBots.length && <option value="">No active bots</option>}
               {exportBots.map((bot: any) => (
-                <option key={bot.id} value={bot.id}>
-                  {bot.name} [{bot.type}]
-                </option>
+                <option key={bot.id} value={bot.id}>{bot.name} [{bot.type}]</option>
               ))}
             </select>
 
             {exportBots.some((b: any) => b.type === 'TELEGRAM') ? (
-              <div className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
-                Для Telegram требуется: активный бот + получатели со scope RECEIVE_TELEGRAM_ALERTS с chatId. Тестовая отправка поможет проверить, что бот в чате.
+              <div className="text-xs text-amber-300 bg-amber-500/8 border border-amber-500/25 px-3 py-2">
+                Для Telegram: активный бот + получатели со scope RECEIVE_TELEGRAM_ALERTS.
               </div>
             ) : (
-              <div className="text-xs text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
-                Нет активных Telegram-ботов. Добавьте бота в разделе Bots, иначе отправка алертов невозможна.
+              <div className="text-xs text-red-300 bg-red-500/8 border border-red-500/25 px-3 py-2">
+                Нет активных Telegram-ботов.
               </div>
             )}
 
             {tgRecipientsStatus && (
-              <div className="text-xs rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-300 whitespace-pre-wrap">
+              <div className="text-xs border border-border bg-background px-3 py-2 text-slate-500 font-mono whitespace-pre-wrap">
                 {tgRecipientsStatus}
               </div>
             )}
@@ -530,37 +472,27 @@ export default memo(function Toolbar({ onToggleCollaboration, onToggleAI, onTogg
             {(() => {
               const bot = exportBots.find((item: any) => item.id === selectedBotId);
               if (bot?.type !== 'DISCORD') return null;
-
               return (
-                <input
-                  value={discordChannelId}
-                  onChange={(e) => setDiscordChannelId(e.target.value)}
+                <input value={discordChannelId} onChange={(e) => setDiscordChannelId(e.target.value)}
                   placeholder="Discord Channel ID"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm"
-                />
+                  className="w-full bg-background border border-border px-3 py-2 text-xs text-slate-300" />
               );
             })()}
 
             {exportBots.find((bot: any) => bot.id === selectedBotId)?.type === 'TELEGRAM' && (
-              <button
-                onClick={handleTestSend}
-                disabled={isTestingSend || isSendingToBot}
-                className="w-full px-3 py-2 rounded-lg bg-cyan-500/20 border border-cyan-500/30 text-cyan-200 hover:bg-cyan-500/30 transition font-semibold disabled:opacity-60"
-              >
-                {isTestingSend ? 'Тестируем...' : 'Отправить тестовое сообщение'}
+              <button onClick={handleTestSend} disabled={isTestingSend || isSendingToBot}
+                className="w-full px-3 py-2 bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/20 transition text-xs font-medium disabled:opacity-60">
+                {isTestingSend ? 'Testing...' : 'Test send'}
               </button>
             )}
 
-            <button
-              onClick={handleExportToBot}
-              disabled={isSendingToBot || !exportBots.length}
-              className="w-full px-3 py-2 rounded-lg bg-green-600 hover:bg-green-500 transition font-semibold disabled:opacity-60"
-            >
-              {isSendingToBot ? 'Sending...' : 'Send graph to bot'}
+            <button onClick={handleExportToBot} disabled={isSendingToBot || !exportBots.length}
+              className="w-full px-3 py-2 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25 transition text-xs font-semibold disabled:opacity-60">
+              {isSendingToBot ? 'Sending...' : 'Send to bot →'}
             </button>
 
             {!!botExportStatus && (
-              <div className="text-xs rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-300 whitespace-pre-wrap">
+              <div className="text-xs border border-border bg-background px-3 py-2 text-slate-500 font-mono whitespace-pre-wrap">
                 {botExportStatus}
               </div>
             )}

@@ -10,29 +10,28 @@ interface ViewToggleProps {
 
 export default memo(function ViewToggle({ currentView, onChange }: ViewToggleProps) {
   return (
-    <div className="flex items-center gap-2 bg-slate-800 rounded-lg p-1 border border-slate-700">
+    <div className="flex items-center bg-background border border-border rounded-none overflow-hidden">
       <button
         onClick={() => onChange('graph')}
-        className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+        className={`flex items-center gap-1.5 px-3 py-1.5 transition-all text-xs font-medium border-r border-border ${
           currentView === 'graph'
-            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-            : 'text-slate-400 hover:text-white hover:bg-slate-700'
+            ? 'bg-sky-500/12 text-sky-300'
+            : 'text-slate-500 hover:text-slate-300 hover:bg-accent/50'
         }`}
       >
-        <Network className="w-4 h-4" />
-        <span className="text-sm font-medium">Graph</span>
+        <Network className="w-3.5 h-3.5" />
+        Graph
       </button>
-      
       <button
         onClick={() => onChange('map')}
-        className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+        className={`flex items-center gap-1.5 px-3 py-1.5 transition-all text-xs font-medium ${
           currentView === 'map'
-            ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
-            : 'text-slate-400 hover:text-white hover:bg-slate-700'
+            ? 'bg-emerald-500/12 text-emerald-300'
+            : 'text-slate-500 hover:text-slate-300 hover:bg-accent/50'
         }`}
       >
-        <Map className="w-4 h-4" />
-        <span className="text-sm font-medium">Map</span>
+        <Map className="w-3.5 h-3.5" />
+        Map
       </button>
     </div>
   );

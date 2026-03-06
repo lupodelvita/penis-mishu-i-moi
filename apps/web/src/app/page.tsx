@@ -30,10 +30,10 @@ const RightSidebar = memo(function RightSidebar({ selectedEntityId }: { selected
       <div className="flex border-b border-border shrink-0">
         <button
           onClick={() => setActiveTab('transforms')}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors ${
+          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition-all ${
             activeTab === 'transforms'
-              ? 'text-primary border-b-2 border-primary bg-accent/30'
-              : 'text-muted-foreground hover:text-foreground hover:bg-accent/20'
+              ? 'text-sky-300 border-b border-sky-400/60 bg-sky-500/5'
+              : 'text-slate-500 hover:text-slate-300 hover:bg-accent/30'
           }`}
         >
           <Zap className="w-3.5 h-3.5" />
@@ -41,10 +41,10 @@ const RightSidebar = memo(function RightSidebar({ selectedEntityId }: { selected
         </button>
         <button
           onClick={() => setActiveTab('details')}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors ${
+          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition-all ${
             activeTab === 'details'
-              ? 'text-primary border-b-2 border-primary bg-accent/30'
-              : 'text-muted-foreground hover:text-foreground hover:bg-accent/20'
+              ? 'text-sky-300 border-b border-sky-400/60 bg-sky-500/5'
+              : 'text-slate-500 hover:text-slate-300 hover:bg-accent/30'
           }`}
         >
           <Info className="w-3.5 h-3.5" />
