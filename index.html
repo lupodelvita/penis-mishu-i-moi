@@ -881,7 +881,7 @@
         @keyframes orbFloat { 0%,100%{transform:translate3d(0,0,0) scale(1)} 33%{transform:translate3d(30px,-40px,0) scale(1.06)} 66%{transform:translate3d(-20px,20px,0) scale(.94)} }
         .text-grd { background:linear-gradient(135deg,#fff 0%,#818cf8 40%,#22d3ee 75%,#34d399 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
         .text-grd-sm { background:linear-gradient(135deg,#818cf8,#22d3ee); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-        nav.scrolled { background:rgba(11,15,26,.88)!important; backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px) saturate(180%); border-bottom:1px solid rgba(148,163,184,.07); }
+        nav.scrolled { background:rgba(11,15,26,.97)!important; border-bottom:1px solid rgba(148,163,184,.07); }
         .cglow::before { content:""; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,#6366f1,transparent); opacity:0; transition:opacity .4s; }
         .cglow:hover::before { opacity:1; }
         .cbar::after { content:""; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,#6366f1,#22d3ee); opacity:0; transition:opacity .4s; }
@@ -891,8 +891,8 @@
         .shimmer:hover::before { left:100%; }
         .gnode { animation:gnodeF var(--dur,4s) ease-in-out infinite; animation-delay:var(--delay,0s); will-change:transform; }
         @keyframes gnodeF { 0%,100%{transform:translate3d(0,0,0)} 50%{transform:translate3d(0,-7px,0)} }
-        .gedge { stroke-dasharray:6 4; animation:gDash 3s linear infinite; animation-delay:var(--delay,0s); will-change:stroke-dashoffset; }
-        @keyframes gDash { to{stroke-dashoffset:-40} }
+        .gedge { stroke-dasharray:6 4; animation:gEdgeFade 3s ease-in-out infinite; animation-delay:var(--delay,0s); will-change:opacity; }
+        @keyframes gEdgeFade { 0%,100%{opacity:.15} 50%{opacity:.7} }
         .pring { animation:pRing 2.8s cubic-bezier(0,.5,.5,1) infinite; animation-delay:var(--delay,0s); transform-box:fill-box; transform-origin:center; will-change:transform,opacity; }
         @keyframes pRing { 0%{transform:scale(1);opacity:.65} 100%{transform:scale(2.4);opacity:0} }
         .scan-line { position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,rgba(99,102,241,.45),transparent); animation:scanAnim 4s linear infinite; pointer-events:none; will-change:transform,opacity; }
