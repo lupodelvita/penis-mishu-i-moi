@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense, memo } from 'react';
 import { Zap, Info } from 'lucide-react';
 import { EntityType } from '@nodeweaver/shared-types';
 import { useGraphStore } from '@/store';
@@ -9,17 +9,19 @@ import EntityPalette from '@/components/EntityPalette';
 import TransformPanel from '@/components/TransformPanel';
 import DetailPanel from '@/components/DetailPanel';
 import Toolbar from '@/components/Toolbar';
-import AIAssistant from '@/components/AIAssistant';
 import CollaborationPanel from '@/components/CollaborationPanel';
 import { InvitationModal } from '@/components/InvitationModal';
-import SettingsModal from '@/components/SettingsModal';
-import SeoConsole from '@/components/SeoConsole';
-import TransformBuilder from '@/components/TransformBuilder';
 import { useCollaborationStore } from '@/store';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
-function RightSidebar({ selectedEntityId }: { selectedEntityId: string | null }) {
+// Lazy-loaded components (not needed on initial render)
+const AIAssistant = lazy(() => import('@/components/AIAssistant'));
+const SettingsModal = lazy(() => import('@/components/SettingsModal'));
+const SeoConsole = lazy(() => import('@/components/SeoConsole'));
+const TransformBuilder = lazy(() => import('@/components/TransformBuilder'));
+
+const RightSidebar = memo(function RightSidebar({ selectedEntityId }: { selectedEntityId: string | null }) {
   const [activeTab, setActiveTab] = useState<'transforms' | 'details'>('transforms');
 
   return (
@@ -58,7 +60,7 @@ function RightSidebar({ selectedEntityId }: { selectedEntityId: string | null })
       )}
     </div>
   );
-}
+});
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -75,6 +77,16 @@ export default function Home() {
   
   const { addEntity, selectEntity } = useGraphStore();
   const { connect } = useCollaborationStore();
+
+  // Stable callbacks for child components
+  const handleToggleCollab = useCallback(() => setShowCollab(v => !v), []);
+  const handleToggleAI = useCallback(() => setShowAI(v => !v), []);
+  const handleToggleSeoConsole = useCallback(() => setShowSeoConsole(v => !v), []);
+  const handleToggleTerminal = useCallback(() => {}, []);
+  const handleEntitySelect = useCallback((id: string | null) => setSelectedEntityId(id), []);
+  const handleCloseSettings = useCallback(() => setShowSettings(false), []);
+  const handleCloseSeoConsole = useCallback(() => setShowSeoConsole(false), []);
+  const handleCloseBuilder = useCallback(() => setShowBuilder(false), []);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -180,18 +192,24 @@ export default function Home() {
     <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
       {/* Top Toolbar */}
       <Toolbar 
-        onToggleCollaboration={() => setShowCollab(!showCollab)}
-        onToggleAI={() => setShowAI(!showAI)}
-        onToggleSeoConsole={() => setShowSeoConsole(!showSeoConsole)}
-        onToggleTerminal={() => {}}
+        onToggleCollaboration={handleToggleCollab}
+        onToggleAI={handleToggleAI}
+        onToggleSeoConsole={handleToggleSeoConsole}
+        onToggleTerminal={handleToggleTerminal}
       />
       
-      <SettingsModal 
-        isOpen={showSettings} 
-        onClose={() => setShowSettings(false)} 
-      />
+      <Suspense fallback={null}>
+        {showSettings && (
+          <SettingsModal 
+            isOpen={showSettings} 
+            onClose={handleCloseSettings} 
+          />
+        )}
+      </Suspense>
       
-      <SeoConsole isOpen={showSeoConsole} onClose={() => setShowSeoConsole(false)} />
+      <Suspense fallback={null}>
+        {showSeoConsole && <SeoConsole isOpen={showSeoConsole} onClose={handleCloseSeoConsole} />}
+      </Suspense>
 
       {/* Main Content Area */}
       <div className="flex-1 relative overflow-hidden flex">
@@ -201,7 +219,7 @@ export default function Home() {
         {/* Center - Graph Canvas */}
         <div className="flex-1 relative">
           <GraphCanvas 
-            onEntitySelect={setSelectedEntityId}
+            onEntitySelect={handleEntitySelect}
           />
         </div>
 
@@ -212,7 +230,9 @@ export default function Home() {
       {/* Floating Components */}
       {showCollab && <CollaborationPanel />}
       <InvitationModal />
-      {showBuilder && <TransformBuilder onClose={() => setShowBuilder(false)} />}
+      <Suspense fallback={null}>
+        {showBuilder && <TransformBuilder onClose={handleCloseBuilder} />}
+      </Suspense>
       
       {/* Action Input Modal */}
       {actionInput.isOpen && (
@@ -248,11 +268,13 @@ export default function Home() {
         </div>
       )}
 
-      {/* AI Assistant - controlled by toolbar only - Moved to Right to avoid blocking Palette */}
+      {/* AI Assistant - controlled by toolbar only */}
       {showAI && (
         <div className="fixed bottom-6 right-6 w-96 h-[600px] pointer-events-none">
           <div className="pointer-events-auto h-full">
-             <AIAssistant isOpen={showAI} onToggle={() => setShowAI(!showAI)} />
+            <Suspense fallback={null}>
+              <AIAssistant isOpen={showAI} onToggle={handleToggleAI} />
+            </Suspense>
           </div>
         </div>
       )}

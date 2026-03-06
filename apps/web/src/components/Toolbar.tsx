@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, memo } from 'react';
 import { Save, FolderOpen, Upload, Download, Users, Sparkles, Bot, Shield, LogOut, Crown } from 'lucide-react';
 import { useGraphStore } from '@/store';
 import { useAuth } from '@/context/AuthContext';
@@ -15,7 +15,7 @@ interface ToolbarProps {
 }
 
 
-export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeoConsole, onToggleTerminal }: ToolbarProps) {
+export default memo(function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeoConsole, onToggleTerminal }: ToolbarProps) {
   const { currentGraph, exportGraph, importGraph } = useGraphStore();
   const { user, logout } = useAuth();
   const [graphName, setGraphName] = useState('Untitled Graph');
@@ -570,4 +570,4 @@ export default function Toolbar({ onToggleCollaboration, onToggleAI, onToggleSeo
     )}
     </>
   );
-}
+});

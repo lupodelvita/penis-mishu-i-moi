@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { Search, Globe, Mail, User, Building, MapPin, Phone, Hash, FileText, Image as ImageIcon, Twitter, Facebook, Instagram, Linkedin, Youtube, MessageCircle, Video } from 'lucide-react';
 import { EntityType } from '@nodeweaver/shared-types';
 
@@ -50,7 +50,7 @@ const ENTITY_GROUPS = [
   }
 ];
 
-export default function EntityPalette() {
+export default memo(function EntityPalette() {
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsed, setCollapsed] = useState(false);
 
@@ -158,4 +158,4 @@ export default function EntityPalette() {
       </div>
     </div>
   );
-}
+});

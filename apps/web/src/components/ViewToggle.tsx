@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { Map, Network } from 'lucide-react';
 
 interface ViewToggleProps {
@@ -7,7 +8,7 @@ interface ViewToggleProps {
   onChange: (view: 'graph' | 'map') => void;
 }
 
-export default function ViewToggle({ currentView, onChange }: ViewToggleProps) {
+export default memo(function ViewToggle({ currentView, onChange }: ViewToggleProps) {
   return (
     <div className="flex items-center gap-2 bg-slate-800 rounded-lg p-1 border border-slate-700">
       <button
@@ -35,4 +36,4 @@ export default function ViewToggle({ currentView, onChange }: ViewToggleProps) {
       </button>
     </div>
   );
-}
+});

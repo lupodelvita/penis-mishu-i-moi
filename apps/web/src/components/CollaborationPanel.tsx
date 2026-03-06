@@ -2,10 +2,10 @@
 
 import { useCollaborationStore } from '@/store/collaborationStore';
 import { Users, Wifi, WifiOff, ChevronDown, ChevronUp, Send, LogOut, UserPlus, LogIn, Copy, UserMinus, Crown, X, AlertTriangle } from 'lucide-react';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { api } from '@/lib/api';
 
-export default function CollaborationPanel() {
+export default memo(function CollaborationPanel() {
   const { isConnected, collaborators, currentUser, commandHistory, broadcastChatMessage, inviteUser, leaveGraph, isLeader, graphId, joinGraph, kickUser, promoteToLeader, disconnectReason, clearDisconnectReason } = useCollaborationStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
@@ -425,4 +425,4 @@ export default function CollaborationPanel() {
       )}
     </div>
   );
-}
+});
