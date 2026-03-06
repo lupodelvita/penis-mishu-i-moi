@@ -3,6 +3,7 @@
 import { useCollaborationStore } from '@/store/collaborationStore';
 import { Users, Wifi, WifiOff, ChevronDown, ChevronUp, Send, LogOut, UserPlus, LogIn, Copy, UserMinus, Crown, X, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
+import { api } from '@/lib/api';
 
 export default function CollaborationPanel() {
   const { isConnected, collaborators, currentUser, commandHistory, broadcastChatMessage, inviteUser, leaveGraph, isLeader, graphId, joinGraph, kickUser, promoteToLeader, disconnectReason, clearDisconnectReason } = useCollaborationStore();
@@ -278,25 +279,11 @@ export default function CollaborationPanel() {
                   <button
                     onClick={async () => {
                       try {
-                        const token = localStorage.getItem('token');
-                        if (!token) return;
-                        
-                        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/graphs/`, {
-                          method: 'POST',
-                          headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json',
-                          },
-                          body: JSON.stringify({
-                            name: 'Новый граф',
-                            description: 'Создано через панель коллаборации'
-                          }),
+                        const { data } = await api.post('/graphs/', {
+                          name: 'Новый граф',
+                          description: 'Создано через панель коллаборации'
                         });
-                        
-                        if (response.ok) {
-                          const data = await response.json();
-                          joinGraph(data.data.id);
-                        }
+                        joinGraph(data.data.id);
                       } catch (error) {
                         console.error('Failed to create graph:', error);
                       }

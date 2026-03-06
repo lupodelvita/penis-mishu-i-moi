@@ -1,21 +1,10 @@
 import PDFDocument from 'pdfkit';
+import { LicenseTier } from '@prisma/client';
 
-
-// Define types manually to avoid import errors
+// Use Prisma types for Graph/Entity/Link
 type Graph = any;
 type Entity = any;
 type Link = any;
-
-export const LicenseTier = {
-  OBSERVER: 'OBSERVER',
-  ANALYST: 'ANALYST',
-  OPERATIVE: 'OPERATIVE',
-  DEVELOPER: 'DEVELOPER',
-  ENTERPRISE: 'ENTERPRISE',
-  CEO: 'CEO'
-} as const;
-
-export type LicenseTier = keyof typeof LicenseTier;
 
 export class ReportService {
   

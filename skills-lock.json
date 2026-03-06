@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "skills": {
+    "backend-testing": {
+      "source": "supercent-io/skills-template",
+      "sourceType": "github",
+      "computedHash": "690311c76efdae3d1fe8fcf1782c5610ee2e96e88d7156df2bc2d711d29050fc"
+    },
+    "cicd-github-actions": {
+      "source": "kiraneswaran/engineering-skills",
+      "sourceType": "github",
+      "computedHash": "944375860170b26cbaaa8fa9e35bd6778431b19dd8a7c07dd9f0f025ee5425cb"
+    },
+    "clerk-nextjs-patterns": {
+      "source": "clerk/skills",
+      "sourceType": "github",
+      "computedHash": "dd47be182d7ca52c2e6b0d4f91cfe8f32409714f677757fc5559b393fb6bad5b"
+    },
+    "database-schema-design": {
+      "source": "supercent-io/skills-template",
+      "sourceType": "github",
+      "computedHash": "62cc403ae9f35f0df29cbacc771fa735bd75c29291b20f431218d43fbb91cd9a"
+    },
+    "electron-desktop": {
+      "source": "travisjneuman/.claude",
+      "sourceType": "github",
+      "computedHash": "9529a99cb7f00b81fa237357aed247a44c14148dc54d12fd6a4adbed42d5f973"
+    },
+    "enhance-prompt": {
+      "source": "google-labs-code/stitch-skills",
+      "sourceType": "github",
+      "computedHash": "28c47bcbc0e8d81f48fbbbe41d227efe4018a32c5d4674b0d052a70d215072d3"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "516bd2154eb843a8240e43d5b285229129853114ad7075a5e141e1c08e408c84"
+    },
+    "monorepo-management": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "de4c0cd8fc802138a80b3ab820d86e291c029422dd8fcc048a8fdfba64bfbd16"
+    },
+    "multi-stage-dockerfile": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "computedHash": "698bf93a84dae18fd7bd0b1d35c21427307fde78fbdf4624be9726f5f98189ca"
+    },
+    "nodejs-backend-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "7f1bf288467c197bde7cb8e4beb9d3568d61ef0d0d3d702b58394ea656757185"
+    },
+    "postgresql-optimization": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "computedHash": "8022448de70ba9a485e3b5bce34c5bbc644f93eb39b68431c9f7dabcf03aeb09"
+    },
+    "prompt-engineering-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "39b63660efb658152f61944b8dc5a05f6290786950474d0d20b75f03e8242aea"
+    },
+    "react-performance": {
+      "source": "thebushidocollective/han",
+      "sourceType": "github",
+      "computedHash": "59fde858aeae0d3466e9581752830802e3dfe46538c9d51a850933ec661ab798"
+    },
+    "systematic-debugging": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "72e9ab72627e4fd8ed26a582e82309a98ecdc4f6e1c99418430ac05682c9e91d"
+    },
+    "tailwind-design-system": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "c88178d861802fa836be54e377e82bb67899b6c378807679a1feecd21bf63cb8"
+    },
+    "turborepo-monorepo": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "computedHash": "094dd4ecc4dbb5ac95a31efd147154d37d0b065f52d7004f1b8b0350f4fa5b82"
+    },
+    "websocket-realtime-builder": {
+      "source": "patricio0312rev/skills",
+      "sourceType": "github",
+      "computedHash": "07a788bf6cd68f0f94ae06f8f71884c2976b4832767d4a928155776a43252d74"
+    }
+  }
+}

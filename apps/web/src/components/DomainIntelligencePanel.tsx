@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { Search, Globe, Server, Mail, Calendar, Shield, Loader2 } from 'lucide-react';
+import { api } from '@/lib/api';
 
 interface DomainIntelligencePanelProps {
   onDataFetched?: (data: any) => void;
@@ -25,18 +26,9 @@ export default function DomainIntelligencePanel({ onDataFetched }: DomainIntelli
     setData(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/osint/whois/domain`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ domain }),
-      });
+      const { data: result } = await api.post('/osint/whois/domain', { domain });
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
+      if (!result.success) {
         throw new Error(result.error || 'Failed to fetch domain intelligence');
       }
 

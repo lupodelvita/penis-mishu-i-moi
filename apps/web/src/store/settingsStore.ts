@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { api } from '@/lib/api';
 
 interface DiscordSettings {
   webhookUrl: string;
@@ -8,14 +9,12 @@ interface DiscordSettings {
 
 interface SettingsStore {
   discord: DiscordSettings;
-  apiUrl: string;
   theme: 'light' | 'dark' | 'auto';
   
   // Actions
   setDiscordWebhook: (url: string) => void;
   setDiscordEnabled: (enabled: boolean) => void;
   setDiscordAutoExport: (autoExport: boolean) => void;
-  setApiUrl: (url: string) => void;
   setTheme: (theme: 'light' | 'dark' | 'auto') => void;
   
   // Discord export functions
@@ -24,15 +23,12 @@ interface SettingsStore {
   testDiscordWebhook: () => Promise<boolean>;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   discord: {
     webhookUrl: '',
     enabled: false,
     autoExport: false,
   },
-  apiUrl: API_URL,
   theme: 'dark',
   
   setDiscordWebhook: (url) => {
@@ -53,16 +49,12 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     }));
   },
   
-  setApiUrl: (url) => {
-    set({ apiUrl: url });
-  },
-  
   setTheme: (theme) => {
     set({ theme });
   },
   
   exportGraphToDiscord: async (graph) => {
-    const { discord, apiUrl } = get();
+    const { discord } = get();
     
     if (!discord.enabled || !discord.webhookUrl) {
       console.error('Discord webhook not configured');
@@ -70,18 +62,12 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     }
     
     try {
-      const response = await fetch(`${apiUrl}/api/discord/export-graph`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          webhookUrl: discord.webhookUrl,
-          graph,
-          format: 'embed',
-        }),
+      const { data } = await api.post('/discord/export-graph', {
+        webhookUrl: discord.webhookUrl,
+        graph,
+        format: 'embed',
       });
-      
-      const result = await response.json();
-      return result.success;
+      return data.success;
     } catch (error) {
       console.error('Failed to export to Discord:', error);
       return false;
@@ -89,24 +75,18 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   },
   
   exportTransformToDiscord: async (transformResult) => {
-    const { discord, apiUrl } = get();
+    const { discord } = get();
     
     if (!discord.enabled || !discord.webhookUrl) {
       return false;
     }
     
     try {
-      const response = await fetch(`${apiUrl}/api/discord/export-transform`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          webhookUrl: discord.webhookUrl,
-          transformResult,
-        }),
+      const { data } = await api.post('/discord/export-transform', {
+        webhookUrl: discord.webhookUrl,
+        transformResult,
       });
-      
-      const result = await response.json();
-      return result.success;
+      return data.success;
     } catch (error) {
       console.error('Failed to export transform to Discord:', error);
       return false;
@@ -114,23 +94,17 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   },
   
   testDiscordWebhook: async () => {
-    const { discord, apiUrl } = get();
+    const { discord } = get();
     
     if (!discord.webhookUrl) {
       return false;
     }
     
     try {
-      const response = await fetch(`${apiUrl}/api/discord/test-webhook`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          webhookUrl: discord.webhookUrl,
-        }),
+      const { data } = await api.post('/discord/test-webhook', {
+        webhookUrl: discord.webhookUrl,
       });
-      
-      const result = await response.json();
-      return result.success;
+      return data.success;
     } catch (error) {
       console.error('Failed to test webhook:', error);
       return false;

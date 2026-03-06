@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import cytoscape, { Core, EventObject, NodeSingular } from 'cytoscape';
 // Extensions managed by cytoscapeHelper
 import { EntityType } from '@nodeweaver/shared-types';
+import { api } from '@/lib/api';
 import { Trash2, Link2, ZoomIn, ZoomOut, Maximize2, X, Wifi } from 'lucide-react';
 import { useGraphStore, useCollaborationStore } from '@/store';
 import NmapScanModal from './NmapScanModal';
@@ -559,21 +560,7 @@ export default function GraphCanvas({ onEntitySelect }: GraphCanvasProps) {
   };
   const handleGeolocateIP = async (entity: any) => {
       try {
-          const token = localStorage.getItem('token');
-          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-          const response = await fetch(`${API_URL}/api/transforms/geolocate`, {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({ ipAddress: entity.value })
-          });
-          if (!response.ok) {
-              console.error('Geolocation failed:', await response.text());
-              return;
-          }
-          const result = await response.json();
+          const { data: result } = await api.post('/transforms/geolocate', { ipAddress: entity.value });
           if (result.success && result.data) {
               const { updateEntity: update } = useGraphStore.getState();
               update(entity.id, {

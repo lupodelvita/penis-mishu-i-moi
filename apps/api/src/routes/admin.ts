@@ -5,22 +5,7 @@ import { authService } from '../services/AuthService';
 import { userService } from '../services/UserService';
 import { botManager } from '../services/BotManager';
 import observabilityAdminRoutes from './observabilityAdmin';
-// Prisma Enums are sometimes under $Enums in newer versions or just use strings for types
-
-
-const Role = {
-  USER: 'USER',
-  ADMIN: 'ADMIN'
-} as const;
-
-const LicenseTier = {
-  OBSERVER: 'OBSERVER',
-  ANALYST: 'ANALYST',
-  OPERATIVE: 'OPERATIVE',
-  DEVELOPER: 'DEVELOPER',
-  ENTERPRISE: 'ENTERPRISE',
-  CEO: 'CEO'
-} as const;
+import { Role, LicenseTier } from '@prisma/client';
 
 const router = Router();
 

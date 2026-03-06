@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { io, Socket } from 'socket.io-client';
+import { api, getApiBaseUrl } from '@/lib/api';
 
 interface Collaborator {
   id: string;
@@ -76,8 +77,12 @@ interface CollaborationStore {
   clearDisconnectReason: () => void;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 const colors = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899'];
+
+/** Socket.io needs the root URL, not the /api path */
+function getSocketUrl(): string {
+  return getApiBaseUrl().replace(/\/api$/, '');
+}
 
 export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
   socket: null,
@@ -99,7 +104,7 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
       set({ socket: null, isConnected: false, collaborators: [], currentUser: null });
     }
     
-    const socket = io(API_URL, {
+    const socket = io(getSocketUrl(), {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
@@ -196,15 +201,10 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
       // Fetch command history
       const fetchHistory = async () => {
         try {
-          const response = await fetch(`${API_URL}/api/graphs/${data.graphId}/commands?limit=100`, {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            },
+          const { data: result } = await api.get(`/graphs/${data.graphId}/commands`, {
+            params: { limit: 100 },
           });
-          if (response.ok) {
-            const result = await response.json();
-            set({ commandHistory: result.data || [] });
-          }
+          set({ commandHistory: result.data || [] });
         } catch (error) {
           // ignore
         }
@@ -263,25 +263,15 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
           return;
         }
         
-        // Try to join as member (will return 400 if already a member, which is fine)
-        const response = await fetch(`${API_URL}/api/graphs/${graphId}/join`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (!response.ok) {
-          const data = await response.json();
-          // 400 "Already a member" is OK, continue
-          // 404 "Graph not found" is a real error
-          if (response.status === 404) {
+        try {
+          await api.post(`/graphs/${graphId}/join`);
+        } catch (err: any) {
+          if (err.response?.status === 404) {
             console.error('[Collab] Graph not found:', graphId);
             set({ graphId: null });
             return;
           }
-          // For other errors (already member etc), continue to socket join
+          // 400 "Already a member" is OK, continue to socket join
         }
         
         // Now emit socket join-graph with the DB userId
@@ -289,10 +279,9 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
           graphId,
           user: {
             ...currentUser,
-            id: currentUser.userId || currentUser.id, // Send DB user ID for membership check
+            id: currentUser.userId || currentUser.id,
           },
         });
-        // Don't set graphId here — wait for 'join-confirmed' from server
       } catch (error) {
         console.error('[Collab] Error joining graph:', error);
       }
@@ -372,15 +361,10 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
 
   loadHistoricalCommands: async (graphId: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/graphs/${graphId}/commands?limit=100`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
+      const { data } = await api.get(`/graphs/${graphId}/commands`, {
+        params: { limit: 100 },
       });
-      if (response.ok) {
-        const data = await response.json();
-        set({ commandHistory: data.data || [] });
-      }
+      set({ commandHistory: data.data || [] });
     } catch (error) {
       console.error('[Collab] Failed to load historical commands:', error);
     }
@@ -430,16 +414,9 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
       socket.emit('leave-graph', { graphId });
       
       // Call REST API to properly leave and trigger graph cleanup/deletion
-      const token = localStorage.getItem('token');
-      if (token) {
-        fetch(`${API_URL}/api/graphs/${graphId}/leave`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }).catch(err => console.error('[Collab] REST leave failed:', err));
-      }
+      api.delete(`/graphs/${graphId}/leave`).catch(err =>
+        console.error('[Collab] REST leave failed:', err)
+      );
       
       set({
         graphId: null,
@@ -463,23 +440,13 @@ export const useCollaborationStore = create<CollaborationStore>((set, get) => ({
     const { graphId } = get();
     if (!graphId) return;
     
-    // Call API to promote user
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    
-    fetch(`${API_URL}/api/graphs/${graphId}/promote/${targetUserId}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    }).then(response => {
-      if (response.ok) {
+    api.post(`/graphs/${graphId}/promote/${targetUserId}`)
+      .then(() => {
         set({ isLeader: false });
-      }
-    }).catch(error => {
-      console.error('[Collab] Failed to promote to leader:', error);
-    });
+      })
+      .catch((error) => {
+        console.error('[Collab] Failed to promote to leader:', error);
+      });
   },
   
   clearDisconnectReason: () => {

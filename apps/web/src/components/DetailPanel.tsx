@@ -2,6 +2,7 @@
 
 import { Info, Tag, Clock, Edit3, Plus, X, Upload, FileText } from 'lucide-react';
 import { useGraphStore } from '@/store';
+import { api } from '@/lib/api';
 import { useState, useEffect, useRef } from 'react';
 
 interface DetailPanelProps {
@@ -72,12 +73,9 @@ export default function DetailPanel({ selectedEntityId }: DetailPanelProps) {
     formData.append('file', file);
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-      const res = await fetch(`${API_URL}/api/upload`, {
-        method: 'POST',
-        body: formData,
+      const { data } = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-      const data = await res.json();
       
       if (data.success) {
         const newProps = {

@@ -20,13 +20,15 @@ export interface User {
 }
 
 /**
- * User subscription tiers
+ * User subscription tiers — matches Prisma LicenseTier enum
  */
 export enum SubscriptionTier {
-  Free = 'free',
-  Pro = 'pro',
-  Team = 'team',
-  Enterprise = 'enterprise',
+  OBSERVER = 'OBSERVER',
+  ANALYST = 'ANALYST',
+  OPERATIVE = 'OPERATIVE',
+  DEVELOPER = 'DEVELOPER',
+  ENTERPRISE = 'ENTERPRISE',
+  CEO = 'CEO',
 }
 
 /**

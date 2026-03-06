@@ -1,4 +1,5 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
+import { api } from '@/lib/api';
 
 interface Message {
   id: string;
@@ -25,15 +26,12 @@ interface AIAssistantStore {
   sendFeedback: (requestType: string, content: any, response: string, rating: number) => Promise<void>;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-
 export const useAIAssistantStore = create<AIAssistantStore>((set, _get) => ({
   messages: [],
   isProcessing: false,
   isEnabled: false,
   
   sendMessage: async (content: string) => {
-    // ... (existing implementation) ...
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -47,16 +45,7 @@ export const useAIAssistantStore = create<AIAssistantStore>((set, _get) => ({
     }));
     
     try {
-      const response = await fetch(`${API_URL}/api/ai/chat`, {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ message: content }),
-      });
-      
-      const data = await response.json();
+      const { data } = await api.post('/ai/chat', { message: content });
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -74,11 +63,11 @@ export const useAIAssistantStore = create<AIAssistantStore>((set, _get) => ({
       
       let errorText = 'Извините, я сейчас недоступен. Пожалуйста, попробуйте позже.';
       
-      // Check for network error (Backend down)
-      if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+      if (error.code === 'ERR_NETWORK') {
           errorText = 'Ошибка подключения к серверу API. Пожалуйста, убедитесь, что backend запущен (npm run dev:all).';
+      } else if (error.response?.data?.error) {
+          errorText = `Ошибка: ${error.response.data.error}`;
       } else if (error.message) {
-          // Use specific error if available
           errorText = `Ошибка: ${error.message}`;
       }
       
@@ -108,18 +97,8 @@ export const useAIAssistantStore = create<AIAssistantStore>((set, _get) => ({
     set({ isProcessing: true });
     
     try {
-      const response = await fetch(`${API_URL}/api/ai/analyze-graph`, {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ graph }),
-      });
-      
-      const data = await response.json();
+      const { data } = await api.post('/ai/analyze-graph', { graph });
       set({ isProcessing: false });
-      
       return data.analysis || 'Анализ недоступен';
     } catch (error) {
       set({ isProcessing: false });
@@ -131,18 +110,8 @@ export const useAIAssistantStore = create<AIAssistantStore>((set, _get) => ({
     set({ isProcessing: true });
     
     try {
-      const response = await fetch(`${API_URL}/api/ai/suggest-transforms`, {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ entity: selectedEntity }),
-      });
-      
-      const data = await response.json();
+      const { data } = await api.post('/ai/suggest-transforms', { entity: selectedEntity });
       set({ isProcessing: false });
-      
       return data.suggestions || [];
     } catch (error) {
       set({ isProcessing: false });
@@ -154,18 +123,8 @@ export const useAIAssistantStore = create<AIAssistantStore>((set, _get) => ({
     set({ isProcessing: true });
     
     try {
-      const response = await fetch(`${API_URL}/api/ai/find-patterns`, {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ graph }),
-      });
-      
-      const data = await response.json();
+      const { data } = await api.post('/ai/find-patterns', { graph });
       set({ isProcessing: false });
-      
       return data.patterns || [];
     } catch (error) {
       set({ isProcessing: false });
@@ -177,18 +136,8 @@ export const useAIAssistantStore = create<AIAssistantStore>((set, _get) => ({
     set({ isProcessing: true });
     
     try {
-      const response = await fetch(`${API_URL}/api/ai/explain-entity`, {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ entity }),
-      });
-      
-      const data = await response.json();
+      const { data } = await api.post('/ai/explain-entity', { entity });
       set({ isProcessing: false });
-      
       return data.explanation || 'Объяснение недоступно';
     } catch (error) {
       set({ isProcessing: false });
@@ -198,14 +147,7 @@ export const useAIAssistantStore = create<AIAssistantStore>((set, _get) => ({
 
   sendFeedback: async (requestType, content, response, rating) => {
     try {
-      await fetch(`${API_URL}/api/ai/feedback`, {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}` 
-        },
-        body: JSON.stringify({ requestType, content, response, rating }),
-      });
+      await api.post('/ai/feedback', { requestType, content, response, rating });
     } catch (error) {
       console.error('Error sending feedback:', error);
     }

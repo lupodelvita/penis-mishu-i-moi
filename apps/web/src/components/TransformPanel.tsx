@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, Play, Settings2, Loader2, Clock, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import { useGraphStore, useCollaborationStore } from '@/store';
+import { api } from '@/lib/api';
 import { EntityType } from '@nodeweaver/shared-types';
 
 interface QuotaWindow {
@@ -86,15 +87,9 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
   useEffect(() => {
     const fetchTransforms = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/transforms`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) {
-          const json = await response.json();
-          if (json.success && json.data?.transforms) {
-            setApiTransforms(json.data.transforms);
-          }
+        const { data: json } = await api.get('/transforms');
+        if (json.success && json.data?.transforms) {
+          setApiTransforms(json.data.transforms);
         }
       } catch (err) {
         console.warn('[TransformPanel] Failed to fetch transforms from API');
@@ -273,16 +268,7 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
       }
       if (endpoint) {
           try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}${endpoint}`, {
-              method: 'POST',
-              headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify(body)
-            });
-            const data = await response.json();
+            const { data } = await api.post(endpoint.replace(/^\/api/, ''), body);
             
             if (data.success && data.data.results) {
                setToastMessage({ text: `Найдено ${data.data.results.length} результатов`, type: 'success' });
@@ -486,19 +472,8 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
     if (transformId === 'email_validate') {
         try {
             const email = sourceEntity.value;
-            const token = localStorage.getItem('token');
             
-            // Call email validation endpoint
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/osint/email/validate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ email })
-            });
-            
-            const data = await response.json();
+            const { data } = await api.post('/osint/email/validate', { email });
             
             if (data.success && data.data) {
                 const validationResult = data.data;
@@ -551,24 +526,15 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
     }
     
     try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/transforms/execute`, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                transformId,
-                entity: {
-                    id: sourceEntity.id,
-                    type: sourceEntity.type,
-                    value: sourceEntity.value,
-                    data: sourceEntity.data
-                }
-            })
+        const { data: json } = await api.post('/transforms/execute', {
+            transformId,
+            entity: {
+                id: sourceEntity.id,
+                type: sourceEntity.type,
+                value: sourceEntity.value,
+                data: sourceEntity.data
+            }
         });
-        const json = await response.json();
         if (json.success) {
             // Build quota suffix for toast
             const quotaSuffix = json.quota ? ` | Лимит: ${json.quota.windows?.[0]?.remaining ?? '?'}/${json.quota.windows?.[0]?.total ?? '?'}` : '';

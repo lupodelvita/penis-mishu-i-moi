@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Search, Shield, AlertTriangle, Database, Loader2, Check, X } from 'lucide-react';
+import { api } from '@/lib/api';
 
 interface BreachVIPResult {
   source: string;
@@ -72,23 +73,14 @@ export default function BreachVIPPanel({ onDataFetched, onClose }: BreachVIPPane
     setData(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/osint/breachvip/search`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          term: searchTerm,
-          fields: selectedFields,
-          wildcard,
-          case_sensitive: caseSensitive,
-        }),
+      const { data: result } = await api.post('/osint/breachvip/search', {
+        term: searchTerm,
+        fields: selectedFields,
+        wildcard,
+        case_sensitive: caseSensitive,
       });
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
+      if (!result.success) {
         throw new Error(result.error || 'Failed to search BreachVIP');
       }
 

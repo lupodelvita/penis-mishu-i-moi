@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X, Wifi, Shield, Zap, AlertTriangle, Loader2 } from 'lucide-react';
+import { api } from '@/lib/api';
 
 interface NmapScanModalProps {
   isOpen: boolean;
@@ -72,18 +73,9 @@ export default function NmapScanModal({
     setResults(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/osint/nmap/scan`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ target, scanType }),
-      });
+      const { data } = await api.post('/osint/nmap/scan', { target, scanType });
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error || 'Scan failed');
       }
 
