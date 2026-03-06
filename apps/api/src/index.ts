@@ -1,10 +1,15 @@
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load env FIRST — before any other imports that read process.env at module level
+// CWD when running via `tsx src/index.ts` is apps/api, so go up 2 levels to repo root
+dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { createServer } from 'http';
-import dotenv from 'dotenv';
-import path from 'path';
 
 // Routes
 import graphRoutes from './routes/graphs';
@@ -24,10 +29,6 @@ import observabilityRoutes from './routes/observability';
 import { botManager } from './services/BotManager';
 import { collaborationService } from './services/CollaborationService';
 import { errorHandler } from './middleware/error';
-
-
-// Load from monorepo root .env (works from both src/ and dist/)
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 const app = express();
 const httpServer = createServer(app);
