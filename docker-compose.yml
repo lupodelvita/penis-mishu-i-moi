@@ -17,19 +17,19 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: nodeweaver-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
+  # Redis Cache (uncomment when needed)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: nodeweaver-redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 5
 
   # Neo4j (Optional - for graph database)
   # neo4j:
@@ -98,7 +98,7 @@ services:
 
 volumes:
   postgres_data:
-  redis_data:
+  # redis_data:
   # neo4j_data:
   ollama_data:
   open_webui_data:

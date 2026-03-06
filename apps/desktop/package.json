@@ -30,7 +30,6 @@
     "node-pty": "^1.1.0"
   },
   "devDependencies": {
-    "@types/electron": "^1.6.10",
     "chokidar": "^3.5.3",
     "concurrently": "^8.2.2",
     "electron": "28.1.0",
