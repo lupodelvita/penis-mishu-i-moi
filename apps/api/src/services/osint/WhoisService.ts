@@ -73,38 +73,90 @@ export class WhoisService {
   }
 
   /**
-   * Execute system whois command and parse output
+   * WHOIS lookup via raw TCP socket (port 43) — cross-platform, no CLI needed.
    */
   private async systemWhoisLookup(domain: string): Promise<WhoisResult | null> {
     try {
-      const { exec } = require('child_process');
-      const { promisify } = require('util');
-      const execAsync = promisify(exec);
+      const net = require('net');
 
-      // Timeout 10s
-      const { stdout } = await execAsync(`whois ${domain}`, { timeout: 10000 });
-      
-      const text = stdout as string;
-      
-      // Basic Regex Parsing for common fields
-      const registrar = text.match(/Registrar:\s*(.+)/i)?.[1]?.trim() || 
+      // WHOIS servers per TLD
+      const tldServers: Record<string, string> = {
+        com: 'whois.verisign-grs.com',
+        net: 'whois.verisign-grs.com',
+        org: 'whois.pir.org',
+        info: 'whois.afilias.net',
+        biz: 'whois.biz',
+        io:  'whois.nic.io',
+        co:  'whois.nic.co',
+        us:  'whois.nic.us',
+        uk:  'whois.nic.uk',
+        de:  'whois.denic.de',
+        ru:  'whois.tcinet.ru',
+        cn:  'whois.cnnic.cn',
+        jp:  'whois.jprs.jp',
+        fr:  'whois.nic.fr',
+        nl:  'whois.domain-registry.nl',
+        eu:  'whois.eu',
+        app: 'whois.nic.google',
+        dev: 'whois.nic.google',
+        ai:  'whois.nic.ai',
+      };
+
+      const queryWhois = (host: string, query: string): Promise<string> =>
+        new Promise((resolve, reject) => {
+          let data = '';
+          const socket = (net as typeof import('net')).createConnection(43, host);
+          socket.setTimeout(10000);
+          socket.on('connect', () => socket.write(`${query}\r\n`));
+          socket.on('data', (chunk: Buffer) => { data += chunk.toString(); });
+          socket.on('end', () => resolve(data));
+          socket.on('error', (err: Error) => reject(err));
+          socket.on('timeout', () => { socket.destroy(); reject(new Error('WHOIS timeout')); });
+        });
+
+      const tld = domain.split('.').pop()?.toLowerCase() || '';
+      const primaryServer = tldServers[tld] || 'whois.iana.org';
+
+      let text = await queryWhois(primaryServer, domain);
+
+      // Follow IANA referral to the authoritative server
+      if (primaryServer === 'whois.iana.org') {
+        const referMatch = text.match(/refer:\s*(\S+)/i);
+        if (referMatch) {
+          try { text = await queryWhois(referMatch[1].trim(), domain); } catch (_) { /* use IANA text */ }
+        }
+      }
+
+      // Parse common WHOIS fields
+      const registrar = text.match(/Registrar:\s*(.+)/i)?.[1]?.trim() ||
                         text.match(/Registrar Name:\s*(.+)/i)?.[1]?.trim();
-                        
-      const createdDate = text.match(/Creation Date:\s*(.+)/i)?.[1]?.trim() || 
-                          text.match(/Registered on:\s*(.+)/i)?.[1]?.trim();
-                          
-      const expiresDate = text.match(/Registry Expiry Date:\s*(.+)/i)?.[1]?.trim() || 
-                          text.match(/Expires on:\s*(.+)/i)?.[1]?.trim();
-                          
-      const updatedDate = text.match(/Updated Date:\s*(.+)/i)?.[1]?.trim() || 
-                          text.match(/Last Updated on:\s*(.+)/i)?.[1]?.trim();
+
+      const createdDate = text.match(/Creation Date:\s*(.+)/i)?.[1]?.trim() ||
+                          text.match(/Registered on:\s*(.+)/i)?.[1]?.trim() ||
+                          text.match(/created:\s*(.+)/i)?.[1]?.trim();
+
+      const expiresDate = text.match(/Registry Expiry Date:\s*(.+)/i)?.[1]?.trim() ||
+                          text.match(/Expiry Date:\s*(.+)/i)?.[1]?.trim() ||
+                          text.match(/Expires on:\s*(.+)/i)?.[1]?.trim() ||
+                          text.match(/paid-till:\s*(.+)/i)?.[1]?.trim();
+
+      const updatedDate = text.match(/Updated Date:\s*(.+)/i)?.[1]?.trim() ||
+                          text.match(/Last updated:\s*(.+)/i)?.[1]?.trim() ||
+                          text.match(/changed:\s*(.+)/i)?.[1]?.trim();
 
       const nameServers: string[] = [];
-      const nsRegex = /Name Server:\s*(.+)/gi;
-      let match;
-      while ((match = nsRegex.exec(text)) !== null) {
-        nameServers.push(match[1].trim().toLowerCase());
+      const nsRegex = /Name Server:\s*(\S+)/gi;
+      let nsMatch;
+      while ((nsMatch = nsRegex.exec(text)) !== null) {
+        nameServers.push(nsMatch[1].toLowerCase());
       }
+      // .de / .ru style
+      if (nameServers.length === 0) {
+        const nsRaw = text.match(/nserver:\s*(\S+)/gi) || [];
+        nsRaw.forEach(ns => nameServers.push(ns.replace(/nserver:\s*/i, '').toLowerCase()));
+      }
+
+      const statusMatches = [...text.matchAll(/Domain Status:\s*(\S+)/gi)].map(m => m[1]);
 
       return {
         domain,
@@ -112,13 +164,13 @@ export class WhoisService {
         createdDate,
         expiresDate,
         updatedDate,
-        nameServers: [...new Set(nameServers)], // unique
-        status: ['Active'], // Assumption if whois succeeds
+        nameServers: [...new Set(nameServers)],
+        status: statusMatches.length > 0 ? statusMatches : ['Active'],
         registrant: {
-           organization: text.match(/Registrant Organization:\s*(.+)/i)?.[1]?.trim()
-        }
+          organization: text.match(/Registrant Organization:\s*(.+)/i)?.[1]?.trim() ||
+                        text.match(/org:\s*(.+)/i)?.[1]?.trim(),
+        },
       };
-
     } catch (error) {
       console.error('[WhoisService] System WHOIS failed:', error);
       return null;
