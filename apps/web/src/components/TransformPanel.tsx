@@ -38,10 +38,13 @@ interface APITransform {
 }
 
 interface ProgressInfo {
+  id: string; // unique run id
   transformId: string;
+  transformName: string;
   startTime: number;
   estimatedMs: number;
   provider: string;
+  percent: number;
 }
 
 interface TransformPanelProps {
@@ -57,7 +60,8 @@ const LOCAL_TRANSFORMS: APITransform[] = [
   { id: 'email_validate', name: 'Email Validator', description: 'Validate email', category: 'Email', icon: '✅', inputTypes: ['email_address'], outputTypes: ['email_address'], estimatedTime: '~3 сек', estimatedMs: 3000 },
   { id: 'username_search', name: 'Username Search', description: 'Search username across platforms', category: 'Social', icon: '👤', inputTypes: ['username', 'person'], outputTypes: ['social_profile'], estimatedTime: '~5 сек', estimatedMs: 5000 },
   { id: 'geo_ip_location', name: 'IP to Location', description: 'Geolocate IP', category: 'Geo', icon: '📍', inputTypes: ['ip_address'], outputTypes: ['location'], estimatedTime: '~2 сек', estimatedMs: 2000 },
-  { id: 'nmap_quick_scan', name: 'Port Scan (Active)', description: 'Nmap quick scan', category: 'Security', icon: '🛡️', inputTypes: ['domain', 'ip_address'], outputTypes: ['port'], estimatedTime: '~15 сек', estimatedMs: 15000 },
+  { id: 'nmap_quick_scan', name: 'Quick Port Scan', description: 'Top 100 ports, version detection', category: 'Security', icon: '🛡️', inputTypes: ['domain', 'ip_address'], outputTypes: ['port'], estimatedTime: '~15 сек', estimatedMs: 15000 },
+  { id: 'nmap_full_scan', name: 'Deep Port Scan', description: 'Top 1000 ports + NSE scripts', category: 'Security', icon: '🔬', inputTypes: ['domain', 'ip_address'], outputTypes: ['port'], estimatedTime: '~2 мин', estimatedMs: 120000 },
   { id: 'security.xss_scan', name: 'XSS Fuzzer (Active)', description: 'XSS vulnerability scan', category: 'Security', icon: '☣️', inputTypes: ['url', 'domain'], outputTypes: ['vulnerability'], estimatedTime: '~20 сек', estimatedMs: 20000 },
   { id: 'security.sqli_scan', name: 'SQLi Fuzzer (Active)', description: 'SQL injection scan', category: 'Security', icon: '💉', inputTypes: ['url', 'domain'], outputTypes: ['vulnerability'], estimatedTime: '~20 сек', estimatedMs: 20000 },
 ];
@@ -65,11 +69,11 @@ const LOCAL_TRANSFORMS: APITransform[] = [
 export default function TransformPanel({ selectedEntityId }: TransformPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'info' | 'success' | 'error' } | null>(null);
   const [apiTransforms, setApiTransforms] = useState<APITransform[]>([]);
-  const [progressInfo, setProgressInfo] = useState<ProgressInfo | null>(null);
-  const [progressPercent, setProgressPercent] = useState(0);
+  const [runningTransforms, setRunningTransforms] = useState<Map<string, ProgressInfo>>(new Map());
+  const [showAllProgress, setShowAllProgress] = useState(false);
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { currentGraph, addEntity, addLink } = useGraphStore();
   const { sendCommand, isConnected } = useCollaborationStore();
@@ -101,27 +105,25 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
     return () => clearInterval(interval);
   }, []);
 
-  // Progress bar animation
+  // Progress bar animation — tick all running transforms
   useEffect(() => {
-    if (progressInfo) {
-      const { startTime, estimatedMs } = progressInfo;
-      setProgressPercent(0);
-      
+    if (runningTransforms.size > 0) {
       progressTimerRef.current = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const percent = Math.min(95, (elapsed / estimatedMs) * 100); // Cap at 95% until done
-        setProgressPercent(percent);
-      }, 100);
-      
-      return () => {
-        if (progressTimerRef.current) clearInterval(progressTimerRef.current);
-      };
+        setRunningTransforms(prev => {
+          const next = new Map(prev);
+          next.forEach((info, key) => {
+            const elapsed = Date.now() - info.startTime;
+            info.percent = Math.min(95, (elapsed / info.estimatedMs) * 100);
+          });
+          return next;
+        });
+      }, 200);
+      return () => { if (progressTimerRef.current) clearInterval(progressTimerRef.current); };
     } else {
-      setProgressPercent(0);
       if (progressTimerRef.current) clearInterval(progressTimerRef.current);
     }
     return undefined;
-  }, [progressInfo]);
+  }, [runningTransforms.size]);
 
   // Merge local + API transforms (API transforms override by ID)
   const allTransforms = (() => {
@@ -189,14 +191,22 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
     return { text: `${tightest.remaining}/${tightest.total}`, color: 'text-slate-500', warning: false };
   };
 
-  const startProgress = (transformId: string, estimatedMs: number, provider: string) => {
-    setProgressInfo({ transformId, startTime: Date.now(), estimatedMs, provider });
+  const startProgress = (runId: string, transformId: string, transformName: string, estimatedMs: number, provider: string) => {
+    setRunningTransforms(prev => {
+      const next = new Map(prev);
+      next.set(runId, { id: runId, transformId, transformName, startTime: Date.now(), estimatedMs, provider, percent: 0 });
+      return next;
+    });
+    setLoadingIds(prev => { const n = new Set(prev); n.add(transformId); return n; });
   };
 
-  const stopProgress = () => {
-    setProgressInfo(null);
-    setProgressPercent(100);
-    setTimeout(() => setProgressPercent(0), 300);
+  const stopProgress = (runId: string, transformId: string) => {
+    setRunningTransforms(prev => {
+      const next = new Map(prev);
+      next.delete(runId);
+      return next;
+    });
+    setLoadingIds(prev => { const n = new Set(prev); n.delete(transformId); return n; });
   };
 
   const handleRunTransform = useCallback(async (transformId: string) => {
@@ -211,6 +221,7 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
     const transformInfo = allTransforms.find(t => t.id === transformId);
     const estimatedMs = transformInfo?.estimatedMs || 2000;
     const provider = transformInfo?.provider || '';
+    const transformName = transformInfo?.name || transformId;
     
     // Check quota before even trying
     if (transformInfo?.quota && !transformInfo.quota.available) {
@@ -223,10 +234,12 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
       return;
     }
     
+    // Unique run ID so we can track concurrent transforms independently
+    const runId = `run-${transformId}-${Date.now()}`;
+    
     // Set loading state with progress
-    setLoadingId(transformId);
-    startProgress(transformId, estimatedMs, provider);
-    setToastMessage({ text: `Запуск "${transformInfo?.name || transformId}"... (~${Math.ceil(estimatedMs / 1000)} сек)`, type: 'info' });
+    startProgress(runId, transformId, transformName, estimatedMs, provider);
+    setToastMessage({ text: `Запуск "${transformName}"... (~${Math.ceil(estimatedMs / 1000)} сек)`, type: 'info' });
 
     // --- UNIFIED TERMINAL INTERCEPTOR ---
     // If the transform has a CLI equivalent, run it in terminal instead of API
@@ -235,6 +248,9 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
     if (transformId === 'nmap_quick_scan') {
         const target = sourceEntity.value.replace(/^https?:\/\//, '').split('/')[0];
         cliCommand = `nmap -F -sV -T4 --script-args http.useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" "${target}"`;
+    } else if (transformId === 'nmap_full_scan') {
+        const target = sourceEntity.value.replace(/^https?:\/\//, '').split('/')[0];
+        cliCommand = `nmap -sV -sC -T4 --top-ports 1000 --script-args http.useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" "${target}"`;
     }
 
     // NOTE: Terminal opening completely disabled - all transforms use API callbacks instead
@@ -242,7 +258,7 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
     // ======================================
     // SECURITY SCANS (Port, XSS, SQLi) - ALL VIA TERMINAL
     // ======================================
-    const isSecurityScan = transformId.startsWith('security.') || transformId.includes('nmap_quick_scan');
+    const isSecurityScan = transformId.startsWith('security.') || transformId.includes('nmap_quick_scan') || transformId.includes('nmap_full_scan');
     if (isSecurityScan) {
       // NOTE: Terminal opening skipped for security scans to avoid SES "Super constructor null" error
       // Results are added to graph via API callback instead
@@ -251,10 +267,13 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
       let endpoint = '';
       let body: any = {};
       if (transformId === 'nmap_quick_scan') {
-        // FIXED: Use the new OSINT endpoint that returns correct graph topology
         endpoint = '/api/osint/nmap/scan';
         const target = sourceEntity.value.replace(/^https?:\/\//, '').split('/')[0];
         body = { target, scanType: 'quick' };
+      } else if (transformId === 'nmap_full_scan') {
+        endpoint = '/api/osint/nmap/scan';
+        const target = sourceEntity.value.replace(/^https?:\/\//, '').split('/')[0];
+        body = { target, scanType: 'full' };
       } else if (transformId === 'security.xss_scan') {
         endpoint = '/api/security/xss-scan';
         let url = sourceEntity.value;
@@ -275,7 +294,7 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
 
                if (data.data.results.length === 0) {
                    // No alert - let the loading indicator continue or show subtle toast
-                   setLoadingId(null);
+                   stopProgress(runId, transformId);
                    return; // Exit early if no results
                }
                
@@ -457,10 +476,8 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
             }
           } catch (err) {
               setToastMessage({ text: 'Ошибка соединения с API', type: 'error' });
-              alert('Ошибка соединения с API');
           } finally {
-              setLoadingId(null);
-              stopProgress();
+              stopProgress(runId, transformId);
           }
           return; 
       }
@@ -519,8 +536,7 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
         } catch (err) {
             setToastMessage({ text: 'Email validation error', type: 'error' });
         } finally {
-            setLoadingId(null);
-            stopProgress();
+            stopProgress(runId, transformId);
         }
         return;
     }
@@ -692,8 +708,7 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
     } catch (err) {
        setToastMessage({ text: 'Ошибка выполнения трансформа', type: 'error' });
     } finally {
-       setLoadingId(null);
-       stopProgress();
+       stopProgress(runId, transformId);
     }
   }, [selectedEntityId, currentGraph, addEntity, addLink]);
   useEffect(() => {
@@ -721,24 +736,44 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
         </div>
       )}
       
-      {/* Progress Bar */}
-      {progressInfo && (
-        <div className="px-4 py-2 border-b border-border bg-accent/30">
-          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-            <span className="flex items-center gap-1">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              {progressInfo.provider || 'Выполнение'}...
-            </span>
-            <span>~{Math.ceil(progressInfo.estimatedMs / 1000)} сек</span>
+      {/* Progress Bars — concurrent transforms */}
+      {runningTransforms.size > 0 && (() => {
+        const entries = Array.from(runningTransforms.values());
+        const VISIBLE_LIMIT = 2;
+        const visible = showAllProgress ? entries : entries.slice(0, VISIBLE_LIMIT);
+        const hiddenCount = entries.length - VISIBLE_LIMIT;
+        return (
+          <div className="border-b border-border">
+            {visible.map(info => (
+              <div key={info.id} className="px-3 py-1.5 bg-accent/30 border-b border-border/50 last:border-b-0">
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-0.5">
+                  <span className="flex items-center gap-1 truncate">
+                    <Loader2 className="w-2.5 h-2.5 animate-spin shrink-0" />
+                    <span className="truncate font-mono">{info.transformName}</span>
+                  </span>
+                  <span className="shrink-0 ml-2">~{Math.ceil(info.estimatedMs / 1000)} сек</span>
+                </div>
+                <div className="w-full h-1 bg-secondary rounded-full overflow-hidden">
+                  <div className="h-full bg-primary rounded-full transition-all duration-200 ease-linear"
+                    style={{ width: `${info.percent}%` }} />
+                </div>
+              </div>
+            ))}
+            {hiddenCount > 0 && !showAllProgress && (
+              <button onClick={() => setShowAllProgress(true)}
+                className="w-full px-3 py-1 text-[10px] text-sky-400 hover:bg-accent/50 transition-colors font-mono text-center">
+                + ещё {hiddenCount} {hiddenCount === 1 ? 'трансформ' : 'трансформов'}
+              </button>
+            )}
+            {showAllProgress && hiddenCount > 0 && (
+              <button onClick={() => setShowAllProgress(false)}
+                className="w-full px-3 py-1 text-[10px] text-slate-500 hover:bg-accent/50 transition-colors font-mono text-center">
+                свернуть
+              </button>
+            )}
           </div>
-          <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full transition-all duration-200 ease-linear"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        </div>
-      )}
+        );
+      })()}
       <div className="p-3 border-b border-border space-y-2">
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -840,11 +875,11 @@ export default function TransformPanel({ selectedEntityId }: TransformPanelProps
                     e.stopPropagation();
                     handleRunTransform(transform.id);
                   }}
-                  disabled={loadingId === transform.id}
+                  disabled={loadingIds.has(transform.id)}
                   className="opacity-0 group-hover:opacity-100 p-1 hover:bg-primary/10 rounded transition-all disabled:opacity-100"
                   title="Запустить"
                 >
-                  {loadingId === transform.id ? (
+                  {loadingIds.has(transform.id) ? (
                     <Loader2 className="w-4 h-4 text-primary animate-spin" />
                   ) : (
                     <Play className="w-4 h-4 text-primary" />

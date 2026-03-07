@@ -52,12 +52,13 @@ const RightSidebar = memo(function RightSidebar({ selectedEntityId }: { selected
         </button>
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'transforms' ? (
+      {/* Tab Content — both always mounted, hidden via CSS to preserve state */}
+      <div className={activeTab === 'transforms' ? 'flex-1 flex flex-col min-h-0 overflow-hidden' : 'hidden'}>
         <TransformPanel selectedEntityId={selectedEntityId} />
-      ) : (
+      </div>
+      <div className={activeTab === 'details' ? 'flex-1 flex flex-col min-h-0 overflow-hidden' : 'hidden'}>
         <DetailPanel selectedEntityId={selectedEntityId} />
-      )}
+      </div>
     </div>
   );
 });

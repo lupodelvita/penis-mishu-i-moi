@@ -60,8 +60,8 @@ export class TransformManager {
     // Network Intelligence
     this.registerTransform({
       id: 'nmap_quick_scan',
-      name: 'Nmap Quick Scan',
-      description: 'Fast port scan (top 100 ports, ~10s)',
+      name: 'Quick Port Scan',
+      description: 'Fast scan — top 100 ports, version detection, no scripts (~15s)',
       category: 'Network Intelligence',
       inputTypes: ['ip_address', 'domain'],
       outputTypes: ['port', 'vulnerability'],
@@ -90,8 +90,8 @@ export class TransformManager {
 
     this.registerTransform({
       id: 'nmap_full_scan',
-      name: 'Nmap Full Scan',
-      description: 'Complete scan with OS detection (2-5 min)',
+      name: 'Deep Port Scan',
+      description: 'Top 1000 ports + NSE scripts + version detection (~2 min)',
       category: 'Network Intelligence',
       inputTypes: ['ip_address', 'domain'],
       outputTypes: ['port', 'vulnerability'],

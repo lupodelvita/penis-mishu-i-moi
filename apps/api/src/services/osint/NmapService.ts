@@ -114,6 +114,7 @@ export class NmapService {
         // -F: Fast scan (top 100 ports)
         // -sV: Service version detection
         // -T4: Aggressive timing
+        // NO -sC: skip scripts for speed
         return `${baseCommand} -sT -Pn --unprivileged -F -sV -T4 --script-args http.useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" ${xmlOutput} ${target}`;
       
       case 'full':
@@ -121,10 +122,10 @@ export class NmapService {
         // -Pn: Skip discovery
         // --unprivileged: No raw sockets
         // -sV: Service version detection
-        // -sC: Default scripts
+        // -sC: Default NSE scripts (banner, http-title, ssl-cert, etc.)
         // -T4: Aggressive timing
-        // -p-: Scan all 65535 ports
-        return `${baseCommand} -sT -Pn --unprivileged -sV -sC -T4 -p- --script-args http.useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" ${xmlOutput} ${target}`;
+        // --top-ports 1000: Scan top 1000 most common ports (replaces -p- which timed out)
+        return `${baseCommand} -sT -Pn --unprivileged -sV -sC -T4 --top-ports 1000 --script-args http.useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" ${xmlOutput} ${target}`;
       
       case 'vuln':
         // -sT, -Pn, --unprivileged
@@ -255,9 +256,11 @@ export class NmapService {
       const command = this.buildNmapCommand(options);
       console.log(`[NmapService] Executing: ${command}`);
 
-      // Execute with timeout (5 minutes max)
+      // Per-scan-type timeout: quick 60s, full 180s, vuln 300s
+      const timeoutMap: Record<string, number> = { quick: 60000, full: 180000, vuln: 300000, custom: 300000 };
+      const timeout = timeoutMap[options.scanType] || 300000;
       const { stdout, stderr } = await execAsync(command, { 
-        timeout: 300000, // 5 minutes
+        timeout,
         maxBuffer: 10 * 1024 * 1024 // 10MB buffer
       });
 
