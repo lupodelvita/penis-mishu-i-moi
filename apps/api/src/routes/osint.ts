@@ -8,6 +8,7 @@ import socialRoutes from './osint/socialRoutes';
 import emailRoutes from './osint/emailRoutes';
 import breachRoutes from './osint/breachRoutes';
 import breachvipRoutes from './osint/breachvipRoutes';
+import phoneRoutes from './osint/phoneRoutes';
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.use(socialRoutes);
 router.use(emailRoutes);
 router.use(breachRoutes);
 router.use(breachvipRoutes);
+router.use(phoneRoutes);
 
 export default router;

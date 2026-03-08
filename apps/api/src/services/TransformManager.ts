@@ -23,6 +23,7 @@ import { censysService } from './osint/CensysService';
 import { binaryEdgeService } from './osint/BinaryEdgeService';
 import { fullContactService } from './osint/FullContactService';
 import { emailRepService } from './osint/EmailRepService';
+import { phoneIntelService } from './osint/PhoneIntelService';
 import { rateLimitTracker } from './RateLimitTracker';
 import * as dns from 'dns/promises';
 
@@ -2232,6 +2233,44 @@ export class TransformManager {
               employees: company.employees,
               founded: company.founded,
               category: company.category
+            }
+          };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+    });
+
+    // ═══════════════════════════════════════════════════
+    // Phone Intelligence Transforms
+    // ═══════════════════════════════════════════════════
+
+    this.registerTransform({
+      id: 'phone_intel',
+      name: 'Phone Intelligence',
+      description: 'Full phone lookup: validation, carrier/MNP, HLR network check, messenger presence (WhatsApp/Telegram)',
+      category: 'People Intelligence',
+      inputTypes: ['phone_number'],
+      outputTypes: ['organization', 'location', 'social_profile', 'scan_result'],
+      icon: '📞',
+      execute: async (input) => {
+        try {
+          const intel = await phoneIntelService.lookup(input.value);
+          const graphData = phoneIntelService.convertToEntities(intel);
+
+          return {
+            success: true,
+            entities: graphData.entities,
+            links: graphData.links,
+            metadata: {
+              valid: intel.validation.valid,
+              country: intel.validation.country,
+              carrier: intel.carrier?.carrier,
+              lineType: intel.carrier?.lineType,
+              active: intel.hlr?.active,
+              whatsapp: intel.messengers.whatsapp,
+              telegram: intel.messengers.telegram,
+              methods: intel.methods,
             }
           };
         } catch (error: any) {
